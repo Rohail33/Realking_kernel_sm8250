@@ -227,18 +227,12 @@ static int ashmem_mmap(struct file *file, struct vm_area_struct *vma)
 	get_file(asma->file);
 
 	if (vma->vm_flags & VM_SHARED) {
-		ret = shmem_zero_setup(vma);
-		if (ret) {
-			fput(asma->file);
-			return ret;
-		}
+		shmem_set_file(vma, asma->file);
 	} else {
 		vma_set_anonymous(vma);
+		vma_set_file(vma, asma->file);
+		fput(asma->file);
 	}
-
-	vma_set_file(vma, asma->file);
-	/* XXX: merge this with the get_file() above if possible */
-	fput(asma->file);
 
 	return 0;
 }
