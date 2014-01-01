@@ -1787,6 +1787,30 @@ static inline bool req_gap_front_merge(struct request *req, struct bio *bio)
 	return bio_will_gap(req->q, NULL, bio, req->bio);
 }
 
+static inline void set_start_time_ns(struct request *req)
+{
+	preempt_disable();
+	req->start_time_ns = sched_clock();
+	preempt_enable();
+}
+
+static inline void set_io_start_time_ns(struct request *req)
+{
+	preempt_disable();
+	req->io_start_time_ns = sched_clock();
+	preempt_enable();
+}
+
+static inline uint64_t rq_start_time_ns(struct request *req)
+{
+        return req->start_time_ns;
+}
+
+static inline uint64_t rq_io_start_time_ns(struct request *req)
+{
+        return req->io_start_time_ns;
+}
+
 int kblockd_schedule_work(struct work_struct *work);
 int kblockd_schedule_work_on(int cpu, struct work_struct *work);
 int kblockd_mod_delayed_work_on(int cpu, struct delayed_work *dwork, unsigned long delay);
