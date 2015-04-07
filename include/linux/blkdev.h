@@ -55,7 +55,7 @@ struct keyslot_manager;
  * Maximum number of blkcg policies allowed to be registered concurrently.
  * Defined here to simplify include dependency.
  */
-#define BLKCG_MAX_POLS		5
+#define BLKCG_MAX_POLS		6
 
 static inline int blk_validate_block_size(unsigned int bsize)
 {
