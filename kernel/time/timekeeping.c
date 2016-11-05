@@ -2417,3 +2417,13 @@ void xtime_update(unsigned long ticks)
 	write_sequnlock(&jiffies_lock);
 	update_wall_time();
 }
+
+/**
+ * get_total_sleep_time_nsec() - returns total sleep time in nanoseconds
+ */
+s64 get_total_sleep_time_nsec(void)
+{
+	struct timekeeper *tk = &tk_core.timekeeper;
+
+	return ktime_to_ns(tk->offs_boot);
+}
