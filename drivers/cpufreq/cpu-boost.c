@@ -70,7 +70,6 @@ static u64 last_input_time;
 static struct kthread_worker cpu_boost_worker;
 static struct task_struct *cpu_boost_worker_thread;
 
-#define MIN_INPUT_INTERVAL (100 * USEC_PER_MSEC)
 
 static ssize_t store_input_boost_freq(struct kobject *kobj,
 				      struct kobj_attribute *attr,
@@ -252,7 +251,7 @@ static void cpuboost_input_event(struct input_handle *handle,
 		return;
 
 	now = ktime_to_us(ktime_get());
-	if (now - last_input_time < MIN_INPUT_INTERVAL)
+	if ((now - last_input_time) < (input_boost_ms * USEC_PER_MSEC))
 		return;
 
 	if (queuing_blocked(&cpu_boost_worker, &input_boost_work))
