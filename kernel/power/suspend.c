@@ -78,6 +78,8 @@ void s2idle_set_ops(const struct platform_s2idle_ops *ops)
 }
 EXPORT_SYMBOL_GPL(s2idle_set_ops);
 
+extern void thaw_fingerprintd(void);
+
 static void s2idle_begin(void)
 {
 	s2idle_state = S2IDLE_STATE_NONE;
@@ -475,6 +477,8 @@ static int suspend_enter(suspend_state_t state, bool *wakeup)
 	enable_nonboot_cpus();
 
  Platform_wake:
+	thaw_fingerprintd();
+
 	platform_resume_noirq(state);
 	dpm_resume_noirq(PMSG_RESUME);
 
