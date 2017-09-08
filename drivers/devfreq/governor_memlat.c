@@ -297,6 +297,10 @@ static int devfreq_memlat_get_freq(struct devfreq *df,
 					hw->core_stats[i].stall_pct,
 					hw->core_stats[i].wb_pct, ratio);
 
+		if (!hw->core_stats[i].inst_count
+		    || !hw->core_stats[i].freq)
+			continue;
+
 		if (((ratio <= node->ratio_ceil
 		      && hw->core_stats[i].stall_pct >= node->stall_floor) ||
 		      (hw->core_stats[i].wb_pct >= node->wb_pct_thres
