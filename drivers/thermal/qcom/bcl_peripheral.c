@@ -731,10 +731,10 @@ static int bcl_probe(struct platform_device *pdev)
 	}
 
 	bcl_get_devicetree_data(pdev);
+	bcl_configure_lmh_peripheral();
 	bcl_probe_ibat(pdev);
 	bcl_probe_vbat(pdev);
 	bcl_probe_soc(pdev);
-	bcl_configure_lmh_peripheral();
 
 	dev_set_drvdata(&pdev->dev, bcl_perph);
 	ret = bcl_write_register(BCL_MONITOR_EN, BIT(7));
