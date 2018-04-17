@@ -2872,7 +2872,7 @@ static vm_fault_t wp_page_copy(struct vm_fault *vmf)
 		}
 		flush_cache_page(vma, vmf->address, pte_pfn(vmf->orig_pte));
 		entry = mk_pte(new_page, vmf->vma_page_prot);
-                entry = pte_sw_mkyoung(entry);
+		entry = pte_sw_mkyoung(entry);
 		entry = maybe_mkwrite(pte_mkdirty(entry), vmf->vma_flags);
 		/*
 		 * Clear the pte entry and flush it first, before updating the
@@ -3108,9 +3108,9 @@ static vm_fault_t do_wp_page(struct vm_fault *vmf)
 			}
 			put_page(vmf->page);
 		}
-		if (reuse_swap_page(vmf->page, &total_map_swapcount)) {
-			if (total_map_swapcount == 1) {
-				/*
+	if (reuse_swap_page(vmf->page, &total_map_swapcount)) {
+		if (total_map_swapcount == 1) {
+			/*
 				 * The page is all ours. Move it to
 				 * our anon_vma so the rmap code will
 				 * not search our parent or siblings.
@@ -3118,12 +3118,12 @@ static vm_fault_t do_wp_page(struct vm_fault *vmf)
 				 * the page lock.
 				 */
 				page_move_anon_rmap(vmf->page, vma);
-			}
-			unlock_page(vmf->page);
-			wp_page_reuse(vmf);
-			return VM_FAULT_WRITE;
 		}
 		unlock_page(vmf->page);
+		wp_page_reuse(vmf);
+		return VM_FAULT_WRITE;
+	}
+	unlock_page(vmf->page);
 	} else if (unlikely((vmf->vma_flags & (VM_WRITE|VM_SHARED)) ==
 					(VM_WRITE|VM_SHARED))) {
 		return wp_page_shared(vmf);
@@ -3624,7 +3624,7 @@ skip_pmd_checks:
 	__SetPageUptodate(page);
 
 	entry = mk_pte(page, vmf->vma_page_prot);
-        entry = pte_sw_mkyoung(entry);
+	entry = pte_sw_mkyoung(entry);
 	if (vmf->vma_flags & VM_WRITE)
 		entry = pte_mkwrite(pte_mkdirty(entry));
 
@@ -3936,7 +3936,7 @@ vm_fault_t alloc_set_pte(struct vm_fault *vmf, struct mem_cgroup *memcg,
 
 	flush_icache_page(vma, page);
 	entry = mk_pte(page, vmf->vma_page_prot);
-        entry = pte_sw_mkyoung(entry);
+	entry = pte_sw_mkyoung(entry);
 	if (write)
 		entry = maybe_mkwrite(pte_mkdirty(entry), vmf->vma_flags);
 	/* copy-on-write page */
