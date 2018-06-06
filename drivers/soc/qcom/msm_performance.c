@@ -89,10 +89,12 @@ static int set_cpu_min_freq(const char *buf, const struct kernel_param *kp)
 	struct cpu_status *i_cpu_stats;
 	struct cpufreq_policy policy;
 	cpumask_var_t limit_mask;
-	const char *reset = "0:0 2:0";
+#ifdef CONFIG_CONTROL_CENTER
+	bool boost_on_big_hint = false;
+#endif
 
- 	if (touchboost == 0)
- 		cp = reset;
+	if (touchboost == 0)
+		return 0;
 
 	if (kp_active_mode() == 1)
 	  return 0;
@@ -104,10 +106,7 @@ static int set_cpu_min_freq(const char *buf, const struct kernel_param *kp)
 	if (!(ntokens % 2))
 		return -EINVAL;
 
-	if (touchboost == 0)
- 		cp = reset;
- 	else
- 		cp = buf;
+	cp = buf;
 
 	cpumask_clear(limit_mask);
 	for (i = 0; i < ntokens; i += 2) {
@@ -182,6 +181,9 @@ static int set_cpu_max_freq(const char *buf, const struct kernel_param *kp)
 
 	if (kp_active_mode() == 1)
 	  return 0;
+
+	if (touchboost == 0)
+		return 0;
 
 	while ((cp = strpbrk(cp + 1, " :")))
 		ntokens++;
