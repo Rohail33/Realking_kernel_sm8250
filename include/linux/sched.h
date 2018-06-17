@@ -2144,6 +2144,7 @@ extern long sched_getaffinity(pid_t pid, struct cpumask *mask);
 #ifdef CONFIG_DYNAMIC_STUNE_BOOST
 int do_stune_boost(char *st_name, int boost);
 int reset_stune_boost(char *st_name);
+int stune_boost(char *st_name);
 #endif /* CONFIG_DYNAMIC_STUNE_BOOST */
 
 #ifdef CONFIG_RSEQ
