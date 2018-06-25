@@ -149,7 +149,7 @@ void tcp_rate_gen(struct sock *sk, u32 delivered, u32 lost,
 	 * longer phase.
 	 */
 	snd_us = rs->interval_us;				/* send phase */
-	ack_us = tcp_stamp_us_delta(tp->tcp_mstamp,
+	ack_us = tcp_stamp32_us_delta(tp->tcp_mstamp,
 				    rs->prior_mstamp); /* ack phase */
 	rs->interval_us = max(snd_us, ack_us);
 
