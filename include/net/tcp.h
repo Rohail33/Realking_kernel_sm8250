@@ -1043,11 +1043,6 @@ struct tcp_skb_cb {
 			u32 first_tx_mstamp;
 			/* when we reached the "delivered" count */
 			u32 delivered_mstamp;
-#define TCPCB_IN_FLIGHT_BITS 20
-#define TCPCB_IN_FLIGHT_MAX ((1U << TCPCB_IN_FLIGHT_BITS) - 1)
-			u32 in_flight:20,   /* packets in flight at transmit */
-			    unused2:12;
-			u32 lost;	/* packets lost so far upon tx of skb */
 		} tx;   /* only used for outgoing skbs */
 		union {
 			struct inet_skb_parm	h4;
