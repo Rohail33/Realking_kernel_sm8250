@@ -82,6 +82,8 @@ struct __limits_cdev_data {
 	u32 min_freq;
 };
 
+static bool lmh_enabled = false;
+
 struct limits_dcvs_hw {
 	char sensor_name[THERMAL_NAME_LENGTH];
 	uint32_t affinity;
@@ -354,6 +356,9 @@ static int enable_lmh(void)
 	int ret = 0;
 	struct scm_desc desc_arg;
 
+	if (lmh_enabled)
+		return 0;
+
 	desc_arg.args[0] = 1;
 	desc_arg.arginfo = SCM_ARGS(1, SCM_VAL);
 	ret = scm_call2(SCM_SIP_FNID(SCM_SVC_LMH, LIMITS_PROFILE_CHANGE),
@@ -362,6 +367,8 @@ static int enable_lmh(void)
 		pr_err("Error switching profile:[1]. err:%d\n", ret);
 		return ret;
 	}
+
+	lmh_enabled = true;
 
 	return ret;
 }
