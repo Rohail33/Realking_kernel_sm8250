@@ -126,8 +126,8 @@ struct schedtune {
 	 */
 	int boost_default;
 
-	/* Dynamic boost value for tasks on that SchedTune CGroup */
-	int dynamic_boost;
+	/* Sched Boost value for tasks on that SchedTune CGroup */
+	int sched_boost;
 
 	/* Number of ongoing boosts for this SchedTune CGroup */
 	int boost_count;
@@ -170,7 +170,7 @@ root_schedtune = {
 	.prefer_idle = 0,
 #ifdef CONFIG_DYNAMIC_STUNE_BOOST
 	.boost_default = 0,
-	.dynamic_boost = 0,
+	.sched_boost = 0,
 	.boost_count = 0,
 #endif /* CONFIG_DYNAMIC_STUNE_BOOST */
 };
@@ -788,19 +788,19 @@ static int prefer_idle_write_wrapper(struct cgroup_subsys_state *css,
 
 #ifdef CONFIG_DYNAMIC_STUNE_BOOST
 static s64
-dynamic_boost_read(struct cgroup_subsys_state *css, struct cftype *cft)
+sched_boost_read(struct cgroup_subsys_state *css, struct cftype *cft)
 {
 	struct schedtune *st = css_st(css);
 
-	return st->dynamic_boost;
+	return st->sched_boost;
 }
 
 static int
-dynamic_boost_write(struct cgroup_subsys_state *css, struct cftype *cft,
-	    s64 dynamic_boost)
+sched_boost_write(struct cgroup_subsys_state *css, struct cftype *cft,
+	    s64 sched_boost)
 {
 	struct schedtune *st = css_st(css);
-	st->dynamic_boost = dynamic_boost;
+	st->sched_boost = sched_boost;
 
 	return 0;
 }
@@ -843,9 +843,9 @@ static struct cftype files[] = {
 	},
 #ifdef CONFIG_DYNAMIC_STUNE_BOOST
 	{
-		.name = "dynamic_boost",
-		.read_s64 = dynamic_boost_read,
-		.write_s64 = dynamic_boost_write,
+		.name = "sched_boost",
+		.read_s64 = sched_boost_read,
+		.write_s64 = sched_boost_write,
 	},
 #endif // CONFIG_DYNAMIC_STUNE_BOOST
 	{ }	/* terminate */
@@ -1044,7 +1044,7 @@ int stune_boost(char *st_name)
 	if (!st)
 		return -EINVAL;
 
-	return _do_stune_boost(st, st->dynamic_boost);
+	return _do_stune_boost(st, st->sched_boost);
 }
 
 int do_stune_boost(char *st_name, int boost)
