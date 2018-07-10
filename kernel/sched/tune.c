@@ -1037,7 +1037,7 @@ int reset_stune_boost(char *st_name)
 	return ret;
 }
 
-int stune_boost(char *st_name)
+int do_stune_sched_boost(char *st_name)
 {
 	struct schedtune *st = getSchedtune(st_name);
 
