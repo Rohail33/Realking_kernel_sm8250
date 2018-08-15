@@ -712,6 +712,9 @@ struct fuse_conn {
 	/* Send DESTROY request */
 	unsigned int destroy:1;
 
+	/* Delete dentries that have gone stale */
+	unsigned int delete_stale:1;
+
 	/** Passthrough mode for read/write IO */
 	unsigned int passthrough:1;
 
