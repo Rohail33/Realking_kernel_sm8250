@@ -627,6 +627,7 @@ void fuse_conn_init(struct fuse_conn *fc, struct user_namespace *user_ns)
 	memset(fc, 0, sizeof(*fc));
 	spin_lock_init(&fc->lock);
 	spin_lock_init(&fc->passthrough_req_lock);
+	spin_lock_init(&fc->bg_lock);
 	init_rwsem(&fc->killsb);
 	refcount_set(&fc->count, 1);
 	atomic_set(&fc->dev_count, 1);
@@ -875,6 +876,7 @@ static void process_init_limits(struct fuse_conn *fc, struct fuse_init_out *arg)
 	sanitize_global_limit(&max_user_bgreq);
 	sanitize_global_limit(&max_user_congthresh);
 
+	spin_lock(&fc->bg_lock);
 	if (arg->max_background) {
 		fc->max_background = arg->max_background;
 
@@ -888,6 +890,7 @@ static void process_init_limits(struct fuse_conn *fc, struct fuse_init_out *arg)
 		    fc->congestion_threshold > max_user_congthresh)
 			fc->congestion_threshold = max_user_congthresh;
 	}
+	spin_unlock(&fc->bg_lock);
 }
 
 static void process_init_reply(struct fuse_conn *fc, struct fuse_req *req)
