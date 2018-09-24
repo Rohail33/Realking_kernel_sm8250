@@ -108,5 +108,8 @@ extern void remove_pagetable(unsigned long start,
 #endif
 #endif
 
+#define INIT_MM_CONTEXT(name)	\
+	.pgd = init_pg_dir,
+
 #endif	/* !__ASSEMBLY__ */
 #endif

@@ -295,7 +295,7 @@ __create_page_tables:
 	 * dirty cache lines being evicted.
 	 */
 	adrp	x0, idmap_pg_dir
-	adrp	x1, swapper_pg_end
+	adrp	x1, init_pg_end
 	sub	x1, x1, x0
 	bl	__inval_dcache_area
 
@@ -303,7 +303,7 @@ __create_page_tables:
 	 * Clear the idmap and swapper page tables.
 	 */
 	adrp	x0, idmap_pg_dir
-	adrp	x1, swapper_pg_end
+	adrp	x1, init_pg_end
 	sub	x1, x1, x0
 1:	stp	xzr, xzr, [x0], #16
 	stp	xzr, xzr, [x0], #16
@@ -377,7 +377,7 @@ __create_page_tables:
 	/*
 	 * Map the kernel image (starting with PHYS_OFFSET).
 	 */
-	adrp	x0, swapper_pg_dir
+	adrp	x0, init_pg_dir
 	mov_q	x5, KIMAGE_VADDR + TEXT_OFFSET	// compile time __va(_text)
 	add	x5, x5, x23			// add KASLR displacement
 	mov	x4, PTRS_PER_PGD
@@ -394,7 +394,7 @@ __create_page_tables:
 	 * tables again to remove any speculatively loaded cache lines.
 	 */
 	adrp	x0, idmap_pg_dir
-	adrp	x1, swapper_pg_end
+	adrp	x1, init_pg_end
 	sub	x1, x1, x0
 	dmb	sy
 	bl	__inval_dcache_area
@@ -939,7 +939,7 @@ __primary_switch:
 	mrs	x20, sctlr_el1			// preserve old SCTLR_EL1 value
 #endif
 
-	adrp	x1, swapper_pg_dir
+	adrp	x1, init_pg_dir
 	bl	__enable_mmu
 #ifdef CONFIG_RELOCATABLE
 #ifdef CONFIG_RELR
