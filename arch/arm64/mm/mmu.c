@@ -77,6 +77,24 @@ struct dma_contig_early_reserve {
 static struct dma_contig_early_reserve dma_mmu_remap[MAX_CMA_AREAS];
 static int dma_mmu_remap_num;
 
+static DEFINE_SPINLOCK(swapper_pgdir_lock);
+
+void set_swapper_pgd(pgd_t *pgdp, pgd_t pgd)
+{
+	pgd_t *fixmap_pgdp;
+
+	spin_lock(&swapper_pgdir_lock);
+	fixmap_pgdp = pgd_set_fixmap(__pa(pgdp));
+	WRITE_ONCE(*fixmap_pgdp, pgd);
+	/*
+	 * We need dsb(ishst) here to ensure the page-table-walker sees
+	 * our new entry before set_p?d() returns. The fixmap's
+	 * flush_tlb_kernel_range() via clear_fixmap() does this for us.
+	 */
+	pgd_clear_fixmap();
+	spin_unlock(&swapper_pgdir_lock);
+}
+
 void __init dma_contiguous_early_fixup(phys_addr_t base, unsigned long size)
 {
 	if (dma_mmu_remap_num >= ARRAY_SIZE(dma_mmu_remap)) {
@@ -705,8 +723,12 @@ static void __init map_kernel(pgd_t *pgdp)
  */
 void __init paging_init(void)
 {
-	map_kernel(swapper_pg_dir);
-	map_mem(swapper_pg_dir);
+	pgd_t *pgdp = pgd_set_fixmap(__pa_symbol(swapper_pg_dir));
+
+	map_kernel(pgdp);
+	map_mem(pgdp);
+
+	pgd_clear_fixmap();
 
 	cpu_replace_ttbr1(lm_alias(swapper_pg_dir));
 	init_mm.pgd = swapper_pg_dir;

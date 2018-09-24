@@ -455,8 +455,27 @@ static inline bool pud_table(pud_t pud) { return true; }
 				 PUD_TYPE_TABLE)
 #endif
 
+extern pgd_t init_pg_dir[PTRS_PER_PGD];
+extern pgd_t init_pg_end[];
+extern pgd_t swapper_pg_dir[PTRS_PER_PGD];
+extern pgd_t idmap_pg_dir[PTRS_PER_PGD];
+extern pgd_t tramp_pg_dir[PTRS_PER_PGD];
+
+extern void set_swapper_pgd(pgd_t *pgdp, pgd_t pgd);
+
+static inline bool in_swapper_pgdir(void *addr)
+{
+	return ((unsigned long)addr & PAGE_MASK) ==
+	        ((unsigned long)swapper_pg_dir & PAGE_MASK);
+}
+
 static inline void set_pmd(pmd_t *pmdp, pmd_t pmd)
 {
+	if (__is_defined(__PAGETABLE_PMD_FOLDED) && in_swapper_pgdir(pmdp)) {
+		set_swapper_pgd((pgd_t *)pmdp, __pgd(pmd_val(pmd)));
+		return;
+	}
+
 	WRITE_ONCE(*pmdp, pmd);
 	if (pmd_valid(pmd))
 		dsb(ishst);
@@ -516,6 +535,11 @@ static inline void pte_unmap(pte_t *pte) { }
 
 static inline void set_pud(pud_t *pudp, pud_t pud)
 {
+	if (__is_defined(__PAGETABLE_PUD_FOLDED) && in_swapper_pgdir(pudp)) {
+		set_swapper_pgd((pgd_t *)pudp, __pgd(pud_val(pud)));
+		return;
+	}
+
 	WRITE_ONCE(*pudp, pud);
 	if (pud_valid(pud))
 		dsb(ishst);
@@ -575,6 +599,11 @@ static inline unsigned long pud_page_vaddr(pud_t pud)
 
 static inline void set_pgd(pgd_t *pgdp, pgd_t pgd)
 {
+	if (in_swapper_pgdir(pgdp)) {
+		set_swapper_pgd(pgdp, pgd);
+		return;
+	}
+
 	WRITE_ONCE(*pgdp, pgd);
 	dsb(ishst);
 }
@@ -774,12 +803,6 @@ static inline pmd_t pmdp_establish(struct vm_area_struct *vma,
 	return __pmd(xchg_relaxed(&pmd_val(*pmdp), pmd_val(pmd)));
 }
 #endif
-
-extern pgd_t init_pg_dir[PTRS_PER_PGD];
-extern pgd_t init_pg_end[];
-extern pgd_t swapper_pg_dir[PTRS_PER_PGD];
-extern pgd_t idmap_pg_dir[PTRS_PER_PGD];
-extern pgd_t tramp_pg_dir[PTRS_PER_PGD];
 
 /*
  * Encode and decode a swap entry:
