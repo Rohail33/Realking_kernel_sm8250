@@ -1630,7 +1630,8 @@ static bool rcu_fwd_emergency_stop;
 #define MAX_FWD_CB_JIFFIES	(8 * HZ) /* Maximum CB test duration. */
 #define MIN_FWD_CB_LAUNDERS	3	/* This many CB invocations to count. */
 #define MIN_FWD_CBS_LAUNDERED	100	/* Number of counted CBs. */
-static long n_launders_hist[2 * MAX_FWD_CB_JIFFIES / HZ];
+#define FWD_CBS_HIST_DIV	10	/* Histogram buckets/second. */
+static long n_launders_hist[2 * MAX_FWD_CB_JIFFIES / (HZ / FWD_CBS_HIST_DIV)];
 
 static void rcu_torture_fwd_cb_hist(void)
 {
@@ -1643,7 +1644,8 @@ static void rcu_torture_fwd_cb_hist(void)
 	pr_alert("%s: Callback-invocation histogram (duration %lu jiffies):",
 		 __func__, jiffies - rcu_fwd_startat);
 	for (j = 0; j <= i; j++)
-		pr_cont(" %ds: %ld", j + 1, n_launders_hist[j]);
+		pr_cont(" %ds/%d: %ld",
+			j + 1, FWD_CBS_HIST_DIV, n_launders_hist[j]);
 	pr_cont("\n");
 }
 
@@ -1662,7 +1664,7 @@ static void rcu_torture_fwd_cb_cr(struct rcu_head *rhp)
 	rcu_fwd_cb_tail = &rfcp->rfc_next;
 	WRITE_ONCE(*rfcpp, rfcp);
 	WRITE_ONCE(n_launders_cb, n_launders_cb + 1);
-	i = ((jiffies - rcu_fwd_startat) / HZ);
+	i = ((jiffies - rcu_fwd_startat) / (HZ / FWD_CBS_HIST_DIV));
 	if (i >= ARRAY_SIZE(n_launders_hist))
 		i = ARRAY_SIZE(n_launders_hist) - 1;
 	n_launders_hist[i]++;
