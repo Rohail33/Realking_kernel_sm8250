@@ -52,9 +52,8 @@ void tcp_mstamp_refresh(struct tcp_sock *tp)
 {
 	u64 val = tcp_clock_ns();
 
-	/* departure time for next data packet */
-	if (val > tp->tcp_wstamp_ns)
-		tp->tcp_wstamp_ns = val;
+	if (val > tp->tcp_clock_cache)
+		tp->tcp_clock_cache = val;
 
 	val = div_u64(val, NSEC_PER_USEC);
 	if (val > tp->tcp_mstamp)
@@ -1071,6 +1070,9 @@ static int __tcp_transmit_skb(struct sock *sk, struct sk_buff *skb,
 			return -ENOBUFS;
 	}
 	skb->skb_mstamp = tp->tcp_mstamp;
+
+	/* TODO: might take care of jitter here */
+	tp->tcp_wstamp_ns = max(tp->tcp_wstamp_ns, tp->tcp_clock_cache);
 
 	inet = inet_sk(sk);
 	tcb = TCP_SKB_CB(skb);
