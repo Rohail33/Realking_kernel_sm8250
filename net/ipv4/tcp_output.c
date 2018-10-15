@@ -1059,6 +1059,10 @@ static int __tcp_transmit_skb(struct sock *sk, struct sk_buff *skb,
 		if (unlikely(!skb))
 			return -ENOBUFS;
 	}
+
+	/* TODO: might take care of jitter here */
+	tp->tcp_wstamp_ns = max(tp->tcp_wstamp_ns, tp->tcp_clock_cache);
+
 	skb->skb_mstamp_ns = tp->tcp_wstamp_ns;
 
 	/* TODO: might take care of jitter here */
