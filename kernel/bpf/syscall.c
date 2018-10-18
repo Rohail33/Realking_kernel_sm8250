@@ -652,6 +652,17 @@ int __weak bpf_stackmap_copy(struct bpf_map *map, void *key, void *value)
 	return -ENOTSUPP;
 }
 
+static void *__bpf_copy_key(void __user *ukey, u64 key_size)
+{
+	if (key_size)
+		return memdup_user(ukey, key_size);
+
+	if (ukey)
+		return ERR_PTR(-EINVAL);
+
+	return NULL;
+}
+
 /* last field in 'union bpf_attr' used by this command */
 #define BPF_MAP_LOOKUP_ELEM_LAST_FIELD value
 
@@ -679,7 +690,7 @@ static int map_lookup_elem(union bpf_attr *attr)
 		goto err_put;
 	}
 
-	key = memdup_user(ukey, map->key_size);
+	key = __bpf_copy_key(ukey, map->key_size);
 	if (IS_ERR(key)) {
 		err = PTR_ERR(key);
 		goto err_put;
@@ -798,7 +809,7 @@ static int map_update_elem(union bpf_attr *attr)
 		goto err_put;
 	}
 
-	key = memdup_user(ukey, map->key_size);
+	key = __bpf_copy_key(ukey, map->key_size);
 	if (IS_ERR(key)) {
 		err = PTR_ERR(key);
 		goto err_put;
@@ -901,7 +912,7 @@ static int map_delete_elem(union bpf_attr *attr)
 		goto err_put;
 	}
 
-	key = memdup_user(ukey, map->key_size);
+	key = __bpf_copy_key(ukey, map->key_size);
 	if (IS_ERR(key)) {
 		err = PTR_ERR(key);
 		goto err_put;
@@ -954,7 +965,7 @@ static int map_get_next_key(union bpf_attr *attr)
 	}
 
 	if (ukey) {
-		key = memdup_user(ukey, map->key_size);
+		key = __bpf_copy_key(ukey, map->key_size);
 		if (IS_ERR(key)) {
 			err = PTR_ERR(key);
 			goto err_put;
