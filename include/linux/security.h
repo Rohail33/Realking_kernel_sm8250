@@ -65,7 +65,7 @@ enum fs_value_type;
 /* If capable is being called by a setid function */
 #define CAP_OPT_INSETID BIT(2)
 
-/* LSM Agnostic defines for sb_set_mnt_opts */
+/* LSM Agnostic defines for fs_context::lsm_flags */
 #define SECURITY_LSM_NATIVE_LABELS	1
 
 struct ctl_table;
