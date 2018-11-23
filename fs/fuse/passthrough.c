@@ -12,7 +12,26 @@ struct fuse_aio_req {
 	struct kiocb *iocb_fuse;
 };
 
-static void fuse_copyattr(struct file *dst_file, struct file *src_file)
+static void fuse_file_accessed(struct file *dst_file, struct file *src_file)
+{
+	struct inode *dst_inode;
+	struct inode *src_inode;
+
+	if (dst_file->f_flags & O_NOATIME)
+		return;
+
+	dst_inode = file_inode(dst_file);
+	src_inode = file_inode(src_file);
+
+	if ((!timespec64_equal(&dst_inode->i_mtime, &src_inode->i_mtime) ||
+	     !timespec64_equal(&dst_inode->i_ctime, &src_inode->i_ctime))) {
+		dst_inode->i_mtime = src_inode->i_mtime;
+		dst_inode->i_ctime = src_inode->i_ctime;
+	}
+
+	touch_atime(&dst_file->f_path);
+}
+void fuse_copyattr(struct file *dst_file, struct file *src_file)
 {
 	struct inode *dst = file_inode(dst_file);
 	struct inode *src = file_inode(src_file);
@@ -62,18 +81,6 @@ static void fuse_aio_rw_complete(struct kiocb *iocb, long res, long res2)
 
 	fuse_aio_cleanup_handler(aio_req);
 	iocb_fuse->ki_complete(iocb_fuse, res, res2);
-}
-
-static inline void kiocb_clone(struct kiocb *kiocb, struct kiocb *kiocb_src,
-			       struct file *filp)
-{
-	*kiocb = (struct kiocb){
-		.ki_filp = filp,
-		.ki_flags = kiocb_src->ki_flags,
-		.ki_hint = kiocb_src->ki_hint,
-		.ki_ioprio = kiocb_src->ki_ioprio,
-		.ki_pos = kiocb_src->ki_pos,
-	};
 }
 
 ssize_t fuse_passthrough_read_iter(struct kiocb *iocb_fuse,
@@ -183,7 +190,8 @@ int fuse_passthrough_open(struct fuse_dev *fud,
 	}
 
 	if (!passthrough_filp->f_op->read_iter ||
-	    !passthrough_filp->f_op->write_iter) {
+	    !((passthrough_filp->f_path.mnt->mnt_flags | MNT_READONLY) ||
+	       passthrough_filp->f_op->write_iter)) {
 		pr_err("FUSE: passthrough file misses file operations.\n");
 		return -EBADF;
 	}
@@ -243,6 +251,45 @@ int fuse_passthrough_setup(struct fuse_conn *fc, struct fuse_file *ff,
 	kfree(passthrough);
 
 	return 0;
+}
+
+int fuse_passthrough_mmap(struct file *file, struct vm_area_struct *vma)
+{
+	int ret;
+	const struct cred *old_cred;
+	struct fuse_file *ff = file->private_data;
+	struct inode *fuse_inode = file_inode(file);
+	struct file *passthrough_file = ff->passthrough.filp;
+	struct inode *passthrough_inode = file_inode(passthrough_file);
+
+	if (!passthrough_file->f_op->mmap)
+		return -ENODEV;
+
+	if (WARN_ON(file != vma->vm_file))
+		return -EIO;
+
+	vma->vm_file = get_file(passthrough_file);
+
+	old_cred = override_creds(ff->passthrough.cred);
+	ret = call_mmap(vma->vm_file, vma);
+	revert_creds(old_cred);
+
+	if (ret)
+		fput(passthrough_file);
+	else
+		fput(file);
+
+	if (file->f_flags & O_NOATIME)
+		return ret;
+
+	if ((!timespec64_equal(&fuse_inode->i_mtime, &passthrough_inode->i_mtime) ||
+	     !timespec64_equal(&fuse_inode->i_ctime, &passthrough_inode->i_ctime))) {
+		fuse_inode->i_mtime = passthrough_inode->i_mtime;
+		fuse_inode->i_ctime = passthrough_inode->i_ctime;
+	}
+	touch_atime(&file->f_path);
+
+	return ret;
 }
 
 void fuse_passthrough_release(struct fuse_passthrough *passthrough)

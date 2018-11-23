@@ -75,4 +75,3 @@ void notrace __hot ftrace_function_trampoline(unsigned long parent,
 	}
 #endif
 }
-

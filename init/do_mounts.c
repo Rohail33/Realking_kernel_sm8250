@@ -597,33 +597,23 @@ out:
 }
 
 static bool is_tmpfs;
-static struct dentry *rootfs_mount(struct file_system_type *fs_type,
-	int flags, const char *dev_name, void *data)
+static int rootfs_init_fs_context(struct fs_context *fc)
 {
-	static unsigned long once;
-	void *fill = ramfs_fill_super;
-
-	if (test_and_set_bit(0, &once))
-		return ERR_PTR(-ENODEV);
-
 	if (IS_ENABLED(CONFIG_TMPFS) && is_tmpfs)
-		fill = shmem_fill_super;
+		return shmem_init_fs_context(fc);
 
-	return mount_nodev(fs_type, flags, data, fill);
+	return ramfs_init_fs_context(fc);
 }
 
-static struct file_system_type rootfs_fs_type = {
+struct file_system_type rootfs_fs_type = {
 	.name		= "rootfs",
-	.mount		= rootfs_mount,
+	.init_fs_context = rootfs_init_fs_context,
 	.kill_sb	= kill_litter_super,
 };
 
 int __init init_rootfs(void)
 {
-	int err = register_filesystem(&rootfs_fs_type);
-
-	if (err)
-		return err;
+	int err = 0;
 
 	if (IS_ENABLED(CONFIG_TMPFS) && !saved_root_name[0] &&
 		(!root_fs_names || strstr(root_fs_names, "tmpfs"))) {
@@ -632,9 +622,5 @@ int __init init_rootfs(void)
 	} else {
 		err = init_ramfs_fs();
 	}
-
-	if (err)
-		unregister_filesystem(&rootfs_fs_type);
-
 	return err;
 }

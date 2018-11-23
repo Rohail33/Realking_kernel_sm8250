@@ -929,7 +929,7 @@ static struct nfs_parsed_mount_data *nfs_alloc_parsed_mount_data(void)
 		data->minorversion	= 0;
 		data->need_mount	= true;
 		data->net		= current->nsproxy->net_ns;
-		security_init_mnt_opts(&data->lsm_opts);
+		data->lsm_opts		= NULL;
 	}
 	return data;
 }
@@ -2076,14 +2076,9 @@ static int nfs23_validate_mount_data(void *options,
 		if (data->context[0]){
 #ifdef CONFIG_SECURITY_SELINUX
 			int rc;
-			char *opts_str = kmalloc(sizeof(data->context) + 8, GFP_KERNEL);
-			if (!opts_str)
-				return -ENOMEM;
-			strcpy(opts_str, "context=");
 			data->context[NFS_MAX_CONTEXT_LEN] = '\0';
-			strcat(opts_str, &data->context[0]);
-			rc = security_sb_parse_opts_str(opts_str, &args->lsm_opts);
-			kfree(opts_str);
+			rc = security_add_mnt_opt("context", data->context,
+					strlen(data->context), &args->lsm_opts);
 			if (rc)
 				return rc;
 #else
@@ -2261,7 +2256,7 @@ nfs_remount(struct super_block *sb, int *flags, char *raw_data)
 					   options->version <= 6))))
 		return 0;
 
-	data = kzalloc(sizeof(*data), GFP_KERNEL);
+	data = nfs_alloc_parsed_mount_data();
 	if (data == NULL)
 		return -ENOMEM;
 
@@ -2300,8 +2295,10 @@ nfs_remount(struct super_block *sb, int *flags, char *raw_data)
 
 	/* compare new mount options with old ones */
 	error = nfs_compare_remount_data(nfss, data);
+	if (!error)
+		error = security_sb_remount(sb, data->lsm_opts);
 out:
-	kfree(data);
+	nfs_free_parsed_mount_data(data);
 	return error;
 }
 EXPORT_SYMBOL_GPL(nfs_remount);
@@ -2538,7 +2535,7 @@ int nfs_set_sb_security(struct super_block *s, struct dentry *mntroot,
 	if (NFS_SB(s)->caps & NFS_CAP_SECURITY_LABEL)
 		kflags |= SECURITY_LSM_NATIVE_LABELS;
 
-	error = security_sb_set_mnt_opts(s, &mount_info->parsed->lsm_opts,
+	error = security_sb_set_mnt_opts(s, mount_info->parsed->lsm_opts,
 						kflags, &kflags_out);
 	if (error)
 		goto err;

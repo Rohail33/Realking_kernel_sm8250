@@ -5,7 +5,10 @@
 #include <linux/fs.h>
 #include <linux/mm.h>
 #include <linux/radix-tree.h>
-#include <asm/pgtable.h>
+#include <linux/pgtable.h>
+
+/* Flag for synchronous flush */
+#define DAXDEV_F_SYNC (1UL << 0)
 
 struct iomap_ops;
 struct dax_device;
@@ -23,6 +26,8 @@ struct dax_operations {
 	/* copy_to_iter: required operation for fs-dax direct-i/o */
 	size_t (*copy_to_iter)(struct dax_device *, pgoff_t, void *, size_t,
 			struct iov_iter *);
+	/* zero_page_range: required operation. Zero page range   */
+	int (*zero_page_range)(struct dax_device *, pgoff_t, size_t);
 };
 
 extern struct attribute_group dax_attribute_group;
@@ -30,18 +35,28 @@ extern struct attribute_group dax_attribute_group;
 #if IS_ENABLED(CONFIG_DAX)
 struct dax_device *dax_get_by_host(const char *host);
 struct dax_device *alloc_dax(void *private, const char *host,
-		const struct dax_operations *ops);
+		const struct dax_operations *ops, unsigned long flags);
 void put_dax(struct dax_device *dax_dev);
 void kill_dax(struct dax_device *dax_dev);
 void dax_write_cache(struct dax_device *dax_dev, bool wc);
 bool dax_write_cache_enabled(struct dax_device *dax_dev);
+bool __dax_synchronous(struct dax_device *dax_dev);
+static inline bool dax_synchronous(struct dax_device *dax_dev)
+{
+	return  __dax_synchronous(dax_dev);
+}
+void __set_dax_synchronous(struct dax_device *dax_dev);
+static inline void set_dax_synchronous(struct dax_device *dax_dev)
+{
+	__set_dax_synchronous(dax_dev);
+}
 #else
 static inline struct dax_device *dax_get_by_host(const char *host)
 {
 	return NULL;
 }
 static inline struct dax_device *alloc_dax(void *private, const char *host,
-		const struct dax_operations *ops)
+		const struct dax_operations *ops, unsigned long flags)
 {
 	/*
 	 * Callers should check IS_ENABLED(CONFIG_DAX) to know if this
@@ -61,6 +76,13 @@ static inline void dax_write_cache(struct dax_device *dax_dev, bool wc)
 static inline bool dax_write_cache_enabled(struct dax_device *dax_dev)
 {
 	return false;
+}
+static inline bool dax_synchronous(struct dax_device *dax_dev)
+{
+	return true;
+}
+static inline void set_dax_synchronous(struct dax_device *dax_dev)
+{
 }
 #endif
 
@@ -144,6 +166,8 @@ size_t dax_copy_from_iter(struct dax_device *dax_dev, pgoff_t pgoff, void *addr,
 		size_t bytes, struct iov_iter *i);
 size_t dax_copy_to_iter(struct dax_device *dax_dev, pgoff_t pgoff, void *addr,
 		size_t bytes, struct iov_iter *i);
+int dax_zero_page_range(struct dax_device *dax_dev, pgoff_t pgoff,
+			size_t nr_pages);
 void dax_flush(struct dax_device *dax_dev, void *addr, size_t size);
 
 ssize_t dax_iomap_rw(struct kiocb *iocb, struct iov_iter *iter,

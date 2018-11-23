@@ -116,14 +116,15 @@ static int ftrace_modify_code(unsigned long pc, unsigned long old,
 	}
 
 	if (validate) {
-		if (probe_kernel_read(&replaced, (void *)pc, MCOUNT_INSN_SIZE))
+		if (copy_from_kernel_nofault(&replaced, (void *)pc,
+				MCOUNT_INSN_SIZE))
 			return -EFAULT;
 
 		if (replaced != old)
 			return -EINVAL;
 	}
 
-	if (probe_kernel_write((void *)pc, &new, MCOUNT_INSN_SIZE))
+	if (copy_to_kernel_nofault((void *)pc, &new, MCOUNT_INSN_SIZE))
 		return -EPERM;
 
 	flush_icache_range(pc, pc + MCOUNT_INSN_SIZE);

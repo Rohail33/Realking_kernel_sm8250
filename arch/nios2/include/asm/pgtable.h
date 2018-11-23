@@ -290,7 +290,6 @@ static inline void pte_clear(struct mm_struct *mm,
 
 #define kern_addr_valid(addr)		(1)
 
-#include <asm-generic/pgtable.h>
 
 #define pgtable_cache_init()		do { } while (0)
 

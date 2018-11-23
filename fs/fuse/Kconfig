@@ -7,7 +7,7 @@ config FUSE_FS
 
 	  There's also a companion library: libfuse2.  This library is available
 	  from the FUSE homepage:
-	  <http://fuse.sourceforge.net/>
+	  <https://github.com/libfuse/>
 	  although chances are your distribution already has that library
 	  installed if you've installed the "fuse" package itself.
 
@@ -26,3 +26,36 @@ config CUSE
 
 	  If you want to develop or use a userspace character device
 	  based on CUSE, answer Y or M.
+
+config VIRTIO_FS
+	tristate "Virtio Filesystem"
+	depends on FUSE_FS
+	select VIRTIO
+	help
+	  The Virtio Filesystem allows guests to mount file systems from the
+	  host.
+
+	  If you want to share files between guests or with the host, answer Y
+	  or M.
+
+config FUSE_DAX
+	bool "Virtio Filesystem Direct Host Memory Access support"
+	default y
+	select INTERVAL_TREE
+	depends on VIRTIO_FS
+	depends on FS_DAX
+	depends on DAX_DRIVER
+	help
+	  This allows bypassing guest page cache and allows mapping host page
+	  cache directly in guest address space.
+
+	  If you want to allow mounting a Virtio Filesystem with the "dax"
+	  option, answer Y.
+
+config FUSE_BPF
+	bool "Adds BPF to fuse"
+	depends on FUSE_FS
+	depends on BPF
+	help
+	  Extends FUSE by adding BPF to prefilter calls and potentially pass to a
+	  backing file system

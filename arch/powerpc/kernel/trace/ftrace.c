@@ -57,7 +57,7 @@ ftrace_modify_code(unsigned long ip, unsigned int old, unsigned int new)
 	 */
 
 	/* read the text we want to modify */
-	if (probe_kernel_read(&replaced, (void *)ip, MCOUNT_INSN_SIZE))
+	if (copy_from_kernel_nofault(&replaced, (void *)ip, MCOUNT_INSN_SIZE))
 		return -EFAULT;
 
 	/* Make sure it is what we expect it to be */
@@ -114,7 +114,7 @@ __ftrace_make_nop(struct module *mod,
 	unsigned int op, pop;
 
 	/* read where this goes */
-	if (probe_kernel_read(&op, (void *)ip, sizeof(int))) {
+	if (copy_from_kernel_nofault(&op, (void *)ip, sizeof(int))) {
 		pr_err("Fetching opcode failed.\n");
 		return -EFAULT;
 	}
@@ -148,7 +148,7 @@ __ftrace_make_nop(struct module *mod,
 	/* When using -mkernel_profile there is no load to jump over */
 	pop = PPC_INST_NOP;
 
-	if (probe_kernel_read(&op, (void *)(ip - 4), 4)) {
+	if (copy_from_kernel_nofault(&op, (void *)(ip - 4), 4)) {
 		pr_err("Fetching instruction at %lx failed.\n", ip - 4);
 		return -EFAULT;
 	}
@@ -179,7 +179,7 @@ __ftrace_make_nop(struct module *mod,
 	 * Check what is in the next instruction. We can see ld r2,40(r1), but
 	 * on first pass after boot we will see mflr r0.
 	 */
-	if (probe_kernel_read(&op, (void *)(ip+4), MCOUNT_INSN_SIZE)) {
+	if (copy_from_kernel_nofault(&op, (void *)(ip+4), MCOUNT_INSN_SIZE)) {
 		pr_err("Fetching op failed.\n");
 		return -EFAULT;
 	}
@@ -208,7 +208,7 @@ __ftrace_make_nop(struct module *mod,
 	unsigned long ip = rec->ip;
 	unsigned long tramp;
 
-	if (probe_kernel_read(&op, (void *)ip, MCOUNT_INSN_SIZE))
+	if (copy_from_kernel_nofault(&op, (void *)ip, MCOUNT_INSN_SIZE))
 		return -EFAULT;
 
 	/* Make sure that that this is still a 24bit jump */
@@ -231,7 +231,7 @@ __ftrace_make_nop(struct module *mod,
 	pr_devel("ip:%lx jumps to %lx", ip, tramp);
 
 	/* Find where the trampoline jumps to */
-	if (probe_kernel_read(jmp, (void *)tramp, sizeof(jmp))) {
+	if (copy_from_kernel_nofault(jmp, (void *)tramp, sizeof(jmp))) {
 		pr_err("Failed to read %lx\n", tramp);
 		return -EFAULT;
 	}
@@ -361,7 +361,7 @@ __ftrace_make_call(struct dyn_ftrace *rec, unsigned long addr)
 	struct module *mod = rec->arch.mod;
 
 	/* read where this goes */
-	if (probe_kernel_read(op, ip, sizeof(op)))
+	if (copy_from_kernel_nofault(op, ip, sizeof(op)))
 		return -EFAULT;
 
 	if (!expected_nop_sequence(ip, op[0], op[1])) {
@@ -423,7 +423,7 @@ __ftrace_make_call(struct dyn_ftrace *rec, unsigned long addr)
 	unsigned long ip = rec->ip;
 
 	/* read where this goes */
-	if (probe_kernel_read(&op, (void *)ip, MCOUNT_INSN_SIZE))
+	if (copy_from_kernel_nofault(&op, (void *)ip, MCOUNT_INSN_SIZE))
 		return -EFAULT;
 
 	/* It should be pointing to a nop */
@@ -509,7 +509,7 @@ __ftrace_modify_call(struct dyn_ftrace *rec, unsigned long old_addr,
 	}
 
 	/* read where this goes */
-	if (probe_kernel_read(&op, (void *)ip, sizeof(int))) {
+	if (copy_from_kernel_nofault(&op, (void *)ip, sizeof(int))) {
 		pr_err("Fetching opcode failed.\n");
 		return -EFAULT;
 	}
