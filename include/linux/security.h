@@ -284,8 +284,7 @@ int security_sb_alloc(struct super_block *sb);
 void security_sb_free(struct super_block *sb);
 int security_sb_eat_lsm_opts(char *options, struct security_mnt_opts *opts);
 int security_sb_remount(struct super_block *sb, struct security_mnt_opts *opts);
-int security_sb_kern_mount(struct super_block *sb, int flags,
-			   struct security_mnt_opts *opts);
+int security_sb_kern_mount(struct super_block *sb);
 int security_sb_show_options(struct seq_file *m, struct super_block *sb);
 int security_sb_statfs(struct dentry *dentry);
 int security_sb_mount(const char *dev_name, const struct path *path,
@@ -609,8 +608,7 @@ static inline int security_sb_remount(struct super_block *sb,
 	return 0;
 }
 
-static inline int security_sb_kern_mount(struct super_block *sb, int flags,
-					 struct security_mnt_opts *opts)
+static inline int security_sb_kern_mount(struct super_block *sb)
 {
 	return 0;
 }
