@@ -30,6 +30,7 @@ struct path;
 
 enum fs_context_purpose {
 	FS_CONTEXT_FOR_MOUNT,		/* New superblock for explicit mount */
+	FS_CONTEXT_FOR_SUBMOUNT,	/* New superblock for automatic submount */
 	FS_CONTEXT_FOR_RECONFIGURE,	/* Superblock reconfiguration (remount) */
 };
 
@@ -105,6 +106,8 @@ extern struct fs_context *fs_context_for_mount(struct file_system_type *fs_type,
 extern struct fs_context *fs_context_for_reconfigure(struct dentry *dentry,
 						unsigned int sb_flags,
 						unsigned int sb_flags_mask);
+extern struct fs_context *fs_context_for_submount(struct file_system_type *fs_type,
+						struct dentry *reference);
 
 extern int vfs_parse_fs_param(struct fs_context *fc, struct fs_parameter *param);
 extern int vfs_parse_fs_string(struct fs_context *fc, const char *key,
