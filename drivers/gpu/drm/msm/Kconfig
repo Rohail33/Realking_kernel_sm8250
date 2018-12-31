@@ -102,3 +102,10 @@ config DRM_MSM_DSI_10NM_PHY
 	default y
 	help
 	  Choose this option if DSI PHY on SDM845 is used on the platform.
+
+config EXPOSURE_ADJUSTMENT
+	bool "Enable exposure adjustment driver"
+	depends on DRM_MSM
+	help
+          The EXPOSURE ADJUSTMENT provides exposure adjustment function without change
+          panel hardware brightness to avoid PWM flicker on OLED devices.
