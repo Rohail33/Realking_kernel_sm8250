@@ -738,7 +738,7 @@ retry:
 		 * If we have a pending SIGKILL, don't keep faulting pages and
 		 * potentially allocating memory.
 		 */
-		if (unlikely(fatal_signal_pending(current)))
+		if (fatal_signal_pending(current))
 			return i ? i : -ERESTARTSYS;
 		cond_resched();
 		page = follow_page_mask(vma, start, foll_flags, &page_mask);

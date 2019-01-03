@@ -1173,7 +1173,7 @@ static inline __sched int wait_on_page_bit_common(wait_queue_head_t *q,
 				break;
 		}
 
-		if (unlikely(signal_pending_state(state, current))) {
+		if (signal_pending_state(state, current)) {
 			ret = -EINTR;
 			break;
 		}
