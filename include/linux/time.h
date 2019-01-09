@@ -7,6 +7,8 @@
 # include <linux/math64.h>
 # include <linux/time64.h>
 
+#define TIMER_LOCK_TIGHT_LOOP_DELAY_NS	350
+
 extern struct timezone sys_tz;
 
 int get_timespec64(struct timespec64 *ts,
