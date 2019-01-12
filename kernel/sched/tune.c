@@ -1246,6 +1246,23 @@ int do_stune_boost(char *st_name, int boost, int *slot)
 	return _do_stune_boost(st, boost, slot);
 }
 
+int set_stune_boost(char *st_name, int boost, int *boost_default)
+{
+	struct schedtune *st = stune_get_by_name(st_name);
+	int ret;
+
+	if (!st)
+		return -EINVAL;
+
+	mutex_lock(&stune_boost_mutex);
+	if (boost_default)
+		*boost_default = st->boost_default;
+	ret = boost_write(&st->css, NULL, boost);
+	mutex_unlock(&stune_boost_mutex);
+
+	return ret;
+}
+
 #endif /* CONFIG_DYNAMIC_STUNE_BOOST */
 
 
