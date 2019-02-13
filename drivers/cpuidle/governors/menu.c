@@ -183,7 +183,7 @@ static inline int performance_multiplier(unsigned long nr_iowaiters, unsigned lo
 	/* mult += 2 * get_loadavg(); */
 
 	/* for IO wait tasks (per cpu!) we add 5x each */
-	mult += 10 * nr_iowaiters;
+	mult += 2 * nr_iowaiters;
 
 	return mult;
 }
