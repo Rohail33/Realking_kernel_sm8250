@@ -321,7 +321,7 @@ int tsens_tm_probe(struct platform_device *pdev)
 		&tmdev->phys_addr_tm);
 
 	tmdev->tsens_reinit_work = alloc_workqueue(tsens_name,
-		WQ_HIGHPRI, 0);
+		WQ_UNBOUND, 1);
 	if (!tmdev->tsens_reinit_work) {
 		rc = -ENOMEM;
 		return rc;
