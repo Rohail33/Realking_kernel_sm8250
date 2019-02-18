@@ -5714,7 +5714,7 @@ struct usbpd *usbpd_create(struct device *parent)
 	if (ret)
 		goto free_pd;
 
-	pd->wq = alloc_ordered_workqueue("usbpd_wq", WQ_FREEZABLE | WQ_HIGHPRI);
+	pd->wq = alloc_ordered_workqueue("usbpd_wq", WQ_FREEZABLE);
 	if (!pd->wq) {
 		ret = -ENOMEM;
 		goto del_pd;
