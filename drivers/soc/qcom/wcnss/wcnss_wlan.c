@@ -1663,7 +1663,7 @@ static int wcnss_ctrl_probe(struct rpmsg_device *rpdev)
 	schedule_work(&penv->wcnssctrl_version_work);
 	schedule_work(&penv->wcnss_pm_config_work);
 	cancel_delayed_work(&penv->wcnss_pm_qos_del_req);
-	schedule_delayed_work(&penv->wcnss_pm_qos_del_req, 0);
+	queue_delayed_work(system_power_efficient_wq, &penv->wcnss_pm_qos_del_req, 0);
 	if (penv->wlan_config.is_pronto_vadc && penv->adc_channel)
 		schedule_work(&penv->wcnss_vadc_work);
 
@@ -2219,7 +2219,7 @@ static void wcnss_notify_vbat(enum adc_tm_state state, void *ctx)
 	if (rc)
 		wcnss_log(ERR, "%s: tm setup failed: %d\n", __func__, rc);
 	else
-		schedule_delayed_work(&penv->vbatt_work,
+		queue_delayed_work(system_power_efficient_wq, &penv->vbatt_work,
 				      msecs_to_jiffies(2000));
 
 	mutex_unlock(&penv->vbat_monitor_mutex);
@@ -3674,7 +3674,7 @@ static int wcnss_notif_cb(struct notifier_block *this, unsigned long code,
 	} else if ((code == SUBSYS_BEFORE_SHUTDOWN && data && data->crashed) ||
 			code == SUBSYS_SOC_RESET) {
 		wcnss_disable_pc_add_req();
-		schedule_delayed_work(&penv->wcnss_pm_qos_del_req,
+		queue_delayed_work(system_power_efficient_wq, &penv->wcnss_pm_qos_del_req,
 				      msecs_to_jiffies(WCNSS_PM_QOS_TIMEOUT));
 		penv->is_shutdown = 1;
 
@@ -3692,7 +3692,7 @@ static int wcnss_notif_cb(struct notifier_block *this, unsigned long code,
 		wcnss_disable_pc_remove_req();
 	} else if (code == SUBSYS_BEFORE_SHUTDOWN) {
 		wcnss_disable_pc_add_req();
-		schedule_delayed_work(&penv->wcnss_pm_qos_del_req,
+		queue_delayed_work(system_power_efficient_wq, &penv->wcnss_pm_qos_del_req,
 				      msecs_to_jiffies(WCNSS_PM_QOS_TIMEOUT));
 		penv->is_shutdown = 1;
 	} else if (code == SUBSYS_AFTER_POWERUP) {
