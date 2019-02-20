@@ -719,7 +719,7 @@ static int wcd_spi_clk_ctrl(struct spi_device *spi,
 		 * flags.
 		 */
 		if (flags == WCD_SPI_CLK_FLAG_DELAYED) {
-			schedule_delayed_work(&wcd_spi->clk_dwork,
+			queue_delayed_work(system_power_efficient_wq, &wcd_spi->clk_dwork,
 				msecs_to_jiffies(WCD_SPI_CLK_OFF_TIMER_MS));
 		} else {
 			ret = wcd_spi_clk_disable(spi);

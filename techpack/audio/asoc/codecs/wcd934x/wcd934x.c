@@ -2141,7 +2141,7 @@ static int tavil_codec_enable_spkr_anc(struct snd_soc_dapm_widget *w,
 	switch (event) {
 	case SND_SOC_DAPM_PRE_PMU:
 		ret = tavil_codec_enable_anc(w, kcontrol, event);
-		schedule_delayed_work(&tavil->spk_anc_dwork.dwork,
+		queue_delayed_work(system_power_efficient_wq, &tavil->spk_anc_dwork.dwork,
 				      msecs_to_jiffies(spk_anc_en_delay));
 		break;
 	case SND_SOC_DAPM_POST_PMD:
@@ -4704,11 +4704,11 @@ static int tavil_codec_enable_dec(struct snd_soc_dapm_widget *w,
 		snd_soc_component_update_bits(component, hpf_gate_reg,
 					0x02, 0x00);
 		/* schedule work queue to Remove Mute */
-		schedule_delayed_work(&tavil->tx_mute_dwork[decimator].dwork,
+		queue_delayed_work(system_power_efficient_wq, &tavil->tx_mute_dwork[decimator].dwork,
 				      msecs_to_jiffies(tx_unmute_delay));
 		if (tavil->tx_hpf_work[decimator].hpf_cut_off_freq !=
 							CF_MIN_3DB_150HZ)
-			schedule_delayed_work(
+			queue_delayed_work(system_power_efficient_wq,
 					&tavil->tx_hpf_work[decimator].dwork,
 					msecs_to_jiffies(300));
 		/* apply gain after decimator is enabled */
@@ -9318,7 +9318,7 @@ static int tavil_dig_core_power_collapse(struct tavil_priv *tavil,
 
 	if (req_state == POWER_COLLAPSE) {
 		if (tavil->power_active_ref == 0) {
-			schedule_delayed_work(&tavil->power_gate_work,
+			queue_delayed_work(system_power_efficient_wq, &tavil->power_gate_work,
 			msecs_to_jiffies(dig_core_collapse_timer * 1000));
 		}
 	} else if (req_state == POWER_RESUME) {
