@@ -1025,9 +1025,9 @@ static int kasan_handler(struct pt_regs *regs, unsigned int esr)
 #define KASAN_ESR_MASK 0xffffff00
 
 static struct break_hook kasan_break_hook = {
-	.esr_val = KASAN_ESR_VAL,
-	.esr_mask = KASAN_ESR_MASK,
 	.fn = kasan_handler,
+	.imm = KASAN_BRK_IMM,
+	.mask = KASAN_BRK_MASK,
 };
 #endif
 
