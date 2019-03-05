@@ -416,21 +416,15 @@ static irqreturn_t bcl_handle_ibat(int irq, void *data)
 {
 	struct bcl_peripheral_data *perph_data =
 		(struct bcl_peripheral_data *)data;
+	bool irq_enabled = false;
 
 	mutex_lock(&perph_data->state_trans_lock);
-	if (!perph_data->irq_enabled) {
-		WARN_ON(1);
-		disable_irq_nosync(irq);
-		perph_data->irq_enabled = false;
-		goto exit_intr;
-	}
+	irq_enabled = perph_data->irq_enabled;
 	mutex_unlock(&perph_data->state_trans_lock);
-	of_thermal_handle_trip(perph_data->tz_dev);
 
-	return IRQ_HANDLED;
+	if (irq_enabled)
+		of_thermal_handle_trip(perph_data->tz_dev);
 
-exit_intr:
-	mutex_unlock(&perph_data->state_trans_lock);
 	return IRQ_HANDLED;
 }
 
@@ -438,21 +432,15 @@ static irqreturn_t bcl_handle_vbat(int irq, void *data)
 {
 	struct bcl_peripheral_data *perph_data =
 		(struct bcl_peripheral_data *)data;
+	bool irq_enabled = false;
 
 	mutex_lock(&perph_data->state_trans_lock);
-	if (!perph_data->irq_enabled) {
-		WARN_ON(1);
-		disable_irq_nosync(irq);
-		perph_data->irq_enabled = false;
-		goto exit_intr;
-	}
+	irq_enabled = perph_data->irq_enabled;
 	mutex_unlock(&perph_data->state_trans_lock);
-	of_thermal_handle_trip(perph_data->tz_dev);
 
-	return IRQ_HANDLED;
+	if (irq_enabled)
+		of_thermal_handle_trip(perph_data->tz_dev);
 
-exit_intr:
-	mutex_unlock(&perph_data->state_trans_lock);
 	return IRQ_HANDLED;
 }
 
