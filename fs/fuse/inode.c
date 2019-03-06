@@ -992,7 +992,7 @@ static void process_init_reply(struct fuse_conn *fc, struct fuse_args *args,
 	wake_up_all(&fc->blocked_waitq);
 }
 
-static void fuse_send_init(struct fuse_conn *fc)
+void fuse_send_init(struct fuse_conn *fc)
 {
 	struct fuse_init_args *ia;
 
@@ -1030,6 +1030,7 @@ static void fuse_send_init(struct fuse_conn *fc)
 	if (fuse_simple_background(fc, &ia->args, GFP_KERNEL) != 0)
 		process_init_reply(fc, &ia->args, -ENOTCONN);
 }
+EXPORT_SYMBOL_GPL(fuse_send_init);
 
 static int free_fuse_passthrough(int id, void *p, void *data)
 {
