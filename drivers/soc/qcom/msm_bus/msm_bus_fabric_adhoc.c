@@ -1145,7 +1145,6 @@ static int msm_bus_device_probe(struct platform_device *pdev)
 		ret = msm_bus_init_clk(node_dev, &pdata->info[i]);
 		if (ret) {
 			MSM_BUS_ERR("\n Failed to init bus clk. ret %d", ret);
-			msm_bus_device_remove(pdev);
 			goto exit_device_probe;
 		}
 		/*Is this a fabric device ?*/
@@ -1184,7 +1183,10 @@ static int msm_bus_device_probe(struct platform_device *pdev)
 
 	dev_info(&pdev->dev, "Bus scaling driver probe successful\n");
 
+	return 0;
+
 exit_device_probe:
+	msm_bus_device_remove(pdev);
 	return ret;
 }
 
