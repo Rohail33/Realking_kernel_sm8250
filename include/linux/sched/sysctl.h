@@ -169,4 +169,6 @@ extern int sched_energy_aware_handler(struct ctl_table *table, int write,
 				 loff_t *ppos);
 #endif
 
+extern bool is_sched_lib_based_app(pid_t pid);
+
 #endif /* _LINUX_SCHED_SYSCTL_H */
