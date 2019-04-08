@@ -554,7 +554,6 @@ config UID_SYS_STATS_DEBUG
 
 config MEMORY_STATE_TIME
 	tristate "Memory freq/bandwidth time statistics"
-	depends on PROFILING
 	help
 	  Memory time statistics exported to /sys/kernel/memory_state_time
 
