@@ -501,7 +501,8 @@ exit_disable_node_qos_clk:
 	return ret;
 }
 
-static int msm_bus_enable_node_qos_clk(struct msm_bus_node_device_type *node)
+static int msm_bus_enable_node_qos_clk(struct msm_bus_node_device_type *node,
+				       bool *no_defer)
 {
 	struct msm_bus_node_device_type *bus_node = NULL;
 	int i;
@@ -534,6 +535,13 @@ static int msm_bus_enable_node_qos_clk(struct msm_bus_node_device_type *node)
 			goto exit_enable_node_qos_clk;
 		}
 
+	}
+
+	if (!bus_node->num_node_qos_clks) {
+		MSM_BUS_DBG("%s: Num of clks is zero\n", __func__);
+		ret = -EINVAL;
+		*no_defer = true;
+		goto exit_enable_node_qos_clk;
 	}
 
 	for (i = 0; i < bus_node->num_node_qos_clks; i++) {
@@ -641,15 +649,16 @@ static int msm_bus_dev_init_qos(struct device *dev, void *data)
 
 			if (node_dev->ap_owned &&
 				(node_dev->node_info->qos_params.mode) != -1) {
+				bool no_defer = false;
 
 				if (bus_node_info->fabdev->bypass_qos_prg)
 					goto exit_init_qos;
 
-				ret = msm_bus_enable_node_qos_clk(node_dev);
+				ret = msm_bus_enable_node_qos_clk(node_dev, &no_defer);
 				if (ret < 0) {
 					MSM_BUS_DBG("Can't Enable QoS clk %d\n",
 					node_dev->node_info->id);
-					node_dev->node_info->defer_qos = true;
+					node_dev->node_info->defer_qos = !no_defer;
 					goto exit_init_qos;
 				}
 
