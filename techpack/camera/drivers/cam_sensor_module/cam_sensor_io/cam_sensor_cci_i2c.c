@@ -13,7 +13,7 @@ int32_t cam_cci_i2c_read(struct cam_sensor_cci_client *cci_client,
 	enum camera_sensor_i2c_type data_type)
 {
 	int32_t rc = -EINVAL;
-	unsigned char buf[CAMERA_SENSOR_I2C_TYPE_DWORD];
+	unsigned char buf[8];
 	struct cam_cci_ctrl cci_ctrl;
 
 	if (addr_type <= CAMERA_SENSOR_I2C_TYPE_INVALID
