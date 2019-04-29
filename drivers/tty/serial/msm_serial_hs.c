@@ -4,7 +4,7 @@
  * MSM 7k High speed uart driver
  *
  * Copyright (c) 2008 Google Inc.
- * Copyright (c) 2007-2018, 2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2007-2019, 2020, The Linux Foundation. All rights reserved.
  * Modified: Nick Pelly <npelly@google.com>
  *
  * Has optional support for uart power management independent of linux
@@ -1173,6 +1173,9 @@ static void msm_hs_set_termios(struct uart_port *uport,
 		data |= EIGHT_BPC;
 		break;
 	}
+
+	uport->status  &= ~(UPSTAT_AUTOCTS);
+
 	/* stop bits */
 	if (c_cflag & CSTOPB) {
 		data |= STOP_BIT_TWO;
@@ -1217,6 +1220,7 @@ static void msm_hs_set_termios(struct uart_port *uport,
 	if (c_cflag & CRTSCTS) {
 		data |= UARTDM_MR1_CTS_CTL_BMSK;
 		data |= UARTDM_MR1_RX_RDY_CTL_BMSK;
+		uport->status |= UPSTAT_AUTOCTS;
 		msm_uport->flow_control = true;
 	}
 	msm_hs_write(uport, UART_DM_MR1, data);
