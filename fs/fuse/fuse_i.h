@@ -488,6 +488,8 @@ struct fuse_fs_context {
 	bool default_permissions:1;
 	bool allow_other:1;
 	bool destroy:1;
+	bool no_control:1;
+	bool no_force_umount:1;
 	unsigned int max_read;
 	unsigned int blksize;
 	const char *subtype;
@@ -715,6 +717,12 @@ struct fuse_conn {
 
 	/* Delete dentries that have gone stale */
 	unsigned int delete_stale:1;
+
+	/** Do not create entry in fusectl fs */
+	unsigned int no_control:1;
+
+	/** Do not allow MNT_FORCE umount */
+	unsigned int no_force_umount:1;
 
 	/** Passthrough mode for read/write IO */
 	unsigned int passthrough:1;
