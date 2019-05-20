@@ -410,7 +410,6 @@ static struct dentry *drm_fs_mount(struct file_system_type *fs_type, int flags,
 				   const char *dev_name, void *data)
 {
 	return mount_pseudo(fs_type,
-			    "drm:",
 			    NULL,
 			    NULL,
 			    0x010203ff);

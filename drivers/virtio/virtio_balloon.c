@@ -517,7 +517,7 @@ static struct dentry *balloon_mount(struct file_system_type *fs_type,
 		.d_dname = simple_dname,
 	};
 
-	return mount_pseudo(fs_type, "balloon-kvm:", NULL, &ops,
+	return mount_pseudo(fs_type, NULL, &ops,
 				BALLOON_KVM_MAGIC);
 }
 
