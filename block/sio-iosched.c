@@ -370,7 +370,7 @@ static struct elv_fs_entry sio_attrs[] = {
 };
 
 static struct elevator_type iosched_sio = {
-	.ops = {
+	.ops.sq = {
 		.elevator_merge_req_fn		= sio_merged_requests,
 		.elevator_dispatch_fn		= sio_dispatch_requests,
 		.elevator_add_req_fn		= sio_add_request,
