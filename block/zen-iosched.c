@@ -254,7 +254,7 @@ static struct elv_fs_entry zen_attrs[] = {
 };
 
 static struct elevator_type iosched_zen = {
-	.ops = {
+	.ops.sq = {
 		.elevator_merge_req_fn		= zen_merged_requests,
 		.elevator_dispatch_fn		= zen_dispatch_requests,
 		.elevator_add_req_fn		= zen_add_request,
