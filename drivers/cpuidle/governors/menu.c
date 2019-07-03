@@ -119,7 +119,6 @@
  */
 
 struct menu_device {
-	int		last_state_idx;
 	int             needs_update;
 	int             tick_wakeup;
 
@@ -452,9 +451,9 @@ static int menu_select(struct cpuidle_driver *drv, struct cpuidle_device *dev,
 	}
 
 out:
-	data->last_state_idx = idx;
+	dev->last_state_idx = idx;
 
-	return data->last_state_idx;
+	return dev->last_state_idx;
 }
 
 /**
@@ -469,7 +468,7 @@ static void menu_reflect(struct cpuidle_device *dev, int index)
 {
 	struct menu_device *data = this_cpu_ptr(&menu_devices);
 
-	data->last_state_idx = index;
+	dev->last_state_idx = index;
 	data->needs_update = 1;
 	data->tick_wakeup = tick_nohz_idle_got_tick();
 }
@@ -482,7 +481,7 @@ static void menu_reflect(struct cpuidle_device *dev, int index)
 static void menu_update(struct cpuidle_driver *drv, struct cpuidle_device *dev)
 {
 	struct menu_device *data = this_cpu_ptr(&menu_devices);
-	int last_idx = data->last_state_idx;
+	int last_idx = dev->last_state_idx;
 	struct cpuidle_state *target = &drv->states[last_idx];
 	unsigned int measured_us;
 	unsigned int new_factor;
