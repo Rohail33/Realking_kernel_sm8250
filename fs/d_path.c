@@ -426,10 +426,7 @@ SYSCALL_DEFINE2(getcwd, char __user *, buf, unsigned long, size)
 {
 	int error;
 	struct path pwd, root;
-	char *page = __getname();
-
-	if (!page)
-		return -ENOMEM;
+	char page[PATH_MAX] __aligned(8);
 
 	rcu_read_lock();
 	get_fs_root_and_pwd_rcu(current->fs, &root, &pwd);
@@ -466,6 +463,5 @@ SYSCALL_DEFINE2(getcwd, char __user *, buf, unsigned long, size)
 	}
 
 out:
-	__putname(page);
 	return error;
 }
