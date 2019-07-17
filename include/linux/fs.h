@@ -1984,6 +1984,7 @@ struct super_operations {
 	void (*umount_end)(struct super_block *sb, int flags);
 
 	int (*show_options)(struct seq_file *, struct dentry *);
+	int (*show_options2)(struct vfsmount *,struct seq_file *, struct dentry *);
 	int (*show_devname)(struct seq_file *, struct dentry *);
 	int (*show_path)(struct seq_file *, struct dentry *);
 	int (*show_stats)(struct seq_file *, struct dentry *);
