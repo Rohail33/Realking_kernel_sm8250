@@ -1197,12 +1197,12 @@ static int va_macro_enable_dec(struct snd_soc_dapm_widget *w,
 		 */
 		usleep_range(6000, 6010);
 		/* schedule work queue to Remove Mute */
-		queue_delayed_work(system_freezable_wq,
+		queue_delayed_work(system_power_efficient_wq,
 				   &va_priv->va_mute_dwork[decimator].dwork,
 				   msecs_to_jiffies(va_tx_unmute_delay));
 		if (va_priv->va_hpf_work[decimator].hpf_cut_off_freq !=
 							CF_MIN_3DB_150HZ)
-			queue_delayed_work(system_freezable_wq,
+			queue_delayed_work(system_power_efficient_wq,
 					&va_priv->va_hpf_work[decimator].dwork,
 					msecs_to_jiffies(hpf_delay));
 		/* apply gain after decimator is enabled */
