@@ -50,7 +50,6 @@ enum kgsl_event_results {
 	KGSL_EVENT_CANCELLED = 2,
 };
 
-#define KGSL_FLAG_WAKE_ON_TOUCH   BIT(0)
 #define KGSL_FLAG_SPARSE          BIT(1)
 #define KGSL_FLAG_USE_SHMEM       BIT(2)
 #define KGSL_FLAG_PROCESS_RECLAIM BIT(3)
