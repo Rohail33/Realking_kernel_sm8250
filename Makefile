@@ -717,9 +717,9 @@ else ifeq ($(cc-name),clang)
 KBUILD_CFLAGS   += -Ofast
 KBUILD_AFLAGS   += -Ofast
 else
-KBUILD_CFLAGS   += -Ofast
-KBUILD_AFLAGS   += -Ofast
-KBUILD_LDFLAGS  += -Ofast
+KBUILD_CFLAGS   += -O3
+KBUILD_AFLAGS   += -O2
+KBUILD_LDFLAGS  += -O2
 endif
 
 # Tell gcc to never replace conditional load with a non-conditional one
