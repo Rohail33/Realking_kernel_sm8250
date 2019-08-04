@@ -5,7 +5,6 @@ obj-$(CONFIG_MSM_VIDC_3X_V4L2) := 	msm_v4l2_vidc.o \
 				msm_vdec.o \
 				msm_venc.o \
 				msm_smem.o \
-				msm_vidc_debug.o \
 				msm_vidc_res_parse.o \
 				venus_hfi.o \
 				hfi_response_handler.o \
@@ -13,6 +12,8 @@ obj-$(CONFIG_MSM_VIDC_3X_V4L2) := 	msm_v4l2_vidc.o \
 				vidc_hfi.o \
 				venus_boot.o \
 				msm_vidc_dcvs.o
+
+obj-$(CONFIG_DEBUG_KERNEL) += msm_vidc_debug.o
 
 obj-$(CONFIG_MSM_VIDC_3X_V4L2) += governors/
 
