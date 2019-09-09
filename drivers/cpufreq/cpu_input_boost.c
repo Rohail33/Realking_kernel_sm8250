@@ -396,6 +396,11 @@ static const struct input_device_id cpu_input_boost_ids[] = {
 		.flags = INPUT_DEVICE_ID_MATCH_EVBIT,
 		.evbit = { BIT_MASK(EV_KEY) }
 	},
+	/* Power Key */
+	{
+		.flags = INPUT_DEVICE_ID_MATCH_EVBIT,
+		.evbit = { BIT_MASK(KEY_POWER) }
+	},
 	{ }
 };
 
