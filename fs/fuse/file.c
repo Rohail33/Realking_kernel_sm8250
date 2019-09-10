@@ -22,8 +22,8 @@
 
 #include <trace/events/android_fs.h>
 
-struct page **fuse_pages_alloc(unsigned int npages, gfp_t flags,
-			       struct fuse_page_desc **desc)
+static struct page **fuse_pages_alloc(unsigned int npages, gfp_t flags,
+				      struct fuse_page_desc **desc)
 {
 	struct page **pages;
 
