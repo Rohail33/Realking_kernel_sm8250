@@ -737,6 +737,9 @@ struct fuse_conn {
 	/** Does the filesystem support copy_file_range? */
 	unsigned no_copy_file_range:1;
 
+	/* Send DESTROY request */
+	unsigned int destroy:1;
+
 	/** Passthrough mode for read/write IO */
 	unsigned int passthrough:1;
 
@@ -760,9 +763,6 @@ struct fuse_conn {
 
 	/** Key for lock owner ID scrambling */
 	u32 scramble_key[4];
-
-	/** Reserved request for the DESTROY message */
-	struct fuse_req *destroy_req;
 
 	/** Version counter for attribute changes */
 	atomic64_t attr_version;
