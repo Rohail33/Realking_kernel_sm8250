@@ -320,6 +320,7 @@ struct fuse_args {
 	bool page_replace:1;
 	struct fuse_in_arg in_args[3];
 	struct fuse_arg out_args[2];
+	void (*end)(struct fuse_conn *fc, struct fuse_args *args, int error);
 	struct path *canonical_path;
 };
 
@@ -400,6 +401,9 @@ struct fuse_req {
 
 	/** Entry on the interrupts list  */
 	struct list_head intr_entry;
+
+	/* Input/output arguments */
+	struct fuse_args *args;
 
 	/** refcount */
 	refcount_t count;
@@ -990,6 +994,8 @@ void fuse_request_send(struct fuse_conn *fc, struct fuse_req *req);
  * Simple request sending that does request allocation and freeing
  */
 ssize_t fuse_simple_request(struct fuse_conn *fc, struct fuse_args *args);
+int fuse_simple_background(struct fuse_conn *fc, struct fuse_args *args,
+			   gfp_t gfp_flags);
 
 /**
  * Send a request in the background
