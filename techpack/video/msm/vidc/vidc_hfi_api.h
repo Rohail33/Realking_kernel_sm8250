@@ -728,7 +728,8 @@ struct hfi_device {
 
 typedef void (*hfi_cmd_response_callback) (enum hal_command_response cmd,
 			void *data);
-typedef void (*msm_vidc_callback) (u32 response, void *callback);
+typedef void (*msm_vidc_callback) (enum hal_command_response response,
+			void *callback);
 
 struct hfi_device *vidc_hfi_initialize(enum msm_vidc_hfi_type hfi_type,
 		u32 device_id, struct msm_vidc_platform_resources *res,
