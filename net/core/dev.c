@@ -1876,6 +1876,80 @@ int unregister_netdevice_notifier_net(struct net *net,
 EXPORT_SYMBOL(unregister_netdevice_notifier_net);
 
 /**
+ * register_netdevice_notifier_net - register a per-netns network notifier block
+ * @net: network namespace
+ * @nb: notifier
+ *
+ * Register a notifier to be called when network device events occur.
+ * The notifier passed is linked into the kernel structures and must
+ * not be reused until it has been unregistered. A negative errno code
+ * is returned on a failure.
+ *
+ * When registered all registration and up events are replayed
+ * to the new notifier to allow device to have a race free
+ * view of the network device list.
+ */
+
+int register_netdevice_notifier_net(struct net *net, struct notifier_block *nb)
+{
+	int err;
+
+	rtnl_lock();
+	err = raw_notifier_chain_register(&net->netdev_chain, nb);
+	if (err)
+		goto unlock;
+	if (dev_boot_phase)
+		goto unlock;
+
+	err = call_netdevice_register_net_notifiers(nb, net);
+	if (err)
+		goto chain_unregister;
+
+unlock:
+	rtnl_unlock();
+	return err;
+
+chain_unregister:
+	raw_notifier_chain_unregister(&netdev_chain, nb);
+	goto unlock;
+}
+EXPORT_SYMBOL(register_netdevice_notifier_net);
+
+/**
+ * unregister_netdevice_notifier_net - unregister a per-netns
+ *                                     network notifier block
+ * @net: network namespace
+ * @nb: notifier
+ *
+ * Unregister a notifier previously registered by
+ * register_netdevice_notifier(). The notifier is unlinked into the
+ * kernel structures and may then be reused. A negative errno code
+ * is returned on a failure.
+ *
+ * After unregistering unregister and down device events are synthesized
+ * for all devices on the device list to the removed notifier to remove
+ * the need for special case cleanup code.
+ */
+
+int unregister_netdevice_notifier_net(struct net *net,
+				      struct notifier_block *nb)
+{
+	int err;
+
+	rtnl_lock();
+	err = raw_notifier_chain_unregister(&net->netdev_chain, nb);
+	if (err)
+		goto unlock;
+
+	call_netdevice_unregister_net_notifiers(nb, net);
+
+unlock:
+	rtnl_unlock();
+	return err;
+}
+EXPORT_SYMBOL(unregister_netdevice_notifier_net);
+
+/**
  *	call_netdevice_notifiers_info - call all network notifier blocks
  *	@val: value passed unmodified to notifier function
  *	@info: notifier information data
