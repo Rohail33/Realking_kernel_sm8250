@@ -3185,7 +3185,10 @@ static void _sde_plane_update_properties(struct drm_plane *plane,
 		psde->pipe_hw->ops.setup_sharpening)
 		_sde_plane_update_sharpening(psde);
 
-	_sde_plane_set_qos_lut(plane, crtc, fb);
+        if (pstate->dirty & (SDE_PLANE_DIRTY_QOS | SDE_PLANE_DIRTY_RECTS |
+			     SDE_PLANE_DIRTY_FORMAT)) {
+		_sde_plane_set_qos_lut(plane, crtc, fb);
+	}
 
 	if (plane->type != DRM_PLANE_TYPE_CURSOR) {
 		_sde_plane_set_qos_ctrl(plane, true, SDE_PLANE_QOS_PANIC_CTRL);
@@ -3194,7 +3197,7 @@ static void _sde_plane_update_properties(struct drm_plane *plane,
 			_sde_plane_set_ts_prefill(plane, pstate);
 	}
 
-	if ((pstate->dirty & SDE_PLANE_DIRTY_ALL) == SDE_PLANE_DIRTY_ALL)
+	if (pstate->dirty & SDE_PLANE_DIRTY_QOS)
 		_sde_plane_set_qos_remap(plane, true);
 	else
 		_sde_plane_set_qos_remap(plane, false);
@@ -3227,6 +3230,7 @@ static int sde_plane_sspp_atomic_update(struct drm_plane *plane,
 	struct sde_plane_state *old_pstate;
 	struct drm_crtc *crtc;
 	struct drm_framebuffer *fb;
+	bool is_rt;
 	int idx;
 	int dirty_prop_flag;
 
@@ -3310,13 +3314,18 @@ static int sde_plane_sspp_atomic_update(struct drm_plane *plane,
 		memset(&(psde->pipe_cfg), 0, sizeof(struct sde_hw_pipe_cfg));
 
 	_sde_plane_set_scanout(plane, pstate, &psde->pipe_cfg, fb);
+	
+	is_rt = sde_crtc_is_rt_client(crtc, crtc->state);
+	if (is_rt != psde->is_rt_pipe) {
+		psde->is_rt_pipe = is_rt;
+		pstate->dirty |= SDE_PLANE_DIRTY_QOS;
+	}
 
 	/* early out if nothing dirty */
 	if (!pstate->dirty)
 		return 0;
 	pstate->pending = true;
 
-	psde->is_rt_pipe = sde_crtc_is_rt_client(crtc, crtc->state);
 	_sde_plane_set_qos_ctrl(plane, false, SDE_PLANE_QOS_PANIC_CTRL);
 
 	_sde_plane_update_properties(plane, crtc, fb);
