@@ -222,6 +222,24 @@ config CPU_FREQ_GOV_SCHEDUTIL
 
 comment "CPU frequency scaling drivers"
 
+if CPU_FREQ_GOV_SCHEDUTIL
+
+config SCHEDUTIL_UP_RATE_LIMIT
+	int "Default up rate-limit for schedutil"
+	default 0
+	help
+	  This sets schedutil's default frequency up rate-limit in
+	  microseconds.
+
+config SCHEDUTIL_DOWN_RATE_LIMIT
+	int "Default down rate-limit for schedutil"
+	default 0
+	help
+	  This sets schedutil's default frequency down rate-limit in
+	  microseconds.
+
+endif
+
 config CPUFREQ_DT
 	tristate "Generic DT based cpufreq driver"
 	depends on HAVE_CLK && OF
