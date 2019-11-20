@@ -262,16 +262,16 @@ struct ftrace_direct_func *ftrace_find_direct_func(unsigned long addr);
 #else
 static inline int register_ftrace_direct(unsigned long ip, unsigned long addr)
 {
-	return -ENODEV;
+	return -ENOTSUPP;
 }
 static inline int unregister_ftrace_direct(unsigned long ip, unsigned long addr)
 {
-	return -ENODEV;
+	return -ENOTSUPP;
 }
 static inline int modify_ftrace_direct(unsigned long ip,
 				       unsigned long old_addr, unsigned long new_addr)
 {
-	return -ENODEV;
+	return -ENOTSUPP;
 }
 static inline struct ftrace_direct_func *ftrace_find_direct_func(unsigned long addr)
 {
