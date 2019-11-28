@@ -256,7 +256,7 @@ static void pulse(unsigned long data)
 		restart_timer();
 }
 
-static void step_current_rgb_to_flow()
+static void step_current_rgb_to_flow(void)
 {
 	if (current_r < flow_r)
 		++current_r;
