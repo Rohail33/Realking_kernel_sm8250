@@ -285,7 +285,7 @@ struct metadata_handler {
 				 struct metadata_handler *handler);
 };
 #define INCFS_MAX_METADATA_RECORD_SIZE \
-	FIELD_SIZEOF(struct metadata_handler, md_buffer)
+	sizeof_field(struct metadata_handler, md_buffer)
 
 loff_t incfs_get_end_offset(struct file *f);
 
