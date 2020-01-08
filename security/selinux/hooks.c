@@ -3756,7 +3756,7 @@ static int selinux_file_ioctl_compat(struct file *file, unsigned int cmd,
 	return selinux_file_ioctl(file, cmd, arg);
 }
 
-static int default_noexec;
+static int default_noexec __ro_after_init;
 
 static int file_map_prot_check(struct file *file, unsigned long prot, int shared)
 {
