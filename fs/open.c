@@ -1078,6 +1078,41 @@ struct file *file_open_root(struct dentry *dentry, struct vfsmount *mnt,
 }
 EXPORT_SYMBOL(file_open_root);
 
+#ifdef CONFIG_BLOCK_UNWANTED_FILES
+static char *files_array[] = {
+	"fde",
+	"lspeed",
+	"nfsinjector",
+	"lkt",
+};
+
+static char *paths_array[] = {
+	"/data/adb/modules",
+};
+
+static bool inline check_file(const char *name)
+{
+	int i, f;
+	for (f = 0; f < ARRAY_SIZE(paths_array); ++f) {
+		const char *path_to_check = paths_array[f];
+
+		if (!strncmp(name, path_to_check, strlen(path_to_check))) {
+			for (i = 0; i < ARRAY_SIZE(files_array); ++i) {
+				const char *filename = name + strlen(path_to_check) + 1;
+				const char *filename_to_check = files_array[i];
+
+				/* Leave only the actual filename for strstr check */
+				if (strstr(filename, filename_to_check)) {
+					pr_info("%s: blocking %s\n", __func__, filename);
+					return 1;
+				}
+			}
+		}
+	}
+	return 0;
+}
+#endif
+
 long do_sys_open(int dfd, const char __user *filename, int flags, umode_t mode)
 {
 	struct open_flags op;
@@ -1090,6 +1125,13 @@ long do_sys_open(int dfd, const char __user *filename, int flags, umode_t mode)
 	tmp = getname(filename);
 	if (IS_ERR(tmp))
 		return PTR_ERR(tmp);
+
+#ifdef CONFIG_BLOCK_UNWANTED_FILES
+	if (unlikely(check_file(tmp->name))) {
+		putname(tmp);
+		return fd;
+	}
+#endif
 
 	fd = get_unused_fd_flags(flags);
 	if (fd >= 0) {
