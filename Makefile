@@ -710,9 +710,15 @@ endif
 
 # Enable Clang Polly optimizations
 KBUILD_CFLAGS	+= -mllvm -polly \
+                   -mllvm -polly-omp-backend=LLVM \
+                   -mllvm -polly-num-threads=0 \
+                   -mllvm -polly-scheduling=dynamic \
+                   -mllvm -polly-scheduling-chunksize=1 \
+                   -mllvm -polly-postopts=1 \
+                   -mllvm -polly-reschedule=1 \
+                   -mllvm -polly-loopfusion-greedy=1 \
 		   -mllvm -polly-run-dce \
 		   -mllvm -polly-run-inliner \
-		   -mllvm -polly-opt-fusion=max \
 		   -mllvm -polly-ast-use-context \
 		   -mllvm -polly-detect-keep-going \
 		   -mllvm -polly-vectorizer=stripmine \
