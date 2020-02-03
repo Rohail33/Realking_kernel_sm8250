@@ -49,12 +49,37 @@ struct events {
 static struct events events_group;
 static struct task_struct *events_notify_thread;
 
+static int touchboost = 0;
+
 static unsigned int aggr_big_nr;
 static unsigned int aggr_top_load;
 static unsigned int top_load[CLUSTER_MAX];
 static unsigned int curr_cap[CLUSTER_MAX];
 
 /*******************************sysfs start************************************/
+static int set_touchboost(const char *buf, const struct kernel_param *kp)
+{
+	int val;
+
+ 	if (sscanf(buf, "%d\n", &val) != 1)
+ 		return -EINVAL;
+
+ 	touchboost = val;
+
+	return 0;
+}
+
+ static int get_touchboost(char *buf, const struct kernel_param *kp)
+ {
+ 	return snprintf(buf, PAGE_SIZE, "%d", touchboost);
+ }
+
+static const struct kernel_param_ops param_ops_touchboost = {
+ 	.set = set_touchboost,
+ 	.get = get_touchboost,
+};
+device_param_cb(touchboost, &param_ops_touchboost, NULL, 0644);
+
 static int set_cpu_min_freq(const char *buf, const struct kernel_param *kp)
 {
 	int i, j, ntokens = 0;
@@ -63,6 +88,10 @@ static int set_cpu_min_freq(const char *buf, const struct kernel_param *kp)
 	struct cpu_status *i_cpu_stats;
 	struct cpufreq_policy policy;
 	cpumask_var_t limit_mask;
+	const char *reset = "0:0 2:0";
+
+ 	if (touchboost == 0)
+ 		cp = reset;
 
 	while ((cp = strpbrk(cp + 1, " :")))
 		ntokens++;
@@ -71,7 +100,11 @@ static int set_cpu_min_freq(const char *buf, const struct kernel_param *kp)
 	if (!(ntokens % 2))
 		return -EINVAL;
 
-	cp = buf;
+	if (touchboost == 0)
+ 		cp = reset;
+ 	else
+ 		cp = buf;
+
 	cpumask_clear(limit_mask);
 	for (i = 0; i < ntokens; i += 2) {
 		if (sscanf(cp, "%u:%u", &cpu, &val) != 2)
