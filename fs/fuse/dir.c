@@ -885,7 +885,7 @@ static int fuse_rename2(struct inode *olddir, struct dentry *oldent,
 	if (fuse_is_bad(olddir))
 		return -EIO;
 
-	if (flags & ~(RENAME_NOREPLACE | RENAME_EXCHANGE))
+	if (flags & ~(RENAME_NOREPLACE | RENAME_EXCHANGE | RENAME_WHITEOUT))
 		return -EINVAL;
 
 	if (flags) {
