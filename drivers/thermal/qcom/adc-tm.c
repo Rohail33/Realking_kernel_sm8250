@@ -360,7 +360,7 @@ static int adc_tm_get_dt_data(struct platform_device *pdev,
 
 		if (adc_tm->sensor[idx].non_thermal) {
 			adc_tm->sensor[idx].req_wq = alloc_workqueue(
-				"qpnp_adc_notify_wq", WQ_HIGHPRI, 0);
+				"qpnp_adc_notify_wq", 0, 0);
 			if (!adc_tm->sensor[idx].req_wq) {
 				pr_err("Requesting priority wq failed\n");
 				return -ENOMEM;
