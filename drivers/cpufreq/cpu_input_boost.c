@@ -150,14 +150,17 @@ static void update_online_cpu_policy(void)
 {
 	unsigned int cpu;
 
-	/* Only one CPU from each cluster needs to be updated */
 	get_online_cpus();
-	cpu = cpumask_first_and(cpu_lp_mask, cpu_online_mask);
-	cpufreq_update_policy(cpu);
-	cpu = cpumask_first_and(cpu_perf_mask, cpu_online_mask);
-	cpufreq_update_policy(cpu);
-	cpu = cpumask_first_and(cpu_prime_mask, cpu_online_mask);
-	cpufreq_update_policy(cpu);
+	for_each_possible_cpu(cpu) {
+		if (cpu_online(cpu)) {
+			if (cpumask_intersects(cpumask_of(cpu), cpu_lp_mask))
+				cpufreq_update_policy(cpu);
+			if (cpumask_intersects(cpumask_of(cpu), cpu_perf_mask))
+				cpufreq_update_policy(cpu);
+			if (cpumask_intersects(cpumask_of(cpu), cpu_prime_mask))
+				cpufreq_update_policy(cpu);
+		}
+	}
 	put_online_cpus();
 }
 
