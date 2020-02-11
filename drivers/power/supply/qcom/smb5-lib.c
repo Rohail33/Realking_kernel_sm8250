@@ -9061,7 +9061,7 @@ static void smblib_handle_hvdcp_check_timeout(struct smb_charger *chg,
 						HVDCP2_CURRENT_UA);
 				else
 					vote(chg->usb_icl_votable, SW_ICL_MAX_VOTER, true,
-						HVDCP_CURRENT_UA);
+							hvdcp_ua);
 			}
 		} else {
 			/* A plain DCP, enforce DCP ICL if specified */
