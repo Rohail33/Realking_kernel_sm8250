@@ -4677,6 +4677,9 @@ retry:
 			     !(gfp_mask & __GFP_RETRY_MAYFAIL)))
 		goto nopage;
 
+	if (order <= PAGE_ALLOC_COSTLY_ORDER && should_ulmk_retry())
+		goto retry;
+
 	if (should_reclaim_retry(gfp_mask, order, ac, alloc_flags,
 				 did_some_progress > 0, &no_progress_loops))
 		goto retry;
@@ -4695,8 +4698,6 @@ retry:
 				&compaction_retries))
 		goto retry;
 
-	if (order <= PAGE_ALLOC_COSTLY_ORDER && should_ulmk_retry())
-		goto retry;
 
 	/*
 	 * Deal with possible cpuset update races or zonelist updates to avoid
