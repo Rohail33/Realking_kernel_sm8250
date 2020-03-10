@@ -7,6 +7,30 @@
 
 #ifdef CONFIG_TASKS_RCU
 
+struct rcu_tasks;
+typedef void (*rcu_tasks_gp_func_t)(struct rcu_tasks *rtp);
+typedef void (*pregp_func_t)(void);
+typedef void (*pertask_func_t)(struct task_struct *t, struct list_head *hop);
+typedef void (*postscan_func_t)(struct list_head *hop);
+typedef void (*holdouts_func_t)(struct list_head *hop, bool ndrpt, bool *frptp);
+typedef void (*postgp_func_t)(struct rcu_tasks *rtp);
+
+#define RTGS_INIT		 0
+#define RTGS_WAIT_WAIT_CBS	 1
+#define RTGS_WAIT_GP		 2
+#define RTGS_PRE_WAIT_GP	 3
+#define RTGS_SCAN_TASKLIST	 4
+#define RTGS_POST_SCAN_TASKLIST	 5
+#define RTGS_WAIT_SCAN_HOLDOUTS	 6
+#define RTGS_SCAN_HOLDOUTS	 7
+#define RTGS_POST_GP		 8
+#define RTGS_WAIT_READERS	 9
+#define RTGS_INVOKE_CBS		10
+#define RTGS_WAIT_CBS		11
+
+static atomic_t trc_n_readers_need_end;		// Number of waited-for readers.
+static DECLARE_WAIT_QUEUE_HEAD(trc_wait);	// List of holdout tasks.
+
 /*
  * Simple variant of RCU whose quiescent states are voluntary context
  * switch, cond_resched_rcu_qs(), user-space execution, and idle.
@@ -24,6 +48,31 @@ static struct rcu_head *rcu_tasks_cbs_head;
 static struct rcu_head **rcu_tasks_cbs_tail = &rcu_tasks_cbs_head;
 static DECLARE_WAIT_QUEUE_HEAD(rcu_tasks_cbs_wq);
 static DEFINE_RAW_SPINLOCK(rcu_tasks_cbs_lock);
+
+struct rcu_tasks {
+	struct rcu_head *cbs_head;
+	struct rcu_head **cbs_tail;
+	struct wait_queue_head cbs_wq;
+	raw_spinlock_t cbs_lock;
+	int gp_state;
+	int gp_sleep;
+	int init_fract;
+	unsigned long gp_jiffies;
+	unsigned long gp_start;
+	unsigned long n_gps;
+	unsigned long n_ipis;
+	unsigned long n_ipis_fails;
+	struct task_struct *kthread_ptr;
+	rcu_tasks_gp_func_t gp_func;
+	pregp_func_t pregp_func;
+	pertask_func_t pertask_func;
+	postscan_func_t postscan_func;
+	holdouts_func_t holdouts_func;
+	postgp_func_t postgp_func;
+	call_rcu_func_t call_func;
+	char *name;
+	char *kname;
+};
 
 /* Track exiting tasks in order to allow them to be waited for. */
 DEFINE_STATIC_SRCU(tasks_rcu_exit_srcu);
@@ -344,6 +393,7 @@ void exit_tasks_rcu_start(void)
 /* Do the srcu_read_unlock() for the above synchronize_srcu().  */
 void exit_tasks_rcu_finish(void)
 {
+
 	preempt_disable();
 	__srcu_read_unlock(&tasks_rcu_exit_srcu, current->rcu_tasks_idx);
 	preempt_enable();
@@ -358,12 +408,165 @@ void exit_tasks_rcu_finish(void)
  */
 static void __init rcu_tasks_bootup_oddness(void)
 {
-#ifdef CONFIG_TASKS_RCU
+#if defined(CONFIG_TASKS_RCU) || defined(CONFIG_TASKS_TRACE_RCU)
 	if (rcu_task_stall_timeout != RCU_TASK_STALL_TIMEOUT)
 		pr_info("\tTasks-RCU CPU stall warnings timeout set to %d (rcu_task_stall_timeout).\n", rcu_task_stall_timeout);
-	else
-		pr_info("\tTasks RCU enabled.\n");
 #endif /* #ifdef CONFIG_TASKS_RCU */
+#ifdef CONFIG_TASKS_RCU
+	pr_info("\tTrampoline variant of Tasks RCU enabled.\n");
+#endif /* #ifdef CONFIG_TASKS_RCU */
+#ifdef CONFIG_TASKS_TRACE_RCU
+	pr_info("\tTracing variant of Tasks RCU enabled.\n");
+#endif /* #ifdef CONFIG_TASKS_TRACE_RCU */
 }
 
 #endif /* #ifndef CONFIG_TINY_RCU */
+
+
+
+
+// Enqueue a callback for the specified flavor of Tasks RCU.
+static void call_rcu_tasks_generic(struct rcu_head *rhp, rcu_callback_t func,
+				   struct rcu_tasks *rtp)
+{
+	unsigned long flags;
+	bool needwake;
+
+	rhp->next = NULL;
+	rhp->func = func;
+	raw_spin_lock_irqsave(&rtp->cbs_lock, flags);
+	needwake = !rtp->cbs_head;
+	WRITE_ONCE(*rtp->cbs_tail, rhp);
+	rtp->cbs_tail = &rhp->next;
+	raw_spin_unlock_irqrestore(&rtp->cbs_lock, flags);
+	/* We can't create the thread unless interrupts are enabled. */
+	if (needwake && READ_ONCE(rtp->kthread_ptr))
+		wake_up(&rtp->cbs_wq);
+}
+
+
+#define DEFINE_RCU_TASKS(rt_name, gp, call, n)				\
+static struct rcu_tasks rt_name =					\
+{									\
+	.cbs_tail = &rt_name.cbs_head,					\
+	.cbs_wq = __WAIT_QUEUE_HEAD_INITIALIZER(rt_name.cbs_wq),	\
+	.cbs_lock = __RAW_SPIN_LOCK_UNLOCKED(rt_name.cbs_lock),		\
+	.gp_func = gp,							\
+	.call_func = call,						\
+	.name = n,							\
+	.kname = #rt_name,						\
+}
+
+
+/* Record grace-period phase and time. */
+static void set_tasks_gp_state(struct rcu_tasks *rtp, int newstate)
+{
+	rtp->gp_state = newstate;
+	rtp->gp_jiffies = jiffies;
+}
+
+
+static void rcu_tasks_wait_gp(struct rcu_tasks *rtp)
+{
+	struct task_struct *g, *t;
+	unsigned long lastreport;
+	LIST_HEAD(holdouts);
+	int fract;
+
+	set_tasks_gp_state(rtp, RTGS_PRE_WAIT_GP);
+	rtp->pregp_func();
+
+	/*
+	 * There were callbacks, so we need to wait for an RCU-tasks
+	 * grace period.  Start off by scanning the task list for tasks
+	 * that are not already voluntarily blocked.  Mark these tasks
+	 * and make a list of them in holdouts.
+	 */
+	set_tasks_gp_state(rtp, RTGS_SCAN_TASKLIST);
+	rcu_read_lock();
+	for_each_process_thread(g, t)
+		rtp->pertask_func(t, &holdouts);
+	rcu_read_unlock();
+
+	set_tasks_gp_state(rtp, RTGS_POST_SCAN_TASKLIST);
+	rtp->postscan_func(&holdouts);
+
+	/*
+	 * Each pass through the following loop scans the list of holdout
+	 * tasks, removing any that are no longer holdouts.  When the list
+	 * is empty, we are done.
+	 */
+	lastreport = jiffies;
+
+	// Start off with initial wait and slowly back off to 1 HZ wait.
+	fract = rtp->init_fract;
+	if (fract > HZ)
+		fract = HZ;
+
+	for (;;) {
+		bool firstreport;
+		bool needreport;
+		int rtst;
+
+		if (list_empty(&holdouts))
+			break;
+
+		/* Slowly back off waiting for holdouts */
+		set_tasks_gp_state(rtp, RTGS_WAIT_SCAN_HOLDOUTS);
+		schedule_timeout_idle(HZ/fract);
+
+		if (fract > 1)
+			fract--;
+
+		rtst = READ_ONCE(rcu_task_stall_timeout);
+		needreport = rtst > 0 && time_after(jiffies, lastreport + rtst);
+		if (needreport)
+			lastreport = jiffies;
+		firstreport = true;
+		WARN_ON(signal_pending(current));
+		set_tasks_gp_state(rtp, RTGS_SCAN_HOLDOUTS);
+		rtp->holdouts_func(&holdouts, needreport, &firstreport);
+	}
+
+	set_tasks_gp_state(rtp, RTGS_POST_GP);
+	rtp->postgp_func(rtp);
+}
+
+
+
+void call_rcu_tasks_trace(struct rcu_head *rhp, rcu_callback_t func);
+DEFINE_RCU_TASKS(rcu_tasks_trace, rcu_tasks_wait_gp, call_rcu_tasks_trace,
+		 "RCU Tasks Trace");
+
+/**
+ * call_rcu_tasks_trace() - Queue a callback trace task-based grace period
+ * @rhp: structure to be used for queueing the RCU updates.
+ * @func: actual callback function to be invoked after the grace period
+ *
+ * The callback function will be invoked some time after a full grace
+ * period elapses, in other words after all currently executing RCU
+ * read-side critical sections have completed. call_rcu_tasks_trace()
+ * assumes that the read-side critical sections end at context switch,
+ * cond_resched_rcu_qs(), or transition to usermode execution.  As such,
+ * there are no read-side primitives analogous to rcu_read_lock() and
+ * rcu_read_unlock() because this primitive is intended to determine
+ * that all tasks have passed through a safe state, not so much for
+ * data-strcuture synchronization.
+ *
+ * See the description of call_rcu() for more detailed information on
+ * memory ordering guarantees.
+ */
+void call_rcu_tasks_trace(struct rcu_head *rhp, rcu_callback_t func)
+{
+	call_rcu_tasks_generic(rhp, func, &rcu_tasks_trace);
+}
+EXPORT_SYMBOL_GPL(call_rcu_tasks_trace);
+
+/* If we are the last reader, wake up the grace-period kthread. */
+void rcu_read_unlock_trace_special(struct task_struct *t)
+{
+	WRITE_ONCE(t->trc_reader_need_end, false);
+	if (atomic_dec_and_test(&trc_n_readers_need_end))
+		wake_up(&trc_wait);
+}
+EXPORT_SYMBOL_GPL(rcu_read_unlock_trace_special);
