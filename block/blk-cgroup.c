@@ -45,6 +45,8 @@ static DEFINE_MUTEX(blkcg_pol_mutex);
 struct blkcg blkcg_root;
 EXPORT_SYMBOL_GPL(blkcg_root);
 
+struct blkcg *blkcg_bg;
+
 struct cgroup_subsys_state * const blkcg_root_css = &blkcg_root.css;
 
 static struct blkcg_policy *blkcg_policy[BLKCG_MAX_POLS];
@@ -242,8 +244,13 @@ static struct blkcg_gq *blkg_create(struct blkcg *blkcg,
 	blkg->online = true;
 	spin_unlock(&blkcg->lock);
 
-	if (!ret)
+	if (!ret) {
+		char name_buf[NAME_MAX + 1];
+		cgroup_name(blkg->blkcg->css.cgroup, name_buf, sizeof(name_buf));
+		if (!strncmp(name_buf, "background", strlen("background")+1) && !blkcg_bg)
+			blkcg_bg = blkg->blkcg;
 		return blkg;
+	}
 
 	/* @blkg failed fully initialized, use the usual release path */
 	blkg_put(blkg);
