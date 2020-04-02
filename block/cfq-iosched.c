@@ -6,6 +6,7 @@
  *
  *  Copyright (C) 2003 Jens Axboe <axboe@kernel.dk>
  */
+#include <linux/binfmts.h>
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/sched/clock.h>
@@ -1929,6 +1930,9 @@ static int cfq_set_group_idle(struct cgroup_subsys_state *css,
 	struct cfq_group_data *cfqgd;
 	struct blkcg_gq *blkg;
 	int ret = 0;
+
+	if (task_is_zygote(current))
+		return ret;
 
 	spin_lock_irq(&blkcg->lock);
 	cfqgd = blkcg_to_cfqgd(blkcg);
