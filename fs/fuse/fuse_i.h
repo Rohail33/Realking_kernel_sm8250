@@ -989,7 +989,7 @@ int fuse_simple_background(struct fuse_conn *fc, struct fuse_args *args,
 /**
  * End a finished request
  */
-void fuse_request_end(struct fuse_conn *fc, struct fuse_req *req);
+void fuse_request_end(struct fuse_req *req);
 
 /* Abort all requests */
 void fuse_abort_conn(struct fuse_conn *fc);
