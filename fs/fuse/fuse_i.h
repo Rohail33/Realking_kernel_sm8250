@@ -762,6 +762,9 @@ struct fuse_conn {
 	/** Do not allow MNT_FORCE umount */
 	unsigned int no_force_umount:1;
 
+	/* Auto-mount submounts announced by the server */
+	unsigned int auto_submounts:1;
+
 	/** Passthrough mode for read/write IO */
 	unsigned int passthrough:1;
 
