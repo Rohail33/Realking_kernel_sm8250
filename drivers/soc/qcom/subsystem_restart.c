@@ -1245,7 +1245,10 @@ int subsystem_restart_dev(struct subsys_device *dev)
 		return 0;
 	}
 
-	__subsystem_restart_dev(dev);
+	if (!strcmp(name, "modem"))
+		dev->restart_level = RESET_SUBSYS_COUPLED;
+
+        __subsystem_restart_dev(dev);
 
 	module_put(dev->owner);
 	put_device(&dev->dev);
