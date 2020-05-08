@@ -419,10 +419,10 @@ static int tz_get_target_freq(struct devfreq *devfreq, unsigned long *freq)
 	priv->bin.total_time += stats->total_time;
 #if 1
 	// scale busy time up based on adrenoboost parameter, only if MIN_BUSY exceeded...
-	if ((unsigned int)(priv->bin.busy_time + stats.busy_time) >= MIN_BUSY) {
-		priv->bin.busy_time += stats.busy_time * (1 + (adrenoboost*3)/2);
+	if ((unsigned int)(priv->bin.busy_time + stats->busy_time) >= MIN_BUSY) {
+		priv->bin.busy_time += stats->busy_time * (1 + (adrenoboost*3)/2);
 	} else {
-		priv->bin.busy_time += stats.busy_time;
+		priv->bin.busy_time += stats->busy_time;
 	}
 #else
 	priv->bin.busy_time += stats->busy_time;
