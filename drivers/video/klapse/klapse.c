@@ -34,8 +34,8 @@ static unsigned int dimmer_stop_minute = 360;
 static unsigned int flow_freq = DEFAULT_FLOW_FREQ;
 
 /* Core */
-static void pulse(unsigned long data);
-static void set_rgb_flow(unsigned long data);
+static void pulse(struct timer_list *unused);
+static void set_rgb_flow(struct timer_list *unused);
 
 static unsigned short current_r = MAX_SCALE;
 static unsigned short current_g = MAX_SCALE;
@@ -48,8 +48,8 @@ static unsigned int last_bl = MAX_BRIGHTNESS;
 static unsigned long local_time;
 static struct rtc_time tm;
 static struct timeval time;
-static DEFINE_TIMER(pulse_timer, pulse, 0, 0);
-static DEFINE_TIMER(flow_timer, set_rgb_flow, 0, 0);
+static DEFINE_TIMER(pulse_timer, pulse);
+static DEFINE_TIMER(flow_timer, set_rgb_flow);
 
 static void restart_timer(void)
 {
@@ -215,7 +215,7 @@ static void set_timed_dimmer(void)
 		dimmer = b_cache;
 }
 
-static void pulse(unsigned long data)
+static void pulse(struct timer_list *unused)
 {
 	int backtime;
 
@@ -274,7 +274,7 @@ static void step_current_rgb_to_flow(void)
 		--current_b;
 }
 
-static void set_rgb_flow(unsigned long data)
+static void set_rgb_flow(struct timer_list *unused)
 {
 	step_current_rgb_to_flow();
 
