@@ -28,6 +28,16 @@
 #include <linux/rcupdate.h>
 #include <linux/spinlock.h>
 #include <linux/types.h>
+#include <linux/local_lock.h>
+#include <linux/percpu.h>
+
+struct radix_tree_preload {
+	local_lock_t lock;
+	unsigned nr;
+	/* nodes->parent points to next preallocated node */
+	struct radix_tree_node *nodes;
+};
+DECLARE_PER_CPU(struct radix_tree_preload, radix_tree_preloads);
 
 /*
  * The bottom two bits of the slot determine how the remaining bits in the
@@ -351,7 +361,7 @@ int radix_tree_tagged(const struct radix_tree_root *, unsigned int tag);
 
 static inline void radix_tree_preload_end(void)
 {
-	preempt_enable();
+	local_unlock(&radix_tree_preloads.lock);
 }
 
 int radix_tree_split_preload(unsigned old_order, unsigned new_order, gfp_t);
