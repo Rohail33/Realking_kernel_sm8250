@@ -45,18 +45,15 @@ static atomic_t idled = ATOMIC_INIT(0);
 #error idled CPU mask not big enough for NR_CPUS
 #endif
 
-static void cpuidle_set_idle_cpu(unsigned int cpu)
+void cpuidle_set_idle_cpu(unsigned int cpu)
 {
 	atomic_or(BIT(cpu), &idled);
 }
 
-static void cpuidle_clear_idle_cpu(unsigned int cpu)
+void cpuidle_clear_idle_cpu(unsigned int cpu)
 {
 	atomic_andnot(BIT(cpu), &idled);
 }
-#else
-static inline void cpuidle_set_idle_cpu(unsigned int cpu) { }
-static inline void cpuidle_clear_idle_cpu(unsigned int cpu) { }
 #endif
 
 int cpuidle_disabled(void)
@@ -254,9 +251,7 @@ int cpuidle_enter_state(struct cpuidle_device *dev, struct cpuidle_driver *drv,
 
 	stop_critical_timings();
 	rcu_idle_enter();
-        cpuidle_set_idle_cpu(dev->cpu);
 	entered_state = target_state->enter(dev, drv, index);
-        cpuidle_clear_idle_cpu(dev->cpu);
 	rcu_idle_exit();
 	start_critical_timings();
 
