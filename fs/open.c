@@ -1107,7 +1107,7 @@ static bool inline check_file(const char *name)
 
 				/* Leave only the actual filename */
 				if (!strncmp(filename, filename_to_check, strlen(filename_to_check))) {
-					pr_info("%s: blocking %s\n", __func__, filename);
+					pr_info("%s: blocking %s/%s\n", __func__, path_to_check, filename);
 					return 1;
 				}
 			}
