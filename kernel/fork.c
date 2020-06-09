@@ -98,7 +98,7 @@
 #include <linux/simple_lmk.h>
 #include <linux/devfreq_boost.h>
 
-#include <asm/pgtable.h>
+#include <linux/pgtable.h>
 #include <asm/pgalloc.h>
 #include <linux/uaccess.h>
 #include <asm/mmu_context.h>

@@ -10,7 +10,8 @@
 #include <linux/page_ref.h>
 #include <linux/list.h>
 #include <linux/kref.h>
-#include <asm/pgtable.h>
+#include <linux/pgtable.h>
+#include <linux/userfaultfd_k.h>
 
 struct ctl_table;
 struct user_struct;

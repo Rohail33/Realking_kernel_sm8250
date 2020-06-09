@@ -25,7 +25,7 @@
 #include <linux/uaccess.h>
 
 #include <asm/page.h>
-#include <asm/pgtable.h>
+#include <linux/pgtable.h>
 #include <asm/openprom.h>
 #include <asm/oplib.h>
 #include <asm/setup.h>

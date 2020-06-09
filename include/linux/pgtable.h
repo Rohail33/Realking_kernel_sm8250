@@ -1,8 +1,9 @@
 /* SPDX-License-Identifier: GPL-2.0 */
-#ifndef _ASM_GENERIC_PGTABLE_H
-#define _ASM_GENERIC_PGTABLE_H
+#ifndef _LINUX_PGTABLE_H
+#define _LINUX_PGTABLE_H
 
 #include <linux/pfn.h>
+#include <asm/pgtable.h>
 
 #ifndef __ASSEMBLY__
 #ifdef CONFIG_MMU
@@ -1152,4 +1153,4 @@ static inline bool arch_has_pfn_modify_check(void)
 #define mm_pmd_folded(mm)	__is_defined(__PAGETABLE_PMD_FOLDED)
 #endif
 
-#endif /* _ASM_GENERIC_PGTABLE_H */
+#endif /* _LINUX_PGTABLE_H */

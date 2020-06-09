@@ -20,7 +20,7 @@
 #include <linux/sched/signal.h>
 #include <linux/io.h>
 
-#include <asm/pgtable.h>
+#include <linux/pgtable.h>
 #include <asm/tlbflush.h>
 
 /*

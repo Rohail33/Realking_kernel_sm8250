@@ -39,7 +39,7 @@
 #include <linux/swap_slots.h>
 #include <linux/sort.h>
 
-#include <asm/pgtable.h>
+#include <linux/pgtable.h>
 #include <asm/tlbflush.h>
 #include <linux/swapops.h>
 #include <linux/swap_cgroup.h>

@@ -42,7 +42,7 @@
 #include <asm/irq.h>
 #include <asm/mips-cps.h>
 #include <asm/msa.h>
-#include <asm/pgtable.h>
+#include <linux/pgtable.h>
 #include <asm/mipsregs.h>
 #include <asm/processor.h>
 #include <asm/reg.h>

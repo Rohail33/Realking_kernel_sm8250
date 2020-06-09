@@ -29,7 +29,7 @@
 #include <asm/cpu-type.h>
 #include <asm/io.h>
 #include <asm/page.h>
-#include <asm/pgtable.h>
+#include <linux/pgtable.h>
 #include <asm/r4kcache.h>
 #include <asm/sections.h>
 #include <asm/mmu_context.h>

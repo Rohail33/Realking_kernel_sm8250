@@ -39,7 +39,7 @@
 
 #include <asm/firmware.h>
 #include <asm/page.h>
-#include <asm/pgtable.h>
+#include <linux/pgtable.h>
 #include <asm/mmu.h>
 #include <asm/mmu_context.h>
 #include <asm/siginfo.h>
