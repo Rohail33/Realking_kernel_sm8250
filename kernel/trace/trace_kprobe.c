@@ -216,6 +216,7 @@ DEFINE_BASIC_FETCH_FUNCS(memory)
 static void FETCH_FUNC_NAME(memory, string)(struct pt_regs *regs,
 					    void *addr, void *dest)
 {
+	const void __user *uaddr =  (__force const void __user *)addr;
 	int maxlen = get_rloc_len(*(u32 *)dest);
 	u8 *dst = get_rloc_data(dest);
 	long ret;
@@ -223,11 +224,7 @@ static void FETCH_FUNC_NAME(memory, string)(struct pt_regs *regs,
 	if (!maxlen)
 		return;
 
-	/*
-	 * Try to get string again, since the string can be changed while
-	 * probing.
-	 */
-	ret = strncpy_from_unsafe(dst, addr, maxlen);
+	ret = strncpy_from_user_nofault(dest, uaddr, maxlen);
 
 	if (ret < 0) {	/* Failed to fetch string */
 		dst[0] = '\0';
