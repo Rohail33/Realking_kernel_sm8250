@@ -159,7 +159,7 @@ bpf_probe_read_user_common(void *dst, u32 size, const void __user *unsafe_ptr)
 	if (ret < 0)
 		goto out;
 
-	ret = probe_user_read(dst, unsafe_ptr, size);
+	ret = copy_from_user_nofault(dst, unsafe_ptr, size);
 	if (unlikely(ret < 0))
 out:
 		memset(dst, 0, size);
@@ -333,7 +333,7 @@ BPF_CALL_3(bpf_probe_write_user, void __user *, unsafe_ptr, const void *, src,
 	if (unlikely(!nmi_uaccess_okay()))
 		return -EPERM;
 
-	return probe_user_write(unsafe_ptr, src, size);
+	return copy_to_user_nofault(unsafe_ptr, src, size);
 }
 
 static const struct bpf_func_proto bpf_probe_write_user_proto = {
