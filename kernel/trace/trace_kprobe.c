@@ -201,7 +201,7 @@ static void FETCH_FUNC_NAME(memory, type)(struct pt_regs *regs,		\
 					  void *addr, void *dest)	\
 {									\
 	type retval;							\
-	if (probe_kernel_address(addr, retval))				\
+	if (get_kernel_nofault(retval, addr))				\
 		*(type *)dest = 0;					\
 	else								\
 		*(type *)dest = retval;					\

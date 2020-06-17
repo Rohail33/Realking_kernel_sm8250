@@ -100,12 +100,6 @@ Efault:
  * do_page_fault() doesn't attempt to take mmap_sem.  This makes
  * copy_from_kernel_nofault() suitable for use within regions where the caller
  * already holds mmap_sem, or other locks which nest inside mmap_sem.
- *
- * probe_kernel_read_strict() is the same as copy_from_kernel_nofault() except for
- * the case where architectures have non-overlapping user and kernel address
- * ranges: probe_kernel_read_strict() will additionally return -EFAULT for
- * probing memory on a user address range where probe_user_read() is supposed
- * to be used instead.
  */
 long copy_from_kernel_nofault(void *dst, const void *src, size_t size)
 {
