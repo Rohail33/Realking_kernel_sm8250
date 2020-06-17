@@ -754,11 +754,11 @@ int kgdb_arch_set_breakpoint(struct kgdb_bkpt *bpt)
 	char opc[BREAK_INSTR_SIZE];
 
 	bpt->type = BP_BREAKPOINT;
-	err = probe_kernel_read(bpt->saved_instr, (char *)bpt->bpt_addr,
+	err = copy_from_kernel_nofault(bpt->saved_instr, (char *)bpt->bpt_addr,
 				BREAK_INSTR_SIZE);
 	if (err)
 		return err;
-	err = probe_kernel_write((char *)bpt->bpt_addr,
+	err = copy_to_kernel_nofault((char *)bpt->bpt_addr,
 				 arch_kgdb_ops.gdb_bpt_instr, BREAK_INSTR_SIZE);
 	if (!err)
 		return err;
@@ -770,7 +770,7 @@ int kgdb_arch_set_breakpoint(struct kgdb_bkpt *bpt)
 		return -EBUSY;
 	text_poke((void *)bpt->bpt_addr, arch_kgdb_ops.gdb_bpt_instr,
 		  BREAK_INSTR_SIZE);
-	err = probe_kernel_read(opc, (char *)bpt->bpt_addr, BREAK_INSTR_SIZE);
+	err = copy_from_kernel_nofault(opc, (char *)bpt->bpt_addr, BREAK_INSTR_SIZE);
 	if (err)
 		return err;
 	if (memcmp(opc, arch_kgdb_ops.gdb_bpt_instr, BREAK_INSTR_SIZE))
@@ -794,13 +794,13 @@ int kgdb_arch_remove_breakpoint(struct kgdb_bkpt *bpt)
 	if (mutex_is_locked(&text_mutex))
 		goto knl_write;
 	text_poke((void *)bpt->bpt_addr, bpt->saved_instr, BREAK_INSTR_SIZE);
-	err = probe_kernel_read(opc, (char *)bpt->bpt_addr, BREAK_INSTR_SIZE);
+	err = copy_from_kernel_nofault(opc, (char *)bpt->bpt_addr, BREAK_INSTR_SIZE);
 	if (err || memcmp(opc, bpt->saved_instr, BREAK_INSTR_SIZE))
 		goto knl_write;
 	return err;
 
 knl_write:
-	return probe_kernel_write((char *)bpt->bpt_addr,
+	return copy_to_kernel_nofault((char *)bpt->bpt_addr,
 				  (char *)bpt->saved_instr, BREAK_INSTR_SIZE);
 }
 

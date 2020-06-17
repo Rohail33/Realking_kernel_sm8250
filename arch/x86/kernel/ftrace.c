@@ -126,7 +126,7 @@ ftrace_modify_code_direct(unsigned long ip, unsigned const char *old_code,
 	 */
 
 	/* read the text we want to modify */
-	if (probe_kernel_read(replaced, (void *)ip, MCOUNT_INSN_SIZE))
+	if (copy_from_kernel_nofault(replaced, (void *)ip, MCOUNT_INSN_SIZE))
 		return -EFAULT;
 
 	/* Make sure it is what we expect it to be */
@@ -136,7 +136,7 @@ ftrace_modify_code_direct(unsigned long ip, unsigned const char *old_code,
 	ip = text_ip_addr(ip);
 
 	/* replace the text with the new text */
-	if (probe_kernel_write((void *)ip, new_code, MCOUNT_INSN_SIZE))
+	if (copy_to_kernel_nofault((void *)ip, new_code, MCOUNT_INSN_SIZE))
 		return -EPERM;
 
 	sync_core();
@@ -331,7 +331,7 @@ static int ftrace_write(unsigned long ip, const char *val, int size)
 {
 	ip = text_ip_addr(ip);
 
-	if (probe_kernel_write((void *)ip, val, size))
+	if (copy_to_kernel_nofault((void *)ip, val, size))
 		return -EPERM;
 
 	return 0;
@@ -342,7 +342,7 @@ static int add_break(unsigned long ip, const char *old)
 	unsigned char replaced[MCOUNT_INSN_SIZE];
 	unsigned char brk = BREAKPOINT_INSTRUCTION;
 
-	if (probe_kernel_read(replaced, (void *)ip, MCOUNT_INSN_SIZE))
+	if (copy_from_kernel_nofault(replaced, (void *)ip, MCOUNT_INSN_SIZE))
 		return -EFAULT;
 
 	ftrace_expected = old;
@@ -416,7 +416,7 @@ static int remove_breakpoint(struct dyn_ftrace *rec)
 	unsigned long ip = rec->ip;
 
 	/* If we fail the read, just give up */
-	if (probe_kernel_read(ins, (void *)ip, MCOUNT_INSN_SIZE))
+	if (copy_from_kernel_nofault(ins, (void *)ip, MCOUNT_INSN_SIZE))
 		return -EFAULT;
 
 	/* If this does not have a breakpoint, we are done */
@@ -789,7 +789,7 @@ create_trampoline(struct ftrace_ops *ops, unsigned int *tramp_size)
 	npages = DIV_ROUND_UP(*tramp_size, PAGE_SIZE);
 
 	/* Copy ftrace_caller onto the trampoline memory */
-	ret = probe_kernel_read(trampoline, (void *)start_offset, size);
+	ret = copy_from_kernel_nofault(trampoline, (void *)start_offset, size);
 	if (WARN_ON(ret < 0))
 		goto fail;
 
@@ -797,7 +797,7 @@ create_trampoline(struct ftrace_ops *ops, unsigned int *tramp_size)
 
 	/* The trampoline ends with ret(q) */
 	retq = (unsigned long)ftrace_stub;
-	ret = probe_kernel_read(ip, (void *)retq, RET_SIZE);
+	ret = copy_from_kernel_nofault(ip, (void *)retq, RET_SIZE);
 	if (WARN_ON(ret < 0))
 		goto fail;
 
@@ -907,7 +907,7 @@ static void *addr_from_call(void *ptr)
 	union ftrace_code_union calc;
 	int ret;
 
-	ret = probe_kernel_read(&calc, ptr, MCOUNT_INSN_SIZE);
+	ret = copy_from_kernel_nofault(&calc, ptr, MCOUNT_INSN_SIZE);
 	if (WARN_ON_ONCE(ret < 0))
 		return NULL;
 

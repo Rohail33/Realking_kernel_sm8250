@@ -2009,7 +2009,7 @@ static void print_ip_ins(const char *fmt, const unsigned char *p)
 	char ins[MCOUNT_INSN_SIZE];
 	int i;
 
-	if (probe_kernel_read(ins, p, MCOUNT_INSN_SIZE)) {
+	if (copy_from_kernel_nofault(ins, p, MCOUNT_INSN_SIZE)) {
 		printk(KERN_CONT "%s[FAULT] %px\n", fmt, p);
 		return;
 	}

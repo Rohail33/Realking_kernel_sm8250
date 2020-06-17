@@ -5,14 +5,15 @@
 #include <linux/mm.h>
 #include <linux/uaccess.h>
 
-bool __weak probe_kernel_read_allowed(const void *unsafe_src, size_t size)
+bool __weak copy_from_kernel_nofault_allowed(const void *unsafe_src,
+		size_t size)
 {
 	return true;
 }
 
 #ifdef HAVE_GET_KERNEL_NOFAULT
 
-#define probe_kernel_read_loop(dst, src, len, type, err_label)		\
+#define copy_from_kernel_nofault_loop(dst, src, len, type, err_label)	\
 	while (len >= sizeof(type)) {					\
 		__get_kernel_nofault(dst, src, type, err_label);		\
 		dst += sizeof(type);					\
@@ -20,25 +21,25 @@ bool __weak probe_kernel_read_allowed(const void *unsafe_src, size_t size)
 		len -= sizeof(type);					\
 	}
 
-long probe_kernel_read(void *dst, const void *src, size_t size)
+long copy_from_kernel_nofault(void *dst, const void *src, size_t size)
 {
-	if (!probe_kernel_read_allowed(src, size))
+	if (!copy_from_kernel_nofault_allowed(src, size))
 		return -ERANGE;
 
 	pagefault_disable();
-	probe_kernel_read_loop(dst, src, size, u64, Efault);
-	probe_kernel_read_loop(dst, src, size, u32, Efault);
-	probe_kernel_read_loop(dst, src, size, u16, Efault);
-	probe_kernel_read_loop(dst, src, size, u8, Efault);
+	copy_from_kernel_nofault_loop(dst, src, size, u64, Efault);
+	copy_from_kernel_nofault_loop(dst, src, size, u32, Efault);
+	copy_from_kernel_nofault_loop(dst, src, size, u16, Efault);
+	copy_from_kernel_nofault_loop(dst, src, size, u8, Efault);
 	pagefault_enable();
 	return 0;
 Efault:
 	pagefault_enable();
 	return -EFAULT;
 }
-EXPORT_SYMBOL_GPL(probe_kernel_read);
+EXPORT_SYMBOL_GPL(copy_from_kernel_nofault);
 
-#define probe_kernel_write_loop(dst, src, len, type, err_label)		\
+#define copy_to_kernel_nofault_loop(dst, src, len, type, err_label)	\
 	while (len >= sizeof(type)) {					\
 		__put_kernel_nofault(dst, src, type, err_label);		\
 		dst += sizeof(type);					\
@@ -46,13 +47,13 @@ EXPORT_SYMBOL_GPL(probe_kernel_read);
 		len -= sizeof(type);					\
 	}
 
-long probe_kernel_write(void *dst, const void *src, size_t size)
+long copy_to_kernel_nofault(void *dst, const void *src, size_t size)
 {
 	pagefault_disable();
-	probe_kernel_write_loop(dst, src, size, u64, Efault);
-	probe_kernel_write_loop(dst, src, size, u32, Efault);
-	probe_kernel_write_loop(dst, src, size, u16, Efault);
-	probe_kernel_write_loop(dst, src, size, u8, Efault);
+	copy_to_kernel_nofault_loop(dst, src, size, u64, Efault);
+	copy_to_kernel_nofault_loop(dst, src, size, u32, Efault);
+	copy_to_kernel_nofault_loop(dst, src, size, u16, Efault);
+	copy_to_kernel_nofault_loop(dst, src, size, u8, Efault);
 	pagefault_enable();
 	return 0;
 Efault:
@@ -66,7 +67,7 @@ long strncpy_from_kernel_nofault(char *dst, const void *unsafe_addr, long count)
 
 	if (unlikely(count <= 0))
 		return 0;
-	if (!probe_kernel_read_allowed(unsafe_addr, count))
+	if (!copy_from_kernel_nofault_allowed(unsafe_addr, count))
 		return -ERANGE;
 
 	pagefault_disable();
@@ -86,7 +87,7 @@ Efault:
 }
 #else /* HAVE_GET_KERNEL_NOFAULT */
 /**
- * probe_kernel_read(): safely attempt to read from kernel-space
+ * copy_from_kernel_nofault(): safely attempt to read from kernel-space
  * @dst: pointer to the buffer that shall take the data
  * @src: address to read from
  * @size: size of the data chunk
@@ -97,21 +98,21 @@ Efault:
  *
  * We ensure that the copy_from_user is executed in atomic context so that
  * do_page_fault() doesn't attempt to take mmap_sem.  This makes
- * probe_kernel_read() suitable for use within regions where the caller
+ * copy_from_kernel_nofault() suitable for use within regions where the caller
  * already holds mmap_sem, or other locks which nest inside mmap_sem.
  *
- * probe_kernel_read_strict() is the same as probe_kernel_read() except for
+ * probe_kernel_read_strict() is the same as copy_from_kernel_nofault() except for
  * the case where architectures have non-overlapping user and kernel address
  * ranges: probe_kernel_read_strict() will additionally return -EFAULT for
  * probing memory on a user address range where probe_user_read() is supposed
  * to be used instead.
  */
-long probe_kernel_read(void *dst, const void *src, size_t size)
+long copy_from_kernel_nofault(void *dst, const void *src, size_t size)
 {
 	long ret;
 	mm_segment_t old_fs = get_fs();
 
-	if (!probe_kernel_read_allowed(src, size))
+	if (!copy_from_kernel_nofault_allowed(src, size))
 		return -ERANGE;
 
 	set_fs(KERNEL_DS);
@@ -125,7 +126,7 @@ long probe_kernel_read(void *dst, const void *src, size_t size)
 		return -EFAULT;
 	return 0;
 }
-EXPORT_SYMBOL_GPL(probe_kernel_read);
+EXPORT_SYMBOL_GPL(copy_from_kernel_nofault);
 
 /**
  * probe_user_read(): safely attempt to read from a user-space location
@@ -156,7 +157,7 @@ long probe_user_read(void *dst, const void __user *src, size_t size)
 EXPORT_SYMBOL_GPL(probe_user_read);
 
 /**
- * probe_kernel_write(): safely attempt to write to a location
+ * copy_to_kernel_nofault(): safely attempt to write to a location
  * @dst: address to write to
  * @src: pointer to the data that shall be written
  * @size: size of the data chunk
@@ -164,7 +165,7 @@ EXPORT_SYMBOL_GPL(probe_user_read);
  * Safely write to address @dst from the buffer at @src.  If a kernel fault
  * happens, handle that and return -EFAULT.
  */
-long probe_kernel_write(void *dst, const void *src, size_t size)
+long copy_to_kernel_nofault(void *dst, const void *src, size_t size)
 {
 	long ret;
 	mm_segment_t old_fs = get_fs();
@@ -235,7 +236,7 @@ long strncpy_from_kernel_nofault(char *dst, const void *unsafe_addr, long count)
 
 	if (unlikely(count <= 0))
 		return 0;
-	if (!probe_kernel_read_allowed(unsafe_addr, count))
+	if (!copy_from_kernel_nofault_allowed(unsafe_addr, count))
 		return -ERANGE;
 
 	set_fs(KERNEL_DS);
