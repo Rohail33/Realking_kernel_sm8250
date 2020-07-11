@@ -60,23 +60,17 @@
 #define RATELIMIT_CALC_SHIFT	10
 
 /*
+ * Lock dirty background writeback to the dirty ratio divided by this number.
+ */
+#define LOCKED_DIRTY_RATIO	2
+
+/*
  * After a CPU has dirtied this many pages, balance_dirty_pages_ratelimited
  * will look to see if it needs to force writeback or throttling.
  */
 static long ratelimit_pages = 256;
 
 /* The following parameters are exported via /proc/sys/vm */
-
-/*
- * Start background writeback (via writeback threads) at this percentage
- */
-int dirty_background_ratio = 10;
-
-/*
- * dirty_background_bytes starts at 0 (disabled) so that it is a function of
- * dirty_background_ratio * the amount of dirtyable memory
- */
-unsigned long dirty_background_bytes;
 
 /*
  * free highmem will not be subtracted from the total free memory
@@ -394,10 +388,10 @@ static void domain_dirty_limits(struct dirty_throttle_control *dtc)
 	const unsigned long available_memory = dtc->avail;
 	struct dirty_throttle_control *gdtc = mdtc_gdtc(dtc);
 	unsigned long bytes = vm_dirty_bytes;
-	unsigned long bg_bytes = dirty_background_bytes;
+	unsigned long bg_bytes = vm_dirty_bytes / LOCKED_DIRTY_RATIO;
 	/* convert ratios to per-PAGE_SIZE for higher precision */
 	unsigned long ratio = (vm_dirty_ratio * PAGE_SIZE) / 100;
-	unsigned long bg_ratio = (dirty_background_ratio * PAGE_SIZE) / 100;
+	unsigned long bg_ratio = ratio / LOCKED_DIRTY_RATIO;
 	unsigned long thresh;
 	unsigned long bg_thresh;
 	struct task_struct *tsk;
@@ -508,30 +502,6 @@ bool node_dirty_ok(struct pglist_data *pgdat)
 	nr_pages += node_page_state(pgdat, NR_WRITEBACK);
 
 	return nr_pages <= limit;
-}
-
-int dirty_background_ratio_handler(struct ctl_table *table, int write,
-		void __user *buffer, size_t *lenp,
-		loff_t *ppos)
-{
-	int ret;
-
-	ret = proc_dointvec_minmax(table, write, buffer, lenp, ppos);
-	if (ret == 0 && write)
-		dirty_background_bytes = 0;
-	return ret;
-}
-
-int dirty_background_bytes_handler(struct ctl_table *table, int write,
-		void __user *buffer, size_t *lenp,
-		loff_t *ppos)
-{
-	int ret;
-
-	ret = proc_doulongvec_minmax(table, write, buffer, lenp, ppos);
-	if (ret == 0 && write)
-		dirty_background_ratio = 0;
-	return ret;
 }
 
 int dirty_ratio_handler(struct ctl_table *table, int write,
