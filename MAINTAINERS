@@ -6076,7 +6076,8 @@ F:	drivers/platform/x86/fujitsu-tablet.c
 FUSE: FILESYSTEM IN USERSPACE
 M:	Miklos Szeredi <miklos@szeredi.hu>
 L:	linux-fsdevel@vger.kernel.org
-W:	http://fuse.sourceforge.net/
+S:	Maintained
+W:	https://github.com/libfuse/
 T:	git git://git.kernel.org/pub/scm/linux/kernel/git/mszeredi/fuse.git
 S:	Maintained
 F:	fs/fuse/
