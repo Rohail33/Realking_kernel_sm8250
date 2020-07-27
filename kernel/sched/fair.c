@@ -8487,6 +8487,10 @@ static void check_preempt_wakeup(struct rq *rq, struct task_struct *p, int wake_
 	if (unlikely(p->policy != SCHED_NORMAL) || !sched_feat(WAKEUP_PREEMPTION))
 		return;
 
+	/* Do not preempt running crucial tasks */
+	if (sched_feat(EAS_CRUCIAL) && schedtune_crucial(curr) > 0)
+		return;
+
 	find_matching_se(&se, &pse);
 	update_curr(cfs_rq_of(se));
 	BUG_ON(!pse);
