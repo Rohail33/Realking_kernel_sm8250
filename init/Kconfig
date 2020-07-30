@@ -162,10 +162,13 @@ config HAVE_KERNEL_LZ4
 config HAVE_KERNEL_UNCOMPRESSED
 	bool
 
+config HAVE_KERNEL_ZSTD
+        bool
+
 choice
 	prompt "Kernel compression mode"
 	default KERNEL_GZIP
-	depends on HAVE_KERNEL_GZIP || HAVE_KERNEL_BZIP2 || HAVE_KERNEL_LZMA || HAVE_KERNEL_XZ || HAVE_KERNEL_LZO || HAVE_KERNEL_LZ4 || HAVE_KERNEL_UNCOMPRESSED
+	depends on HAVE_KERNEL_GZIP || HAVE_KERNEL_BZIP2 || HAVE_KERNEL_LZMA || HAVE_KERNEL_XZ || HAVE_KERNEL_LZO || HAVE_KERNEL_LZ4 || HAVE_KERNEL_UNCOMPRESSED || HAVE_KERNEL_ZSTD
 	help
 	  The linux kernel is a kind of self-extracting executable.
 	  Several compression algorithms are available, which differ
@@ -253,6 +256,16 @@ config KERNEL_UNCOMPRESSED
 	  environments, where decompressing and moving the kernel is awfully
 	  slow. This option allows early boot code to skip the decompressor
 	  and jump right at uncompressed kernel image.
+
+config KERNEL_ZSTD
+	bool "ZSTD"
+	depends on HAVE_KERNEL_ZSTD
+	help
+	  ZSTD is a compression algorithm targeting intermediate compression
+	  with fast decompression speed. It will compress better than GZIP and
+	  decompress around the same speed as LZO, but slower than LZ4. You
+	  will need at least 192 KB RAM or more for booting. The zstd command
+	  line tool is required for compression.
 
 endchoice
 
