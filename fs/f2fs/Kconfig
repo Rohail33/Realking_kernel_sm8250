@@ -157,3 +157,22 @@ config F2FS_UNFAIR_RWSEM
 	help
 	  Use unfair rw_semaphore, if system configured IO priority by block
 	  cgroup.
+
+config F2FS_REPORT_FAKE_KERNEL_VERSION
+	bool "Report fake kernel version to fsck.f2fs"
+	depends on F2FS_FS
+	help
+	  fsck.f2fs forces a filesystem fix on boot if it detects that the current
+	  kernel version differs from the one saved in the superblock, which results in
+	  fsck taking a long time to run. This option provides a way to report a
+	  constant fake kernel version to fsck to avoid triggering the version check.
+
+	  If unsure, say N.
+
+config F2FS_FAKE_KERNEL_RELEASE
+	string "Kernel release for fsck.f2fs"
+	depends on F2FS_REPORT_FAKE_KERNEL_VERSION
+
+config F2FS_FAKE_KERNEL_VERSION
+	string "Kernel version for fsck.f2fs"
+	depends on F2FS_REPORT_FAKE_KERNEL_VERSION
