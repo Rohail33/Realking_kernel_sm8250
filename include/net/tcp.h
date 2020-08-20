@@ -476,7 +476,8 @@ enum tcp_synack_type {
 struct sk_buff *tcp_make_synack(const struct sock *sk, struct dst_entry *dst,
 				struct request_sock *req,
 				struct tcp_fastopen_cookie *foc,
-				enum tcp_synack_type synack_type);
+				enum tcp_synack_type synack_type,
+				struct sk_buff *syn_skb);
 int tcp_disconnect(struct sock *sk, int flags);
 
 void tcp_finish_connect(struct sock *sk, struct sk_buff *skb);
@@ -2025,7 +2026,8 @@ struct tcp_request_sock_ops {
 	int (*send_synack)(const struct sock *sk, struct dst_entry *dst,
 			   struct flowi *fl, struct request_sock *req,
 			   struct tcp_fastopen_cookie *foc,
-			   enum tcp_synack_type synack_type);
+			   enum tcp_synack_type synack_type,
+			   struct sk_buff *syn_skb);
 };
 
 extern const struct tcp_request_sock_ops tcp_request_sock_ipv4_ops;
