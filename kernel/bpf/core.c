@@ -25,16 +25,16 @@
 #include <linux/moduleloader.h>
 #include <linux/bpf.h>
 #include <linux/btf.h>
-#include <linux/frame.h>
+#include <linux/objtool.h>
 #include <linux/rbtree_latch.h>
 #include <linux/kallsyms.h>
 #include <linux/rcupdate.h>
 #include <linux/perf_event.h>
 #include <linux/extable.h>
+#include <linux/log2.h>
 #include <linux/nospec.h>
 
 #include <asm/barrier.h>
-#include <linux/log2.h>
 #include <asm/unaligned.h>
 
 #include <trace/hooks/memory.h>
