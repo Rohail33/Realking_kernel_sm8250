@@ -4,6 +4,7 @@
 #include <linux/compiler.h>
 #include <linux/export.h>
 #include <linux/err.h>
+#include <linux/file.h>
 #include <linux/sched.h>
 #include <linux/sched/mm.h>
 #include <linux/sched/task_stack.h>
@@ -318,6 +319,18 @@ unsigned long randomize_page(unsigned long start, unsigned long range)
 
 	return start + (get_random_long() % range << PAGE_SHIFT);
 }
+
+/*
+ * Change backing file, only valid to use during initial VMA setup.
+ */
+void vma_set_file(struct vm_area_struct *vma, struct file *file)
+{
+	/* Changing an anonymous vma with this is illegal */
+	get_file(file);
+	swap(vma->vm_file, file);
+	fput(file);
+}
+EXPORT_SYMBOL(vma_set_file);
 
 #if defined(CONFIG_MMU) && !defined(HAVE_ARCH_PICK_MMAP_LAYOUT)
 void arch_pick_mmap_layout(struct mm_struct *mm, struct rlimit *rlim_stack)
