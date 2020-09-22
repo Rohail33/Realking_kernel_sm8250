@@ -114,7 +114,7 @@ quiet_cmd_vdso = VDSO    $@
 		       -Wl,-T,$(filter %.lds,$^) $(filter %.o,$^)
 
 VDSO_LDFLAGS = -fPIC -shared $(call cc-ldoption, -Wl$(comma)--hash-style=sysv) \
-	$(call cc-ldoption, -Wl$(comma)--build-id) -Wl,-Bsymbolic
+	$(call cc-ldoption, -Wl$(comma)--build-id=sha1) -Wl,-Bsymbolic
 GCOV_PROFILE := n
 
 #
