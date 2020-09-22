@@ -68,7 +68,7 @@ VDSO_LDFLAGS := \
 	$(addprefix -Wl$(comma),$(filter -E%,$(KBUILD_CFLAGS))) \
 	-nostdlib -shared \
 	$(call cc-ldoption, -Wl$(comma)--hash-style=sysv) \
-	$(call cc-ldoption, -Wl$(comma)--build-id)
+	$(call cc-ldoption, -Wl$(comma)--build-id=sha1)
 
 CFLAGS_REMOVE_vdso.o = -pg
 
