@@ -680,6 +680,7 @@ static void sugov_update_single(struct update_util_data *hook, u64 time,
 	unsigned long util, max, hs_util, boost_util;
 	unsigned int next_f;
 	bool busy;
+	unsigned int cached_freq = sg_policy->cached_raw_freq;
 
 	if (!sg_policy->tunables->pl && flags & SCHED_CPUFREQ_PL)
 		return;
@@ -736,7 +737,7 @@ static void sugov_update_single(struct update_util_data *hook, u64 time,
 		next_f = sg_policy->next_freq;
 
 		/* Restore cached freq as next_freq has changed */
-		sg_policy->cached_raw_freq = sg_policy->prev_cached_raw_freq;
+		sg_policy->cached_raw_freq = cached_freq;
 	}
 
 	/*
