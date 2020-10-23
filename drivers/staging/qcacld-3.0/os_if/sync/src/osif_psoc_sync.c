@@ -127,7 +127,7 @@ sync_put:
 int __osif_psoc_sync_create_and_trans(struct osif_psoc_sync **out_psoc_sync,
 				      const char *desc)
 {
-	struct osif_psoc_sync *psoc_sync;
+	struct osif_psoc_sync *psoc_sync = NULL;
 	QDF_STATUS status;
 	int errno;
 

@@ -11101,7 +11101,7 @@ void csr_roam_joined_state_msg_processor(struct mac_context *mac, void *msg_buf)
 		struct csr_roam_session *pSession;
 		tSirSmeAssocIndToUpperLayerCnf *pUpperLayerAssocCnf;
 		struct csr_roam_info *roam_info;
-		uint32_t sessionId;
+		uint32_t sessionId = 0;
 		QDF_STATUS status;
 
 		sme_debug("ASSOCIATION confirmation can be given to upper layer ");

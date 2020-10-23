@@ -1412,7 +1412,7 @@ struct xt_table *xt_register_table(struct net *net,
 				   struct xt_table_info *bootstrap,
 				   struct xt_table_info *newinfo)
 {
-	int ret;
+	int ret = 0;
 	struct xt_table_info *private;
 	struct xt_table *t, *table;
 

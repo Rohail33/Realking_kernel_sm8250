@@ -806,7 +806,7 @@ static void rtc6226_update_af_list(struct rtc6226_device *radio)
 	u8 i = 0;
 	u8 af_data = radio->block[2] >> 8;
 	u32 af_freq_khz;
-	u32 tuned_freq_khz;
+	u32 tuned_freq_khz = 0;
 	struct kfifo *buff;
 	struct af_list_ev ev;
 	spinlock_t lock = radio->buf_lock[RTC6226_FM_BUF_AF_LIST];
@@ -2238,7 +2238,7 @@ static int rtc6226_vidioc_g_frequency(struct file *file, void *priv,
 {
 	struct rtc6226_device *radio = video_drvdata(file);
 	int retval = 0;
-	unsigned int frq;
+	unsigned int frq = 0;
 
 	FMDBG("%s enter freq %d\n", __func__, freq->frequency);
 

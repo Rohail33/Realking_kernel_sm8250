@@ -1368,7 +1368,7 @@ static int btf_array_check_member(struct btf_verifier_env *env,
 {
 	u32 struct_bits_off = member->offset;
 	u32 struct_size, bytes_offset;
-	u32 array_type_id, array_size;
+	u32 array_type_id, array_size = 0;
 	struct btf *btf = env->btf;
 
 	if (BITS_PER_BYTE_MASKED(struct_bits_off)) {

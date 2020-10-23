@@ -113,7 +113,7 @@ int
 __osif_driver_sync_create_and_trans(struct osif_driver_sync **out_driver_sync,
 				    const char *desc)
 {
-	struct osif_driver_sync *driver_sync;
+	struct osif_driver_sync *driver_sync = NULL;
 	QDF_STATUS status;
 	int errno;
 

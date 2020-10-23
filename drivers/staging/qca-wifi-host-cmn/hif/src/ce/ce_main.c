@@ -905,8 +905,8 @@ static void hif_select_service_to_pipe_map(struct hif_softc *scn,
  */
 static bool ce_mark_datapath(struct CE_state *ce_state)
 {
-	struct service_to_pipe *svc_map;
-	uint32_t map_sz, map_len;
+	struct service_to_pipe *svc_map = NULL;
+	uint32_t map_sz = 0, map_len;
 	int    i;
 	bool   rc = false;
 

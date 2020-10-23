@@ -2149,7 +2149,7 @@ int mhi_debugfs_mhi_regdump_show(struct seq_file *m, void *d)
 	enum mhi_dev_state state;
 	enum mhi_ee ee;
 	int i, ret;
-	u32 val;
+	u32 val = 0;
 	void __iomem *mhi_base = mhi_cntrl->regs;
 	void __iomem *bhi_base = mhi_cntrl->bhi;
 	void __iomem *bhie_base = mhi_cntrl->bhie;
@@ -2802,7 +2802,7 @@ void mhi_debug_reg_dump(struct mhi_controller *mhi_cntrl)
 	enum mhi_dev_state state;
 	enum mhi_ee ee;
 	int i, ret;
-	u32 val;
+	u32 val = 0;
 	void __iomem *mhi_base = mhi_cntrl->regs;
 	void __iomem *bhi_base = mhi_cntrl->bhi;
 	void __iomem *bhie_base = mhi_cntrl->bhie;

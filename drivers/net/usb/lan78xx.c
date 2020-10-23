@@ -1935,7 +1935,7 @@ static void lan78xx_irq_bus_sync_unlock(struct irq_data *irqd)
 	struct irq_domain_data *data = irq_data_get_irq_chip_data(irqd);
 	struct lan78xx_net *dev =
 			container_of(data, struct lan78xx_net, domain_data);
-	u32 buf;
+	u32 buf = 0;
 	int ret;
 
 	/* call register access here because irq_bus_lock & irq_bus_sync_unlock

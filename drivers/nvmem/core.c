@@ -69,7 +69,7 @@ static ssize_t bin_attr_nvmem_cell_read(struct file *filp, struct kobject *kobj,
 				    char *buf, loff_t pos, size_t count)
 {
 	struct nvmem_cell *cell;
-	size_t len;
+	size_t len = 0;
 	u8 *data;
 
 	cell = attr->private;

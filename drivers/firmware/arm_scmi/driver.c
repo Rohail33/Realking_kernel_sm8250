@@ -507,7 +507,7 @@ int scmi_version_get(const struct scmi_handle *handle, u8 protocol,
 {
 	int ret;
 	__le32 *rev_info;
-	struct scmi_xfer *t;
+	struct scmi_xfer *t = NULL;
 
 	ret = scmi_xfer_get_init(handle, PROTOCOL_VERSION, protocol, 0,
 				 sizeof(*version), &t);

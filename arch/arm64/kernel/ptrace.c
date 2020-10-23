@@ -879,7 +879,7 @@ static int sve_set(struct task_struct *target,
 		   const void *kbuf, const void __user *ubuf)
 {
 	int ret;
-	struct user_sve_header header;
+	struct user_sve_header header = { 0 };
 	unsigned int vq;
 	unsigned long start, end;
 

@@ -750,7 +750,7 @@ static void xycz_add(u64 *x1, u64 *y1, u64 *x2, u64 *y2, u64 *curve_prime,
 		     unsigned int ndigits)
 {
 	/* t1 = X1, t2 = Y1, t3 = X2, t4 = Y2 */
-	u64 t5[ECC_MAX_DIGITS];
+	u64 t5[ECC_MAX_DIGITS] = { 0 };
 
 	/* t5 = x2 - x1 */
 	vli_mod_sub(t5, x2, x1, curve_prime, ndigits);
@@ -791,9 +791,9 @@ static void xycz_add_c(u64 *x1, u64 *y1, u64 *x2, u64 *y2, u64 *curve_prime,
 		       unsigned int ndigits)
 {
 	/* t1 = X1, t2 = Y1, t3 = X2, t4 = Y2 */
-	u64 t5[ECC_MAX_DIGITS];
-	u64 t6[ECC_MAX_DIGITS];
-	u64 t7[ECC_MAX_DIGITS];
+	u64 t5[ECC_MAX_DIGITS] = { 0 };
+	u64 t6[ECC_MAX_DIGITS] = { 0 };
+	u64 t7[ECC_MAX_DIGITS] = { 0 };
 
 	/* t5 = x2 - x1 */
 	vli_mod_sub(t5, x2, x1, curve_prime, ndigits);
@@ -847,9 +847,9 @@ static void ecc_point_mult(struct ecc_point *result,
 {
 	/* R0 and R1 */
 	u64 rx[2][ECC_MAX_DIGITS];
-	u64 ry[2][ECC_MAX_DIGITS];
+	u64 ry[2][ECC_MAX_DIGITS] = { 0 };
 	u64 z[ECC_MAX_DIGITS];
-	u64 sk[2][ECC_MAX_DIGITS];
+	u64 sk[2][ECC_MAX_DIGITS] = { 0 };
 	u64 *curve_prime = curve->p;
 	int i, nb;
 	int num_bits;
