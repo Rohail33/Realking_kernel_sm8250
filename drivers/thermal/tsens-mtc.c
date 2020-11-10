@@ -22,46 +22,6 @@ struct tsens_device *tsens_controller_is_present(void)
 }
 EXPORT_SYMBOL(tsens_controller_is_present);
 
-static __maybe_unused int tsens_mtc_reset_history_counter(unsigned int zone)
-{
-	unsigned int reg_cntl, is_valid;
-	void __iomem *sensor_addr;
-	struct tsens_device *tmdev = NULL;
-
-	if (zone > TSENS_NUM_MTC_ZONES_SUPPORT)
-		return -EINVAL;
-
-	tmdev = tsens_controller_is_present();
-	if (!tmdev) {
-		pr_err("No TSENS controller present\n");
-		return -EPROBE_DEFER;
-	}
-
-	sensor_addr = TSENS_TM_MTC_ZONE0_SW_MASK_ADDR(tmdev->tsens_tm_addr);
-	reg_cntl = readl_relaxed((sensor_addr +
-		(zone * TSENS_SN_ADDR_OFFSET)));
-	is_valid = (reg_cntl & TSENS_RESET_HISTORY_MASK)
-				>> TSENS_RESET_HISTORY_SHIFT;
-	if (!is_valid) {
-		/*Enable the bit to reset counter*/
-		writel_relaxed(reg_cntl | (1 << TSENS_RESET_HISTORY_SHIFT),
-				(sensor_addr + (zone * TSENS_SN_ADDR_OFFSET)));
-		reg_cntl = readl_relaxed((sensor_addr +
-				(zone * TSENS_SN_ADDR_OFFSET)));
-		pr_debug("tsens : zone =%d reg=%x\n", zone, reg_cntl);
-	}
-
-	/*Disable the bit to start counter*/
-	writel_relaxed(reg_cntl & ~(1 << TSENS_RESET_HISTORY_SHIFT),
-				(sensor_addr + (zone * TSENS_SN_ADDR_OFFSET)));
-	reg_cntl = readl_relaxed((sensor_addr +
-			(zone * TSENS_SN_ADDR_OFFSET)));
-	pr_debug("tsens : zone =%d reg=%x\n", zone, reg_cntl);
-
-	return 0;
-}
-EXPORT_SYMBOL(tsens_mtc_reset_history_counter);
-
 int tsens_set_mtc_zone_sw_mask(unsigned int zone, unsigned int th1_enable,
 				unsigned int th2_enable)
 {
