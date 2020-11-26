@@ -2962,6 +2962,7 @@ static inline bool task_rtg_high_prio(struct task_struct *p)
 		(p->prio <= sysctl_walt_rtg_cfs_boost_prio);
 }
 
+/* applying the task threshold for all types of low latency tasks. */
 static inline bool walt_low_latency_task(struct task_struct *p)
 {
 	return p->low_latency &&
