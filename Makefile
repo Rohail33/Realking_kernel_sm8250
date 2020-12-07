@@ -709,10 +709,30 @@ KBUILD_LDFLAGS  += -Os
 else ifeq ($(cc-name),clang)
 KBUILD_CFLAGS   += -O3
 KBUILD_AFLAGS   += -O3
+KBUILD_LDFLAGS  += -O3
 else
 KBUILD_CFLAGS   += -O2
 KBUILD_AFLAGS   += -O2
 KBUILD_LDFLAGS  += -O2
+ifdef CONFIG_POLLY_CLANG
+POLLY_FLAGS	+= -mllvm -polly \
+		   -mllvm -polly-ast-use-context \
+		   -mllvm -polly-detect-keep-going \
+		   -mllvm -polly-invariant-load-hoisting \
+		   -mllvm -polly-opt-fusion=max \
+		   -mllvm -polly-run-inliner \
+		   -mllvm -polly-vectorizer=stripmine
+# Polly may optimise loops with dead paths beyound what the linker
+# can understand. This may negate the effect of the linker's DCE
+# so we tell Polly to perfom proven DCE on the loops it optimises
+# in order to preserve the overall effect of the linker's DCE.
+ifdef CONFIG_LD_DEAD_CODE_DATA_ELIMINATION
+POLLY_FLAGS	+= -mllvm -polly-run-dce
+endif
+KBUILD_CFLAGS += $(POLLY_FLAGS)
+KBUILD_AFLAGS += $(POLLY_FLAGS)
+KBUILD_LDFLAGS	+= $(POLLY_FLAGS)
+endif
 endif
 
 # Tell gcc to never replace conditional load with a non-conditional one
