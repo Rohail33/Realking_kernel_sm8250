@@ -136,7 +136,7 @@ static int virt_sensor_read_temp(void *data, int *val)
 	for (idx = 0; idx < sens->num_sensors; idx++) {
 		int sens_temp = 0;
 
-		ret = thermal_zone_get_temp(sens->tz[idx], &sens_temp);
+		ret = thermal_zone_get_temp_nolock(sens->tz[idx], &sens_temp);
 		if (ret) {
 			pr_err("virt zone: sensor[%s] read error:%d\n",
 				sens->tz[idx]->type, ret);

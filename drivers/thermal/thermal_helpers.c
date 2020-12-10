@@ -113,6 +113,53 @@ exit:
 }
 EXPORT_SYMBOL_GPL(thermal_zone_get_temp);
 
+/**
+ * thermal_zone_get_temp() - returns the temperature of a thermal zone
+ * without holding a mutex (YIKES)
+ * @tz: a valid pointer to a struct thermal_zone_device
+ * @temp: a valid pointer to where to store the resulting temperature.
+ *
+ * When a valid thermal zone reference is passed, it will fetch its
+ * temperature and fill @temp.
+ *
+ * Return: On success returns 0, an error code otherwise
+ */
+int thermal_zone_get_temp_nolock(struct thermal_zone_device *tz, int *temp)
+{
+	int ret = -EINVAL;
+	int count;
+	int crit_temp = INT_MAX;
+	enum thermal_trip_type type;
+
+	if (!tz || IS_ERR(tz) || !tz->ops->get_temp)
+		goto exit;
+
+	ret = tz->ops->get_temp(tz, temp);
+
+	if (IS_ENABLED(CONFIG_THERMAL_EMULATION) && tz->emul_temperature) {
+		for (count = 0; count < tz->trips; count++) {
+			ret = tz->ops->get_trip_type(tz, count, &type);
+			if (!ret && type == THERMAL_TRIP_CRITICAL) {
+				ret = tz->ops->get_trip_temp(tz, count,
+						&crit_temp);
+				break;
+			}
+		}
+
+		/*
+		 * Only allow emulating a temperature when the real temperature
+		 * is below the critical temperature so that the emulation code
+		 * cannot hide critical conditions.
+		 */
+		if (!ret && *temp < crit_temp)
+			*temp = tz->emul_temperature;
+	}
+	trace_thermal_query_temp(tz, *temp);
+exit:
+	return ret;
+}
+EXPORT_SYMBOL_GPL(thermal_zone_get_temp_nolock);
+
 void thermal_zone_set_trips(struct thermal_zone_device *tz)
 {
 	int low = -INT_MAX;
