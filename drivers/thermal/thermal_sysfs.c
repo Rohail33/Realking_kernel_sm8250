@@ -256,12 +256,8 @@ passive_store(struct device *dev, struct device_attribute *attr,
 	if (state && !tz->forced_passive) {
 		if (!tz->passive_delay)
 			tz->passive_delay = 1000;
-		thermal_zone_device_rebind_exception(tz, "Processor",
-						     sizeof("Processor"));
 	} else if (!state && tz->forced_passive) {
 		tz->passive_delay = 0;
-		thermal_zone_device_unbind_exception(tz, "Processor",
-						     sizeof("Processor"));
 	}
 
 	tz->forced_passive = state;
