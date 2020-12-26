@@ -9,7 +9,7 @@
 #include <linux/debugfs.h>
 #include <linux/preempt.h>
 #include <linux/stat.h>
-#include <asm/uaccess.h>
+#include <linux/uaccess.h>
 
 #define CREATE_TRACE_POINTS
 #include "perf_trace_user.h"
