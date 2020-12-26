@@ -471,7 +471,7 @@ static int msm_gpio_get_direction(struct gpio_chip *chip, unsigned int offset)
 
 	g = &pctrl->soc->groups[offset];
 
-	val = readl(pctrl->regs + g->ctl_reg);
+	val = readl_relaxed(pctrl->regs + g->ctl_reg);
 
 	/* 0 = output, 1 = input */
 	return val & BIT(g->oe_bit) ? 0 : 1;
@@ -485,7 +485,7 @@ static int msm_gpio_get(struct gpio_chip *chip, unsigned offset)
 
 	g = &pctrl->soc->groups[offset];
 
-	val = readl(pctrl->regs + g->io_reg);
+	val = readl_relaxed(pctrl->regs + g->io_reg);
 	return !!(val & BIT(g->in_bit));
 }
 
@@ -556,8 +556,8 @@ static void msm_gpio_dbg_show_one(struct seq_file *s,
 		return;
 
 	g = &pctrl->soc->groups[offset];
-	ctl_reg = readl(pctrl->regs + g->ctl_reg);
-	io_reg = readl(pctrl->regs + g->io_reg);
+	ctl_reg = readl_relaxed(pctrl->regs + g->ctl_reg);
+	io_reg = readl_relaxed(pctrl->regs + g->io_reg);
 
 	is_out = !!(ctl_reg & BIT(g->oe_bit));
 	func = (ctl_reg >> g->mux_bit) & 7;
