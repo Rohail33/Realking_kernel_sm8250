@@ -26,6 +26,7 @@
 #include <linux/component.h>
 #include <linux/platform_device.h>
 #include <linux/pm.h>
+#include <linux/pm_qos.h>
 #include <linux/pm_runtime.h>
 #include <linux/slab.h>
 #include <linux/list.h>
@@ -732,6 +733,9 @@ struct msm_drm_private {
 	bool shutdown_in_progress;
 
 	struct msm_idle idle;
+	struct pm_qos_request pm_irq_req;
+	struct delayed_work pm_unreq_dwork;
+	atomic_t pm_req_set;
 };
 
 /* get struct msm_kms * from drm_device * */
