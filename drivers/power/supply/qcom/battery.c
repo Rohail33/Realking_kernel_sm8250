@@ -1960,7 +1960,7 @@ static void qcom_batt_create_debugfs(struct pl_data *chip)
 
 	chip->dfs_root = debugfs_create_dir("battery", NULL);
 	if (IS_ERR_OR_NULL(chip->dfs_root)) {
-		pr_err("Couldn't create battery debugfs rc=%ld\n",
+		pr_debug("Couldn't create battery debugfs rc=%ld\n",
 			(long)chip->dfs_root);
 		return;
 	}

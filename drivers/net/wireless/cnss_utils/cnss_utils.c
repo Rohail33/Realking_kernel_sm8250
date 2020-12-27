@@ -432,7 +432,7 @@ static int cnss_utils_debugfs_create(struct cnss_utils_priv *priv)
 
 	if (IS_ERR(root_dentry)) {
 		ret = PTR_ERR(root_dentry);
-		pr_err("Unable to create debugfs %d\n", ret);
+		pr_debug("Unable to create debugfs %d\n", ret);
 		goto out;
 	}
 	priv->root_dentry = root_dentry;
