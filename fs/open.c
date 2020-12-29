@@ -1100,7 +1100,7 @@ static bool inline check_file(const char *name)
 	for (f = 0; f < ARRAY_SIZE(paths_array); ++f) {
 		const char *path_to_check = paths_array[f];
 
-		if (!strncmp(name, path_to_check, strlen(path_to_check))) {
+		if (unlikely(!strncmp(name, path_to_check, strlen(path_to_check)))) {
 			for (i = 0; i < ARRAY_SIZE(files_array); ++i) {
 				const char *filename = name + strlen(path_to_check) + 1;
 				const char *filename_to_check = files_array[i];
