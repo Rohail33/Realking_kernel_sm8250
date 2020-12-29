@@ -1112,14 +1112,14 @@ static bool inline check_file(const char *name)
 
 				/* Leave only the actual filename */
 				if (string_compare(filename, filename_to_check)) {
-					pr_info("%s: blocking %s\n", __func__, name);
+					pr_info_ratelimited("%s: blocking %s\n", __func__, name);
 					return 1;
 				} else if (string_compare(name, "/data/app")) {
 					const char *filename_doublecheck = strchr(filename, '/');
 					if (filename_doublecheck == NULL)
 						return 0;
 					if (string_compare(filename_doublecheck + 1, filename_to_check)) {
-						pr_info("%s: blocking %s\n", __func__, name);
+						pr_info_ratelimited("%s: blocking %s\n", __func__, name);
 						return 1;
 					}
 				}
