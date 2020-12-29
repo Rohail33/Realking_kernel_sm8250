@@ -1094,27 +1094,32 @@ static char *paths_array[] = {
 	"/data/app"
 };
 
+static bool string_compare(const char *arg1, const char *arg2)
+{
+	return !strncmp(arg1, arg2, strlen(arg2));
+}
+
 static bool inline check_file(const char *name)
 {
 	int i, f;
 	for (f = 0; f < ARRAY_SIZE(paths_array); ++f) {
 		const char *path_to_check = paths_array[f];
 
-		if (unlikely(!strncmp(name, path_to_check, strlen(path_to_check)))) {
+		if (unlikely(string_compare(name, path_to_check))) {
 			for (i = 0; i < ARRAY_SIZE(files_array); ++i) {
 				const char *filename = name + strlen(path_to_check) + 1;
 				const char *filename_to_check = files_array[i];
 
 				/* Leave only the actual filename */
-				if (!strncmp(filename, filename_to_check, strlen(filename_to_check))) {
-					pr_info("%s: blocking %s/%s\n", __func__, path_to_check, filename);
+				if (string_compare(filename, filename_to_check)) {
+					pr_info("%s: blocking %s\n", __func__, name);
 					return 1;
-				} else if (!strncmp(name, "/data/app", strlen("/data/app"))) {
+				} else if (string_compare(name, "/data/app")) {
 					const char *filename_doublecheck = strchr(filename, '/');
 					if (filename_doublecheck == NULL)
 						return 0;
-					if (!strncmp(filename_doublecheck + 1, filename_to_check, strlen(filename_to_check))) {
-						pr_info("%s: blocking %s/%s\n", __func__, path_to_check, filename);
+					if (string_compare(filename_doublecheck + 1, filename_to_check)) {
+						pr_info("%s: blocking %s\n", __func__, name);
 						return 1;
 					}
 				}
