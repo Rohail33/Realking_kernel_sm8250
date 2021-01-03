@@ -717,7 +717,7 @@ else ifeq ($(cc-name),clang)
 KBUILD_CFLAGS   += -Ofast
 KBUILD_AFLAGS   += -Ofast
 else
-KBUILD_CFLAGS   += -O3
+KBUILD_CFLAGS   += -O2
 KBUILD_AFLAGS   += -O2
 KBUILD_LDFLAGS  += -O2
 endif
