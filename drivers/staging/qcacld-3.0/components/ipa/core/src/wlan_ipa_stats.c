@@ -956,6 +956,7 @@ static void __wlan_ipa_wdi_meter_notifier_cb(qdf_ipa_wdi_meter_evt_type_t evt,
 		break;
 	}
 }
+#endif /* WDI3_STATS_UPDATE */
 
 QDF_STATUS wlan_ipa_uc_op_metering(struct wlan_ipa_priv *ipa_ctx,
 				   struct op_msg_type *op_msg)
@@ -1008,7 +1009,6 @@ QDF_STATUS wlan_ipa_uc_op_metering(struct wlan_ipa_priv *ipa_ctx,
 
 	return QDF_STATUS_SUCCESS;
 }
-#endif /* WDI3_STATS_UPDATE */
 
 /**
  * wlan_ipa_wdi_meter_notifier_cb() - SSR wrapper for
