@@ -599,11 +599,11 @@ static unsigned long __calculate_encoder(struct vidc_bus_vote_data *d,
 	/* Encoder Parameters */
 	enum scenario scenario, bitrate_scenario;
 	enum hal_video_codec standard;
-	int width, height, fps, vmem_size;
+	int width, height, fps, vmem_size, rotation;
 	enum hal_uncompressed_format dpb_color_format;
 	enum hal_uncompressed_format original_color_format;
 	bool dpb_compression_enabled, original_compression_enabled,
-		two_stage_encoding, low_power, rotation, cropping_or_scaling;
+		two_stage_encoding, low_power, cropping_or_scaling;
 	fp_t dpb_compression_factor, original_compression_factor,
 		qsmmu_bw_overhead_factor;
 	bool b_frames_enabled;
