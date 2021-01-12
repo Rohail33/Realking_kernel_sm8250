@@ -28,6 +28,7 @@ enum { sysctl_hung_task_timeout_secs = 0 };
 extern unsigned int sysctl_sched_latency;
 extern unsigned int sysctl_sched_min_granularity;
 extern unsigned int sysctl_sched_sync_hint_enable;
+extern unsigned int sysctl_sched_asym_cap_sibling_freq_match_en;
 extern unsigned int sysctl_sched_cstate_aware;
 #if IS_ENABLED(CONFIG_MIGT)
 extern unsigned int sysctl_boost_stask_to_big;
