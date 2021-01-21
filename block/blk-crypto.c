@@ -35,21 +35,6 @@ const struct blk_crypto_mode blk_crypto_modes[] = {
 	},
 };
 
-/* Check that all I/O segments are data unit aligned */
-static int bio_crypt_check_alignment(struct bio *bio)
-{
-	const unsigned int data_unit_size =
-				bio->bi_crypt_context->bc_key->data_unit_size;
-	struct bvec_iter iter;
-	struct bio_vec bv;
-
-	bio_for_each_segment(bv, bio, iter) {
-		if (!IS_ALIGNED(bv.bv_len | bv.bv_offset, data_unit_size))
-			return -EIO;
-	}
-	return 0;
-}
-
 /**
  * blk_crypto_submit_bio - handle submitting bio for inline encryption
  *
@@ -89,8 +74,8 @@ int blk_crypto_submit_bio(struct bio **bio_ptr)
 	if (bio_crypt_fallback_crypted(bc))
 		return 0;
 
-	err = bio_crypt_check_alignment(bio);
-	if (err) {
+	if (!IS_ALIGNED(bio->bi_iter.bi_size,
+			bc->bc_key->data_unit_size)) {
 		bio->bi_status = BLK_STS_IOERR;
 		goto out;
 	}
