@@ -427,25 +427,25 @@ int btfm_slim_hw_init(struct btfmslim *btfmslim)
 	slim_ifd = &btfmslim->slim_ifd;
 
 	mutex_lock(&btfmslim->io_lock);
-		BTFMSLIM_INFO(
+		BTFMSLIM_DBG(
 			"PGD Enum Addr: %.02x:%.02x:%.02x:%.02x:%.02x: %.02x",
 			slim->e_addr[0], slim->e_addr[1], slim->e_addr[2],
 			slim->e_addr[3], slim->e_addr[4], slim->e_addr[5]);
-		BTFMSLIM_INFO(
+		BTFMSLIM_DBG(
 			"IFD Enum Addr: %.02x:%.02x:%.02x:%.02x:%.02x: %.02x",
 			slim_ifd->e_addr[0], slim_ifd->e_addr[1],
 			slim_ifd->e_addr[2], slim_ifd->e_addr[3],
 			slim_ifd->e_addr[4], slim_ifd->e_addr[5]);
 
 	chipset_ver = get_chipset_version();
-	BTFMSLIM_INFO("chipset soc version:%x", chipset_ver);
+	BTFMSLIM_DBG("chipset soc version:%x", chipset_ver);
 
 	if (chipset_ver == QCA_HSP_SOC_ID_0100 ||
 		chipset_ver == QCA_HSP_SOC_ID_0110 ||
 		chipset_ver == QCA_HSP_SOC_ID_0210 ||
 		chipset_ver == QCA_HSP_SOC_ID_1211 ||
 		chipset_ver == QCA_HSP_SOC_ID_0200) {
-		BTFMSLIM_INFO("chipset is hastings prime, overwriting EA");
+		BTFMSLIM_DBG("chipset is hastings prime, overwriting EA");
 		slim->e_addr[0] = 0x00;
 		slim->e_addr[1] = 0x01;
 		slim->e_addr[2] = 0x21;
@@ -460,7 +460,7 @@ int btfm_slim_hw_init(struct btfmslim *btfmslim)
 		slim_ifd->e_addr[4] = 0x17;
 		slim_ifd->e_addr[5] = 0x02;
 	} else if (chipset_ver == QCA_HASTINGS_SOC_ID_0200) {
-		BTFMSLIM_INFO("chipset is hastings 2.0, overwriting EA");
+		BTFMSLIM_DBG("chipset is hastings 2.0, overwriting EA");
 		slim->e_addr[0] = 0x00;
 		slim->e_addr[1] = 0x01;
 		slim->e_addr[2] = 0x20;
@@ -475,11 +475,11 @@ int btfm_slim_hw_init(struct btfmslim *btfmslim)
 		slim_ifd->e_addr[4] = 0x17;
 		slim_ifd->e_addr[5] = 0x02;
 	}
-		BTFMSLIM_INFO(
+		BTFMSLIM_DBG(
 			"PGD Enum Addr: %.02x:%.02x:%.02x:%.02x:%.02x: %.02x",
 			slim->e_addr[0], slim->e_addr[1], slim->e_addr[2],
 			slim->e_addr[3], slim->e_addr[4], slim->e_addr[5]);
-		BTFMSLIM_INFO(
+		BTFMSLIM_DBG(
 			"IFD Enum Addr: %.02x:%.02x:%.02x:%.02x:%.02x: %.02x",
 			slim_ifd->e_addr[0], slim_ifd->e_addr[1],
 			slim_ifd->e_addr[2], slim_ifd->e_addr[3],
