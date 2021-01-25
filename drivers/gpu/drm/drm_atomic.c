@@ -32,6 +32,7 @@
 #include <drm/drm_print.h>
 #include <drm/drm_writeback.h>
 #include <linux/sync_file.h>
+#include <linux/pm_qos.h>
 
 #include "drm_crtc_internal.h"
 #include "drm_internal.h"
