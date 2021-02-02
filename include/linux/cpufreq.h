@@ -339,15 +339,14 @@ struct cpufreq_driver {
 };
 
 /* flags */
-#define CPUFREQ_STICKY		(1 << 0)	/* driver isn't removed even if
-						   all ->init() calls failed */
-#define CPUFREQ_CONST_LOOPS	(1 << 1)	/* loops_per_jiffy or other
-						   kernel "constants" aren't
-						   affected by frequency
-						   transitions */
-#define CPUFREQ_PM_NO_WARN	(1 << 2)	/* don't warn on suspend/resume
-						   speed mismatches */
-
+#define CPUFREQ_NEED_UPDATE_LIMITS	(1 << 0)	/* driver isn't removed even if
+							   all ->init() calls failed */
+#define CPUFREQ_CONST_LOOPS		(1 << 1)	/* loops_per_jiffy or other
+							   kernel "constants" aren't
+							   affected by frequency
+							   transitions */
+#define CPUFREQ_PM_NO_WARN		(1 << 2)	/* don't warn on suspend/resume
+							   speed mismatches */
 /*
  * This should be set by platforms having multiple clock-domains, i.e.
  * supporting multiple policies. With this sysfs directories of governor would
@@ -377,14 +376,6 @@ struct cpufreq_driver {
  * set.
  */
 #define CPUFREQ_NO_AUTO_DYNAMIC_SWITCHING (1 << 6)
-
-/*
- * Set by drivers that need to update internale upper and lower boundaries along
- * with the target frequency and so the core and governors should also invoke
- * the diver if the target frequency does not change, but the policy min or max
- * may have changed.
- */
-#define CPUFREQ_NEED_UPDATE_LIMITS		BIT(8)
 
 int cpufreq_register_driver(struct cpufreq_driver *driver_data);
 int cpufreq_unregister_driver(struct cpufreq_driver *driver_data);

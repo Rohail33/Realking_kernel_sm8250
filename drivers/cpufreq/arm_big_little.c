@@ -540,9 +540,8 @@ static void bL_cpufreq_ready(struct cpufreq_policy *policy)
 
 static struct cpufreq_driver bL_cpufreq_driver = {
 	.name			= "arm-big-little",
-	.flags			= CPUFREQ_STICKY |
-					CPUFREQ_HAVE_GOVERNOR_PER_POLICY |
-					CPUFREQ_NEED_INITIAL_FREQ_CHECK,
+	.flags			= CPUFREQ_HAVE_GOVERNOR_PER_POLICY |
+				  CPUFREQ_NEED_INITIAL_FREQ_CHECK,
 	.verify			= cpufreq_generic_frequency_table_verify,
 	.target_index		= bL_cpufreq_set_target,
 	.get			= bL_cpufreq_get_rate,

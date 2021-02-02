@@ -63,7 +63,7 @@ static int __init ucv2_cpu_init(struct cpufreq_policy *policy)
 }
 
 static struct cpufreq_driver ucv2_driver = {
-	.flags		= CPUFREQ_STICKY | CPUFREQ_NO_AUTO_DYNAMIC_SWITCHING,
+	.flags		= CPUFREQ_NO_AUTO_DYNAMIC_SWITCHING,
 	.verify		= ucv2_verify_speed,
 	.target		= ucv2_target,
 	.get		= cpufreq_generic_get,

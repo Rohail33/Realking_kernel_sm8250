@@ -331,8 +331,7 @@ static void msm_cpufreq_ready(struct cpufreq_policy *policy)
 
 static struct cpufreq_driver msm_cpufreq_driver = {
 	/* lps calculations are handled here. */
-	.flags		= CPUFREQ_STICKY | CPUFREQ_CONST_LOOPS |
-				CPUFREQ_NEED_INITIAL_FREQ_CHECK,
+	.flags		= CPUFREQ_CONST_LOOPS | CPUFREQ_NEED_INITIAL_FREQ_CHECK,
 	.init		= msm_cpufreq_init,
 	.verify		= msm_cpufreq_verify,
 	.target		= msm_cpufreq_target,
