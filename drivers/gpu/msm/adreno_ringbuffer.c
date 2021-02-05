@@ -1080,10 +1080,14 @@ int adreno_ringbuffer_submitcmd(struct adreno_device *adreno_dev,
 	if (gpudev->ccu_invalidate)
 		dwords += 4;
 
-	link = kvcalloc(dwords, sizeof(unsigned int), GFP_KERNEL);
-	if (!link) {
-		ret = -ENOMEM;
-		goto done;
+	if (dwords <= ARRAY_SIZE(link_onstack)) {
+		link = link_onstack;
+	} else {
+		link = kvcalloc(dwords, sizeof(unsigned int), GFP_KERNEL);
+		if (!link) {
+			ret = -ENOMEM;
+			goto done;
+		}
 	}
 
 	cmds = link;
@@ -1213,7 +1217,8 @@ done:
 	trace_kgsl_issueibcmds(device, context->id, numibs, drawobj->timestamp,
 			drawobj->flags, ret, drawctxt->type);
 
-	kvfree(link);
+	if (link != link_onstack)
+		kvfree(link);
 	return ret;
 }
 
