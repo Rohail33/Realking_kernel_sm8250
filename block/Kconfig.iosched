@@ -3,6 +3,21 @@ if BLOCK
 
 menu "IO Schedulers"
 
+config IOSCHED_ANXIETY
+	tristate "Anxiety I/O Scheduler"
+	default y
+	---help---
+	  The purpose of Anxiety is to improve throughput on latency-sensitive
+	  tasks on embedded flash storage devices. On modern devices, embedded
+	  systems contain relatively fast storage, so spending too much time
+	  with complicated queue-shifting scheduling algorithms may end up
+	  bottlenecking the device. Similarly to the No-op I/O scheduler,
+	  Anxiety works with a FIFO queue; however, Anxiety includes basic
+	  request logic based on READ v. WRITE requests. WRITE requests are
+	  starved at a fixed ratio, defined as the `max_writes_starved` tunable.
+	  READ requests are given priority over WRITE requests due to their
+	  essentiality in determining load-time latency.
+
 config IOSCHED_NOOP
 	bool "No-op I/O scheduler"
 	default y
@@ -92,6 +107,9 @@ choice
 	help
 	  Select the I/O scheduler which will be used by default for all
 	  block devices.
+	  
+	config DEFAULT_ANXIETY
+		bool "Anxiety" if IOSCHED_ANXIETY=y
 
 	config DEFAULT_DEADLINE
 		bool "Deadline" if IOSCHED_DEADLINE=y
@@ -125,6 +143,7 @@ endchoice
 
 config DEFAULT_IOSCHED
 	string
+	default "anxiety" if DEFAULT_ANXIETY
 	default "deadline" if DEFAULT_DEADLINE
 	default "cfq" if DEFAULT_CFQ
 	default "bfq-sq" if DEFAULT_BFQ_SQ
