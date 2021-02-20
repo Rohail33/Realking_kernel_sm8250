@@ -1558,6 +1558,12 @@ struct package_runtime_info pkg;
 	 */
 	s64 __user *ui_frame_info;
 
+	struct {
+		struct work_struct work;
+		atomic_t running;
+		bool free_stack;
+	} async_free;
+
 	/*
 	 * New fields for task_struct should be added above here, so that
 	 * they are included in the randomized portion of task_struct.
