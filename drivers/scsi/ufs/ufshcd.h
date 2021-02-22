@@ -61,6 +61,7 @@
 #include <linux/reset.h>
 #include <linux/extcon-provider.h>
 #include <linux/devfreq.h>
+#include <linux/pm_qos.h>
 #include "unipro.h"
 
 #include <asm/irq.h>
@@ -1144,6 +1145,15 @@ struct ufs_hba {
 #if defined(CONFIG_UFSFEATURE) || defined(CONFIG_UFSFEATURE_31)
        struct ufsf_feature *ufsf;
 #endif
+
+	struct {
+		struct pm_qos_request req;
+		struct work_struct get_work;
+		struct work_struct put_work;
+		struct mutex lock;
+		atomic_t count;
+		bool active;
+	} pm_qos;
 
 	ANDROID_KABI_RESERVE(1);
 	ANDROID_KABI_RESERVE(2);
