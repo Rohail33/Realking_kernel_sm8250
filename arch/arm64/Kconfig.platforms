@@ -441,6 +441,85 @@ config BOARD_XIAOMI_SM8250
 	select ARCH_KONA
 	help
 	  This enables support for XiaoMi SM8250 (kona) Family
+
+config BOARD_ALIOTH
+	bool "Alioth and AliothIN platform"
+	select BOARD_XIAOMI_SM8250
+	help
+	  This enables support for Xiaomi Redmi K40 / POCO F3 / MI 11x
+
+config BOARD_APOLLO
+	bool "Apollo and Apollopro platform"
+	select BOARD_XIAOMI_SM8250
+	help
+	  This enables support for Xiaomi MI 10T/Pro / Redmi K30S
+
+config BOARD_CAS
+	bool "Cas platform"
+	select BOARD_XIAOMI_SM8250
+	help
+	  This enables support for Xiaomi MI 10 Ultra
+
+config BOARD_CMI
+	bool "Cmi platform"
+	select BOARD_XIAOMI_SM8250
+	help
+	  This enables support for Xiaomi MI 10 Pro
+
+config BOARD_DAGU
+	bool "Dagu platform"
+	select BOARD_XIAOMI_SM8250
+	help
+	  This enables support for Xiaomi Pad 5 Pro 12.4.
+
+config BOARD_ELISH
+	bool "Elish platform"
+	select BOARD_XIAOMI_SM8250
+	help
+	  This enables support for Xiaomi MI Pad 5 Pro
+
+config BOARD_ENUMA
+	bool "Enuma platform"
+	select BOARD_XIAOMI_SM8250
+	help
+	  This enables support for Xiaomi MI Pad 5 Pro 5G
+
+config BOARD_LMI
+	bool "Lmi, Lmiin and Lmipro platform"
+	select BOARD_XIAOMI_SM8250
+	help
+	  This enables support for Xiaomi Redmi K30 Pro / POCO F2 Pro
+
+config BOARD_MUNCH
+	bool "munch platform"
+	select BOARD_XIAOMI_SM8250
+	help
+	  This enables support for Xiaomi Redmi K40S / POCO F4
+
+config BOARD_PIPA
+	bool "Pipa platform"
+	select BOARD_XIAOMI_SM8250
+	help
+	  This enables support for Xiaomi Pad 6.
+
+config BOARD_PSYCHE
+	bool "Psyche platform"
+	select BOARD_XIAOMI_SM8250
+	help
+	  This enables support for Xiaomi MI 12X
+
+config BOARD_THYME
+	bool "Thyme platform"
+	select BOARD_XIAOMI_SM8250
+	help
+	  This enables support for Xiaomi MI 10S
+
+config BOARD_UMI
+	bool "Umi platform"
+	select BOARD_XIAOMI_SM8250
+	help
+	  This enables support for Xiaomi MI 10
+
 endif
 endmenu
 
