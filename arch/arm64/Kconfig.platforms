@@ -428,4 +428,20 @@ config ARCH_ZYNQMP
 	help
 	  This enables support for Xilinx ZynqMP Family
 
+menu "Xiaomi Family"
+config BOARD_XIAOMI
+	bool "Xiaomi Family"
+	help
+	  This enables support for XiaoMi Family
+
+if BOARD_XIAOMI
+config BOARD_XIAOMI_SM8250
+	bool "Xiaomi SM8250 (kona) Board Family"
+	select ARCH_QCOM
+	select ARCH_KONA
+	help
+	  This enables support for XiaoMi SM8250 (kona) Family
+endif
+endmenu
+
 endmenu
