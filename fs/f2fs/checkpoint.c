@@ -1644,6 +1644,10 @@ int f2fs_write_checkpoint(struct f2fs_sb_info *sbi, struct cp_control *cpc)
 	bdev_set_turbo_write(sbi->sb->s_bdev);
 #endif
 
+#if defined(CONFIG_UFSTW) && defined(UFS3V0)
+	bdev_set_turbo_write(sbi->sb->s_bdev);
+#endif
+
 	if (!is_sbi_flag_set(sbi, SBI_IS_DIRTY) &&
 		((cpc->reason & CP_FASTBOOT) || (cpc->reason & CP_SYNC) ||
 		((cpc->reason & CP_DISCARD) && !sbi->discard_blks)))
