@@ -549,6 +549,8 @@ static int pm8xxx_rtc_probe(struct platform_device *pdev)
 	}
 
 	return rtc_register_device(rtc_dd->rtc);
+	if (of_property_read_bool(pdev->dev.of_node, "disable-alarm-wakeup"))
+		device_set_wakeup_capable(&pdev->dev, false);
 }
 
 #ifdef CONFIG_PM_SLEEP
