@@ -92,7 +92,7 @@ static unsigned char *__struct_ptr(struct f2fs_sb_info *sbi, int struct_type)
 	return NULL;
 }
 
-static ssize_t dirty_segments_show(struct f2fs_attr *a,
+static ssize_t dirty_segments_dev_show(struct f2fs_attr *a,
 		struct f2fs_sb_info *sbi, char *buf)
 {
 	return sprintf(buf, "%llu\n",
@@ -827,7 +827,7 @@ F2FS_RW_ATTR(F2FS_SBI, f2fs_sb_info, data_io_flag, data_io_flag);
 F2FS_RW_ATTR(F2FS_SBI, f2fs_sb_info, node_io_flag, node_io_flag);
 F2FS_RW_ATTR(F2FS_SBI, f2fs_sb_info, gc_urgent_high_remaining, gc_urgent_high_remaining);
 F2FS_RW_ATTR(CPRC_INFO, ckpt_req_control, ckpt_thread_ioprio, ckpt_thread_ioprio);
-F2FS_GENERAL_RO_ATTR(dirty_segments);
+F2FS_GENERAL_RO_ATTR(dirty_segments_dev);
 F2FS_GENERAL_RO_ATTR(free_segments);
 F2FS_GENERAL_RO_ATTR(ovp_segments);
 F2FS_GENERAL_RO_ATTR(lifetime_write_kbytes);
@@ -952,7 +952,7 @@ static struct attribute *f2fs_attrs[] = {
 	ATTR_LIST(node_io_flag),
 	ATTR_LIST(gc_urgent_high_remaining),
 	ATTR_LIST(ckpt_thread_ioprio),
-	ATTR_LIST(dirty_segments),
+	ATTR_LIST(dirty_segments_dev),
 	ATTR_LIST(free_segments),
 	ATTR_LIST(ovp_segments),
 	ATTR_LIST(unusable),
