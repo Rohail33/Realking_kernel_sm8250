@@ -5528,7 +5528,7 @@ static long binder_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 				continue;
 
 			binder_inner_proc_lock(target_proc);
-			target_proc->tmp_ref++;
+			atomic_inc(&target_proc->tmp_ref);
 			binder_inner_proc_unlock(target_proc);
 
 			target_procs[i++] = target_proc;
