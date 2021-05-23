@@ -73,9 +73,9 @@ const char *f2fs_cp_reasons[NR_CP_REASON_TYPE] = {
 	"fastboot mode",
 	"log type is 2",
 	"dir needs recovery",
-	"parent dir xattr set",
 };
 
+#ifdef CONFIG_DEBUG_FS
 static void update_general_status(struct f2fs_sb_info *sbi)
 {
 	struct f2fs_stat_info *si = F2FS_STAT(sbi);
@@ -662,10 +662,8 @@ static int stat_show(struct seq_file *s, void *v)
 	return 0;
 }
 
-#ifdef CONFIG_DEBUG_FS
 DEFINE_SHOW_ATTRIBUTE(stat);
 #endif
-
 int f2fs_build_stats(struct f2fs_sb_info *sbi)
 {
 	struct f2fs_super_block *raw_super = F2FS_RAW_SUPER(sbi);
@@ -741,9 +739,6 @@ void __init f2fs_create_root_stats(void)
 	debugfs_create_file("status", 0444, f2fs_debugfs_root, NULL,
 			    &stat_fops);
 #endif
-	if (f2fs_proc_root)
-		proc_create_single_data("status", S_IRUGO, f2fs_proc_root,
-				stat_show, NULL);
 }
 
 void f2fs_destroy_root_stats(void)
