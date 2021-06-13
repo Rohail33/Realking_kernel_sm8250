@@ -677,7 +677,7 @@ static struct queue_sysfs_entry queue_poll_delay_entry = {
 };
 
 static struct queue_sysfs_entry queue_wc_entry = {
-	.attr = {.name = "write_cache", .mode = 0644 },
+	.attr = {.name = "write_cache", .mode = 0444 },
 	.show = queue_wc_show,
 	.store = queue_wc_store,
 };

@@ -725,9 +725,11 @@ struct request_queue {
 #define QUEUE_FLAG_QUIESCED    28	/* queue has been quiesced */
 
 #define QUEUE_FLAG_DEFAULT	((1 << QUEUE_FLAG_NONROT)	|	\
+				 (1 << QUEUE_FLAG_WC)		|	\
 				 (1 << QUEUE_FLAG_SAME_COMP))
 
 #define QUEUE_FLAG_MQ_DEFAULT	((1 << QUEUE_FLAG_SAME_COMP)	|	\
+				 (1 << QUEUE_FLAG_WC)		|	\
 				 (1 << QUEUE_FLAG_POLL))
 
 void blk_queue_flag_set(unsigned int flag, struct request_queue *q);
