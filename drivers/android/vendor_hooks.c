@@ -20,3 +20,4 @@ EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_set_memory_nx);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_set_memory_ro);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_set_memory_rw);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_check_mmap_file);
+EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_check_file_open);
