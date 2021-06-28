@@ -3512,11 +3512,9 @@ static int smblib_therm_charging(struct smb_charger *chg)
 			chg->thermal_fcc_qc3_cp[chg->system_temp_level];
 		break;
 	case POWER_SUPPLY_TYPE_USB_PD:
-		if (chg->pd_active == POWER_SUPPLY_PD_PPS_ACTIVE) {
-			if (chg->pps_thermal_level < 0)
-				chg->pps_thermal_level = chg->system_temp_level;
-			thermal_fcc_ua =
-				chg->thermal_fcc_pps_cp[chg->pps_thermal_level];
+		if (chg->cp_reason == POWER_SUPPLY_CP_PPS) {
+		thermal_fcc_ua =
+			chg->thermal_fcc_pps_cp[chg->system_temp_level];
 		} else {
 			thermal_icl_ua =
 				chg->thermal_mitigation_icl[chg->system_temp_level];
