@@ -2025,7 +2025,7 @@ static void async_free_zspage(struct work_struct *work)
 		VM_BUG_ON(fullness != ZS_INUSE_RATIO_0);
 		class = pool->size_class[class_idx];
                 spin_lock(&pool->lock);
-		__free_zspage(pool, pool->size_class[class_idx], zspage);
+                __free_zspage(pool, class, zspage);
                 spin_unlock(&pool->lock);
 	}
 };
