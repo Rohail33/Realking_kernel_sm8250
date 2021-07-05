@@ -16,6 +16,7 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include <drm/drm_panel.h>
+#include <linux/pm_qos.h>
 
 #include "msm_drv.h"
 #include "msm_gem.h"
@@ -548,6 +549,11 @@ static void complete_commit(struct msm_commit *c)
 static void _msm_drm_commit_work_cb(struct kthread_work *work)
 {
 	struct msm_commit *commit = NULL;
+	struct pm_qos_request req = {
+		.type = PM_QOS_REQ_AFFINE_CORES,
+		.cpus_affine = ATOMIC_INIT(BIT(raw_smp_processor_id()))
+	};
+
 	ktime_t start, end;
 	s64 duration;
 
@@ -561,9 +567,16 @@ static void _msm_drm_commit_work_cb(struct kthread_work *work)
 	start = ktime_get();
 	frame_stat_collector(0, COMMIT_START_TS);
 
+	/*
+	 * Optimistically assume the current task won't migrate to another CPU
+	 * and restrict the current CPU to shallow idle states so that it won't
+	 * take too long to resume after waiting for the prior commit to finish.
+	 */
+	pm_qos_add_request(&req, PM_QOS_CPU_DMA_LATENCY, 100);
 	SDE_ATRACE_BEGIN("complete_commit");
 	complete_commit(commit);
 	SDE_ATRACE_END("complete_commit");
+	pm_qos_remove_request(&req);
 
 	end = ktime_get();
 	duration = ktime_to_ns(ktime_sub(end, start));
