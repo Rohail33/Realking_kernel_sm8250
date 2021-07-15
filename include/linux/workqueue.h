@@ -618,7 +618,7 @@ static inline void flush_scheduled_work(void)
 static inline bool schedule_delayed_work_on(int cpu, struct delayed_work *dwork,
 					    unsigned long delay)
 {
-	return queue_delayed_work_on(cpu, system_wq, dwork, delay);
+	return queue_delayed_work_on(cpu, system_power_efficient_wq, dwork, delay);
 }
 
 /**
@@ -632,7 +632,7 @@ static inline bool schedule_delayed_work_on(int cpu, struct delayed_work *dwork,
 static inline bool schedule_delayed_work(struct delayed_work *dwork,
 					 unsigned long delay)
 {
-	return queue_delayed_work(system_wq, dwork, delay);
+	return queue_delayed_work(system_power_efficient_wq, dwork, delay);
 }
 
 #ifndef CONFIG_SMP
