@@ -6415,8 +6415,7 @@ static int __wlan_hdd_cfg80211_start_ap(struct wiphy *wiphy,
 	struct cfg80211_chan_def new_chandef;
 	struct cfg80211_chan_def *chandef;
 	uint16_t sap_ch;
-	bool srd_channel_allowed, disable_nan = true;
-	enum QDF_OPMODE vdev_opmode;
+	bool disable_nan = true;
 	uint8_t vdev_id_list[MAX_NUMBER_OF_CONC_CONNECTIONS], i;
 
 	hdd_enter();
@@ -6526,14 +6525,9 @@ static int __wlan_hdd_cfg80211_start_ap(struct wiphy *wiphy,
 		return -EINVAL;
 	}
 
-	vdev_opmode = wlan_vdev_mlme_get_opmode(adapter->vdev);
-	ucfg_mlme_get_srd_master_mode_for_vdev(hdd_ctx->psoc, vdev_opmode,
-					       &srd_channel_allowed);
-
-	if (!srd_channel_allowed &&
+	if (!wlan_reg_is_etsi13_srd_chan_allowed_master_mode(hdd_ctx->pdev) &&
 	    wlan_reg_is_etsi13_srd_chan(hdd_ctx->pdev, channel)) {
-		hdd_err("vdev opmode %d not allowed on SRD channel.",
-			vdev_opmode);
+		hdd_err("SAP not allowed on SRD channel.");
 		return -EINVAL;
 	}
 	if (cds_is_sub_20_mhz_enabled()) {

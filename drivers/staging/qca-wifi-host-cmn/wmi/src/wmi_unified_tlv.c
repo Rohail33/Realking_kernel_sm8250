@@ -3305,10 +3305,6 @@ static QDF_STATUS send_scan_chan_list_cmd_tlv(wmi_unified_t wmi_handle,
 				WMI_SET_CHANNEL_FLAG(chan_info,
 						     WMI_CHAN_FLAG_PSC);
 
-			if (tchan_info->nan_disabled)
-				WMI_SET_CHANNEL_FLAG(chan_info,
-					     WMI_CHAN_FLAG_NAN_DISABLED);
-
 			/* also fill in power information */
 			WMI_SET_CHANNEL_MIN_POWER(chan_info,
 						  tchan_info->minpower);
@@ -6665,19 +6661,6 @@ static void wmi_copy_twt_resource_config(wmi_resource_config *resource_cfg,
 }
 #endif
 
-#ifdef WLAN_FEATURE_NAN
-static void wmi_set_nan_channel_support(wmi_resource_config *resource_cfg)
-{
-	WMI_RSRC_CFG_HOST_SERVICE_FLAG_NAN_CHANNEL_SUPPORT_SET(
-		resource_cfg->host_service_flags, 1);
-}
-#else
-static inline
-void wmi_set_nan_channel_support(wmi_resource_config *resource_cfg)
-{
-}
-#endif
-
 static
 void wmi_copy_resource_config(wmi_resource_config *resource_cfg,
 				target_resource_config *tgt_res_cfg)
@@ -6885,7 +6868,6 @@ void wmi_copy_resource_config(wmi_resource_config *resource_cfg,
 		resource_cfg->host_service_flags,
 		tgt_res_cfg->nan_separate_iface_support);
 
-	wmi_set_nan_channel_support(resource_cfg);
 }
 
 /* copy_hw_mode_id_in_init_cmd() - Helper routine to copy hw_mode in init cmd

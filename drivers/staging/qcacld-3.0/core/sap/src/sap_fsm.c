@@ -3399,8 +3399,6 @@ static QDF_STATUS sap_get_freq_list(struct sap_context *sap_ctx,
 	uint32_t work_freq = 0;
 	uint32_t max_num_of_conc_connections = 0;
 	struct policy_mgr_conc_connection_info *pm_conc_connection_list = NULL;
-	bool srd_chan_enabled;
-	enum QDF_OPMODE vdev_opmode;
 
 	mac_ctx = sap_get_mac_context();
 	if (!mac_ctx) {
@@ -3540,19 +3538,15 @@ static QDF_STATUS sap_get_freq_list(struct sap_context *sap_ctx,
 				mac_ctx->mlme_cfg->acs.np_chan_weightage);
 			freq_present_in_list = true;
 		}
-
-		vdev_opmode = wlan_vdev_mlme_get_opmode(sap_ctx->vdev);
-		wlan_mlme_get_srd_master_mode_for_vdev(mac_ctx->psoc,
-						       vdev_opmode,
-						       &srd_chan_enabled);
-
-		if (!srd_chan_enabled &&
-		    wlan_reg_is_etsi13_srd_chan_for_freq(mac_ctx->pdev,
-					WLAN_REG_CH_TO_FREQ(loop_count))) {
-			sap_debug("vdev opmode %d not allowed on SRD freq %d",
-				  vdev_opmode, WLAN_REG_CH_TO_FREQ(loop_count));
+		/* Dont scan ETSI13 SRD channels if the ETSI13 SRD channels
+		 * are not enabled in master mode
+		 */
+		if (!wlan_reg_is_etsi13_srd_chan_allowed_master_mode(mac_ctx->
+								     pdev) &&
+		    wlan_reg_is_etsi13_srd_chan_for_freq(
+					mac_ctx->pdev,
+					WLAN_REG_CH_TO_FREQ(loop_count)))
 			continue;
-		}
 
 		/* Check if the freq is present in range list */
 		for (i = 0; i < mac_ctx->mlme_cfg->acs.num_weight_range; i++) {
