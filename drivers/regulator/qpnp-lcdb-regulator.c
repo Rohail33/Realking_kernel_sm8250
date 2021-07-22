@@ -2389,7 +2389,7 @@ static int __init qpnp_lcdb_regulator_init(void)
 {
 	return platform_driver_register(&qpnp_lcdb_regulator_driver);
 }
-arch_initcall(qpnp_lcdb_regulator_init);
+subsys_initcall(qpnp_lcdb_regulator_init);
 
 static void __exit qpnp_lcdb_regulator_exit(void)
 {
