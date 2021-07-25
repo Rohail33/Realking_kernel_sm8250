@@ -21,6 +21,13 @@ struct adreno_sysfs_attribute adreno_attr_##_name = { \
 	.store = _ ## _name ## _store, \
 }
 
+#define _ADRENO_SYSFS_FPERM_ATTR(_name, _fperm, __show, __store) \
+struct adreno_sysfs_attribute adreno_attr_##_name = { \
+	.attr = __ATTR(_name, _fperm, __show, __store), \
+	.show = _ ## _name ## _show, \
+	.store = _ ## _name ## _store, \
+}
+
 #define _ADRENO_SYSFS_ATTR_RO(_name, __show) \
 struct adreno_sysfs_attribute adreno_attr_##_name = { \
 	.attr = __ATTR(_name, 0444, __show, NULL), \
