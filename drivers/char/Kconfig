@@ -624,6 +624,8 @@ config RB5_GPIOS_ENABLE
 	  signals, GPIO 60 is default set to low to connect GPIOs
 	  140/145,116/117 to mezzanine connectors.
 
+source "drivers/char/lrng/Kconfig"
+
 config XLOGCHAR
 	tristate "xlogchar driver"
 	help
@@ -635,7 +637,6 @@ config RANDOM_TRUST_CPU
 	default y
 	depends on ARCH_RANDOM
 	help
-<<<<<<< HEAD
 	Assume that CPU manufacturer (e.g., Intel or AMD for RDSEED or
 	RDRAND, IBM for the S390 and Power PC architectures) is trustworthy
 	for the purposes of initializing Linux's CRNG.  Since this is not
