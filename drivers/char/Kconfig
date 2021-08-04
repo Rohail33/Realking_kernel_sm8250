@@ -661,6 +661,8 @@ config RANDOM_TRUST_BOOTLOADER
 	  believe its RNG facilities may be faulty. This may also be configured
 	  at boot time with "random.trust_bootloader=on/off".
 
+source "drivers/char/lrng/Kconfig"
+
 endmenu
 
 config OKL4_PIPE
