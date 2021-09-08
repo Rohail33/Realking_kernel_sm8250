@@ -30,6 +30,7 @@
 #define MS_DUPLICATE_USAGES	BIT(5)
 #define MS_SURFACE_DIAL		BIT(6)
 #define MS_QUIRK_FF		BIT(7)
+#define MS_NOHIDINPUT		BIT(8)
 
 struct ms_data {
 	unsigned long quirks;
@@ -373,6 +374,7 @@ static int ms_probe(struct hid_device *hdev, const struct hid_device_id *id)
 	unsigned long quirks = id->driver_data;
 	struct ms_data *ms;
 	int ret;
+	unsigned int connect_mask;
 
 	ms = devm_kzalloc(&hdev->dev, sizeof(*ms), GFP_KERNEL);
 	if (ms == NULL)
@@ -382,11 +384,17 @@ static int ms_probe(struct hid_device *hdev, const struct hid_device_id *id)
 
 	hid_set_drvdata(hdev, ms);
 
+	connect_mask = HID_CONNECT_DEFAULT | ((quirks & MS_HIDINPUT) ?
+			HID_CONNECT_HIDINPUT_FORCE : 0);
+
 	if (quirks & MS_NOGET)
 		hdev->quirks |= HID_QUIRK_NOGET;
 
 	if (quirks & MS_SURFACE_DIAL)
 		hdev->quirks |= HID_QUIRK_INPUT_PER_APP;
+
+	if (quirks & MS_NOHIDINPUT)
+		connect_mask &= ~HID_CONNECT_HIDINPUT;
 
 	ret = hid_parse(hdev);
 	if (ret) {
@@ -394,8 +402,7 @@ static int ms_probe(struct hid_device *hdev, const struct hid_device_id *id)
 		goto err_free;
 	}
 
-	ret = hid_hw_start(hdev, HID_CONNECT_DEFAULT | ((quirks & MS_HIDINPUT) ?
-				HID_CONNECT_HIDINPUT_FORCE : 0));
+	ret = hid_hw_start(hdev, connect_mask);
 	if (ret) {
 		hid_err(hdev, "hw start failed\n");
 		goto err_free;
@@ -463,6 +470,10 @@ static const struct hid_device_id ms_devices[] = {
 		.driver_data = MS_QUIRK_FF },
 	{ HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_MICROSOFT, USB_DEVICE_ID_MS_XBOX_CONTROLLER_MODEL_1797_BLE),
 		.driver_data = MS_QUIRK_FF },
+	{ HID_SPI_DEVICE(USB_VENDOR_ID_MICROSOFT, SPI_DEVICE_ID_MS_SURFACE_D6_0),
+		.driver_data = MS_NOHIDINPUT },
+	{ HID_SPI_DEVICE(USB_VENDOR_ID_MICROSOFT, SPI_DEVICE_ID_MS_SURFACE_D6_1),
+		.driver_data =  MS_NOHIDINPUT },
 	{ HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_MICROSOFT, USB_DEVICE_ID_8BITDO_SN30_PRO_PLUS),
 		.driver_data = MS_QUIRK_FF },
 	{ }
