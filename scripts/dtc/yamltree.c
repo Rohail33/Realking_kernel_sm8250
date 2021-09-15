@@ -29,11 +29,12 @@ char *yaml_error_name[] = {
 		    (emitter)->problem, __func__, __LINE__);		\
 })
 
-static void yaml_propval_int(yaml_emitter_t *emitter, struct marker *markers, char *data, int len, int width)
+static void yaml_propval_int(yaml_emitter_t *emitter, struct marker *markers,
+	char *data, unsigned int seq_offset, unsigned int len, int width)
 {
 	yaml_event_t event;
 	void *tag;
-	int off, start_offset = markers->offset;
+	unsigned int off;
 
 	switch(width) {
 		case 1: tag = "!u8"; break;
@@ -66,7 +67,7 @@ static void yaml_propval_int(yaml_emitter_t *emitter, struct marker *markers, ch
 			m = markers;
 			is_phandle = false;
 			for_each_marker_of_type(m, REF_PHANDLE) {
-				if (m->offset == (start_offset + off)) {
+				if (m->offset == (seq_offset + off)) {
 					is_phandle = true;
 					break;
 				}
@@ -112,8 +113,9 @@ static void yaml_propval_string(yaml_emitter_t *emitter, char *str, int len)
 static void yaml_propval(yaml_emitter_t *emitter, struct property *prop)
 {
 	yaml_event_t event;
-	int len = prop->val.len;
+	unsigned int len = prop->val.len;
 	struct marker *m = prop->val.markers;
+	struct marker *markers = prop->val.markers;
 
 	/* Emit the property name */
 	yaml_scalar_event_initialize(&event, NULL,
@@ -138,27 +140,6 @@ static void yaml_propval(yaml_emitter_t *emitter, struct property *prop)
 		(yaml_char_t *)YAML_SEQ_TAG, 1, YAML_FLOW_SEQUENCE_STYLE);
 	yaml_emitter_emit_or_die(emitter, &event);
 
-	/* Ensure we have a type marker before any phandle */
-	for_each_marker(m) {
-		int last_offset = 0;
-		struct marker *type_m;
-
-		if (m->type >= TYPE_UINT8)
-			last_offset = m->offset;
-
-		if (!(m->next && m->next->type == REF_PHANDLE &&
-		      last_offset < m->next->offset))
-			continue;
-
-		type_m = xmalloc(sizeof(*type_m));
-		type_m->offset = m->next->offset;
-		type_m->type = TYPE_UINT32;
-		type_m->ref = NULL;
-		type_m->next = m->next;
-		m->next = type_m;
-	}
-
-	m = prop->val.markers;
 	for_each_marker(m) {
 		int chunk_len;
 		char *data = &prop->val.val[m->offset];
@@ -172,19 +153,19 @@ static void yaml_propval(yaml_emitter_t *emitter, struct property *prop)
 
 		switch(m->type) {
 		case TYPE_UINT16:
-			yaml_propval_int(emitter, m, data, chunk_len, 2);
+			yaml_propval_int(emitter, markers, data, m->offset, chunk_len, 2);
 			break;
 		case TYPE_UINT32:
-			yaml_propval_int(emitter, m, data, chunk_len, 4);
+			yaml_propval_int(emitter, markers, data, m->offset, chunk_len, 4);
 			break;
 		case TYPE_UINT64:
-			yaml_propval_int(emitter, m, data, chunk_len, 8);
+			yaml_propval_int(emitter, markers, data, m->offset, chunk_len, 8);
 			break;
 		case TYPE_STRING:
 			yaml_propval_string(emitter, data, chunk_len);
 			break;
 		default:
-			yaml_propval_int(emitter, m, data, chunk_len, 1);
+			yaml_propval_int(emitter, markers, data, m->offset, chunk_len, 1);
 			break;
 		}
 	}
