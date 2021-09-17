@@ -3025,6 +3025,7 @@ static int __init sps_init(void)
 	if (sps == NULL)
 		return -ENOMEM;
 
+#ifdef CONFIG_IPC_LOGGING
 	sps->ipc_log0 = ipc_log_context_create(SPS_IPC_LOGPAGES,
 							"sps_ipc_log0", 0);
 	if (!sps->ipc_log0)
@@ -3045,6 +3046,7 @@ static int __init sps_init(void)
 				SPS_IPC_REG_DUMP_FACTOR, "sps_ipc_log4", 0);
 	if (!sps->ipc_log4)
 		pr_err("Failed to create IPC log4\n");
+#endif
 
 	ret = platform_driver_register(&msm_sps_driver);
 
