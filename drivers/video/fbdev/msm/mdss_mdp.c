@@ -4769,7 +4769,7 @@ static int mdss_mdp_parse_dt_handler(struct platform_device *pdev,
 	rc = of_property_read_u32_array(pdev->dev.of_node, prop_name,
 					offsets, len);
 	if (rc) {
-		pr_err("Error from prop %s : u32 array read\n", prop_name);
+		pr_debug("Error from prop %s : u32 array read\n", prop_name);
 		return -EINVAL;
 	}
 
