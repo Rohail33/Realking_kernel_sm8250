@@ -2908,25 +2908,25 @@ struct msm_serial_hs_platform_data
 	pdata->uart_tx_gpio = of_get_named_gpio(node,
 					"qcom,tx-gpio", 0);
 	if (pdata->uart_tx_gpio < 0)
-		pr_err("uart_tx_gpio is not available\n");
+		pr_debug("uart_tx_gpio is not available\n");
 
 	/* UART RX GPIO */
 	pdata->uart_rx_gpio = of_get_named_gpio(node,
 					"qcom,rx-gpio", 0);
 	if (pdata->uart_rx_gpio < 0)
-		pr_err("uart_rx_gpio is not available\n");
+		pr_debug("uart_rx_gpio is not available\n");
 
 	/* UART CTS GPIO */
 	pdata->uart_cts_gpio = of_get_named_gpio(node,
 					"qcom,cts-gpio", 0);
 	if (pdata->uart_cts_gpio < 0)
-		pr_err("uart_cts_gpio is not available\n");
+		pr_debug("uart_cts_gpio is not available\n");
 
 	/* UART RFR GPIO */
 	pdata->uart_rfr_gpio = of_get_named_gpio(node,
 					"qcom,rfr-gpio", 0);
 	if (pdata->uart_rfr_gpio < 0)
-		pr_err("uart_rfr_gpio is not available\n");
+		pr_debug("uart_rfr_gpio is not available\n");
 
 	pdata->no_suspend_delay = of_property_read_bool(node,
 				"qcom,no-suspend-delay");
