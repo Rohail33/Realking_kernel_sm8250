@@ -47,7 +47,7 @@
 #define ISPIF_INTF_CMD_DISABLE_IMMEDIATELY    0x02
 
 #define ISPIF_TIMEOUT_SLEEP_US                1000
-#define ISPIF_TIMEOUT_ALL_US               1000000
+#define ISPIF_TIMEOUT_ALL_US              10000000
 #define ISPIF_SOF_DEBUG_COUNT                    5
 
 /* 3D Threshold value according guidelines for line width 1280 */
