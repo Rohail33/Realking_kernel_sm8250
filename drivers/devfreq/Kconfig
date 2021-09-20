@@ -90,6 +90,12 @@ config ARM_MEMLAT_MON
 	  monitor the memory latency characteristics of an ARM CPU workload.
 	  This driver uses these counters to implement the APIs needed by
 	  the mem_latency devfreq governor.
+	  
+config SIMPLE_GPU_ALGORITHM
+	bool "Simple GPU algorithm"
+	depends on DEVFREQ_GOV_QCOM_ADRENO_TZ
+	help
+	  Simple user configurable GPU controlling algorithm
 
 config DEVFREQ_GOV_QCOM_BW_HWMON
 	tristate "HW monitor based governor for device BW"
