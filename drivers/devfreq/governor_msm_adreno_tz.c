@@ -362,6 +362,12 @@ static inline int devfreq_get_freq_level(struct devfreq *devfreq,
 	return -EINVAL;
 }
 
+#ifdef CONFIG_SIMPLE_GPU_ALGORITHM
+extern int simple_gpu_active;
+extern int simple_gpu_algorithm(int level, int *val,
+				struct devfreq_msm_adreno_tz_data *priv);
+#endif
+
 static int tz_get_target_freq(struct devfreq *devfreq, unsigned long *freq)
 {
 	int result = 0;
@@ -412,7 +418,13 @@ static int tz_get_target_freq(struct devfreq *devfreq, unsigned long *freq)
 	if (!priv->disable_busy_time_burst &&
 			priv->bin.busy_time > CEILING) {
 		val = -1 * level;
+#ifdef CONFIG_SIMPLE_GPU_ALGORITHM
+	} else if (simple_gpu_active) {
+			simple_gpu_algorithm(level, &val, priv);
 	} else {
+#else
+	} else {
+#endif
 
 		scm_data[0] = level;
 		scm_data[1] = priv->bin.total_time;
