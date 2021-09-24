@@ -89,6 +89,11 @@ static void i2c_msm_dbg_dump_diag(struct i2c_msm_ctrl *ctrl,
 		qup_op = readl_relaxed(base + QUP_OPERATIONAL);
 	}
 
+	if ((status & QUP_PACKET_NACKED) && (xfer->msgs->addr == 0x38 || xfer->msgs->addr == 0x1d)) {
+		dev_dbg(ctrl->dev, "%s: i2c slave suspended", __func__);
+		return;
+	}
+
 	if (xfer->err == I2C_MSM_ERR_TIMEOUT) {
 		/*
 		 * if we are not the bus master or SDA/SCL is low then it may be
