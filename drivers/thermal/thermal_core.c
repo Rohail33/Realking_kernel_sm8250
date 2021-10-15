@@ -1024,7 +1024,7 @@ __thermal_cooling_device_register(struct device_node *np,
 {
 	struct thermal_cooling_device *cdev;
 	struct thermal_zone_device *pos = NULL;
-	int ret;
+	int id, ret;
 
 	if (!ops || !ops->get_max_state || !ops->get_cur_state ||
 	    !ops->set_cur_state)
@@ -1038,6 +1038,7 @@ __thermal_cooling_device_register(struct device_node *np,
 	if (ret < 0)
 		goto out_kfree_cdev;
 	cdev->id = ret;
+	id = ret;
 
 	ret = dev_set_name(&cdev->device, "cooling_device%d", cdev->id);
 	if (ret)
@@ -1083,8 +1084,9 @@ __thermal_cooling_device_register(struct device_node *np,
 out_kfree_type:
 	kfree(cdev->type);
 	put_device(&cdev->device);
+	cdev = NULL;
 out_ida_remove:
-	ida_simple_remove(&thermal_cdev_ida, cdev->id);
+	ida_simple_remove(&thermal_cdev_ida, id);
 out_kfree_cdev:
 	kfree(cdev);
 	return ERR_PTR(ret);
