@@ -724,7 +724,8 @@ POLLY_FLAGS	+= -mllvm -polly \
 
 ifeq ($(shell test $(CONFIG_CLANG_VERSION) -gt 130000; echo $$?),0)
 POLLY_FLAGS	+= -mllvm -polly-loopfusion-greedy=1 \
-	     -mllvm -polly-reschedule=1
+	     -mllvm -polly-reschedule=1 \
+	     -mllvm -polly-postopts=1
 else
 POLLY_FLAGS	+= -mllvm -polly-opt-fusion=max
 endif
