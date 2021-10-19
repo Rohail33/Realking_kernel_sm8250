@@ -722,7 +722,9 @@ POLLY_FLAGS	+= -mllvm -polly \
 		   -mllvm -polly-run-inliner \
 		   -mllvm -polly-vectorizer=stripmine
 
-ifneq ($(shell test $(CONFIG_CLANG_VERSION) -gt 130000; echo $$?),0)
+ifeq ($(shell test $(CONFIG_CLANG_VERSION) -gt 130000; echo $$?),0)
+POLLY_FLAGS	+= -mllvm -polly-loopfusion-greedy=1
+else
 POLLY_FLAGS	+= -mllvm -polly-opt-fusion=max
 endif
 
