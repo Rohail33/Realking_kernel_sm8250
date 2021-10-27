@@ -251,7 +251,6 @@ static int binder_update_page_range(struct binder_alloc *alloc, int allocate,
 
 		trace_binder_alloc_page_start(alloc, index);
 		page->page_ptr = alloc_page(GFP_KERNEL |
-					    __GFP_HIGHMEM |
 					    __GFP_ZERO);
 		if (!page->page_ptr) {
 			pr_err("%d: binder_alloc_buf failed for page at %pK\n",
