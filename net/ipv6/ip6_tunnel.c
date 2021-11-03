@@ -500,8 +500,6 @@ ip6_tnl_err(struct sk_buff *skb, __u8 ipproto, struct inet6_skb_parm *opt,
 	err = 0;
 
 	switch (*type) {
-		struct ipv6_tlv_tnl_enc_lim *tel;
-		__u32 mtu, teli;
 	case ICMPV6_DEST_UNREACH:
 		net_dbg_ratelimited("%s: Path to destination invalid or inactive!\n",
 				    t->parms.name);
@@ -514,7 +512,10 @@ ip6_tnl_err(struct sk_buff *skb, __u8 ipproto, struct inet6_skb_parm *opt,
 			rel_msg = 1;
 		}
 		break;
-	case ICMPV6_PARAMPROB:
+	case ICMPV6_PARAMPROB: {
+		struct ipv6_tlv_tnl_enc_lim *tel;
+		__u32 teli;
+
 		teli = 0;
 		if ((*code) == ICMPV6_HDR_FIELD)
 			teli = ip6_tnl_parse_tlv_enc_lim(skb, skb->data);
@@ -531,7 +532,10 @@ ip6_tnl_err(struct sk_buff *skb, __u8 ipproto, struct inet6_skb_parm *opt,
 					    t->parms.name);
 		}
 		break;
-	case ICMPV6_PKT_TOOBIG:
+	}
+	case ICMPV6_PKT_TOOBIG: {
+		__u32 mtu;
+
 		ip6_update_pmtu(skb, net, htonl(*info), 0, 0,
 				sock_net_uid(net, NULL));
 		mtu = *info - offset;
@@ -545,6 +549,7 @@ ip6_tnl_err(struct sk_buff *skb, __u8 ipproto, struct inet6_skb_parm *opt,
 			rel_msg = 1;
 		}
 		break;
+	}
 	case NDISC_REDIRECT:
 		ip6_redirect(skb, net, skb->dev->ifindex, 0,
 			     sock_net_uid(net, NULL));
