@@ -307,7 +307,7 @@ static ssize_t min_level_change_store(struct device *dev,
 	struct mdss_hdcp_2x_wakeup_data cdata = {
 		HDCP_2X_CMD_QUERY_STREAM_TYPE};
 	bool enc_notify = true;
-	int enc_lvl;
+	int enc_lvl = 0;
 	int min_enc_lvl;
 	int rc;
 
