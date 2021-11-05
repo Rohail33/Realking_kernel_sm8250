@@ -1243,7 +1243,7 @@ static int tc_new_tfilter(struct sk_buff *skb, struct nlmsghdr *n,
 	struct tcf_block *block;
 	struct tcf_proto *tp;
 	unsigned long cl;
-	void *fh;
+	void *fh = 0;
 	int err;
 	int tp_created;
 
