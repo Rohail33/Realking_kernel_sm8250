@@ -2062,7 +2062,7 @@ void bond_3ad_unbind_slave(struct slave *slave)
 	int select_new_active_agg = 0;
 	struct bonding *bond = slave->bond;
 	struct slave *slave_iter;
-	struct list_head *iter;
+	struct list_head *iter = { 0 };
 	bool dummy_slave_update; /* Ignore this value as caller updates array */
 
 	/* Sync against bond_3ad_state_machine_handler() */
