@@ -41,6 +41,7 @@
 
 #include "blk.h"
 #include "blk-mq-sched.h"
+#include "blk-pm.h"
 #include "blk-wbt.h"
 
 static DEFINE_SPINLOCK(elv_list_lock);
@@ -556,34 +557,6 @@ void elv_bio_merged(struct request_queue *q, struct request *rq,
 	if (e->type->ops.sq.elevator_bio_merged_fn)
 		e->type->ops.sq.elevator_bio_merged_fn(q, rq, bio);
 }
-
-#ifdef CONFIG_PM
-static void blk_pm_requeue_request(struct request *rq)
-{
-	if (rq->q->dev && !(rq->rq_flags & RQF_PM) &&
-	    (rq->rq_flags & (RQF_PM_ADDED | RQF_FLUSH_SEQ))) {
-		rq->rq_flags &= ~RQF_PM_ADDED;
-		rq->q->nr_pending--;
-	}
-}
-
-static void blk_pm_add_request(struct request_queue *q, struct request *rq)
-{
-	if (q->dev && !(rq->rq_flags & RQF_PM)) {
-		rq->rq_flags |= RQF_PM_ADDED;
-		if (q->nr_pending++ == 0 &&
-		    (q->rpm_status == RPM_SUSPENDED ||
-		     q->rpm_status == RPM_SUSPENDING))
-			pm_request_resume(q->dev);
-	}
-}
-#else
-static inline void blk_pm_requeue_request(struct request *rq) {}
-static inline void blk_pm_add_request(struct request_queue *q,
-				      struct request *rq)
-{
-}
-#endif
 
 void elv_requeue_request(struct request_queue *q, struct request *rq)
 {
