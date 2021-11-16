@@ -107,9 +107,9 @@ module_param_named(sleep_disabled_dev, sleep_disabled_dev, bool, 0664);
  *
  * Returns an s32 latency value
  */
-s32 msm_cpuidle_get_deep_idle_latency(void)
+inline s32 msm_cpuidle_get_deep_idle_latency(void)
 {
-	return 10;
+	return 100;
 }
 EXPORT_SYMBOL(msm_cpuidle_get_deep_idle_latency);
 
