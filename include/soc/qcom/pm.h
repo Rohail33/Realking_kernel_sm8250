@@ -21,7 +21,7 @@ struct latency_level {
 
 #ifdef CONFIG_MSM_PM
 
-s32 msm_cpuidle_get_deep_idle_latency(void);
+inline s32 msm_cpuidle_get_deep_idle_latency(void);
 
 /**
  * lpm_get_latency() - API to get latency for a low power mode
