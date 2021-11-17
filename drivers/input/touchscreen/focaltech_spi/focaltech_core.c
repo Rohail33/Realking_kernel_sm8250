@@ -39,6 +39,7 @@
 #include <linux/of_gpio.h>
 #include <linux/of_irq.h>
 #include <linux/pm_qos.h>
+#include <linux/spi/spi-geni-qcom.h>
 #if defined(CONFIG_DRM)
 #include <drm/drm_notifier_mi.h>
 #elif defined(CONFIG_HAS_EARLYSUSPEND)
@@ -740,6 +741,10 @@ static void fts_irq_read_report(void)
 #if FTS_ESDCHECK_EN
 	fts_esdcheck_set_intr(0);
 #endif
+	pm_qos_update_request(&ts_data->pm_touch_req, 100);
+	pm_qos_update_request(&ts_data->pm_spi_req, 100);
+	pm_qos_update_request(&ts_data->pm_spi_req, PM_QOS_DEFAULT_VALUE);
+	pm_qos_update_request(&ts_data->pm_touch_req, PM_QOS_DEFAULT_VALUE);
 }
 
 static irqreturn_t fts_irq_handler(int irq, void *data)
@@ -764,14 +769,16 @@ static irqreturn_t fts_irq_handler(int irq, void *data)
 	pm_relax(fts_data->dev);
 	return IRQ_HANDLED;
 
-	/*
-	 * This *must* be done before request_threaded_irq is called.
-	 * Otherwise, if an interrupt is received before request is added,
-	 * but after the interrupt has been subscribed to, pm_qos_req
-	 * may be accessed before initialization in the interrupt handler.
-	 */
-	pm_qos_add_request(&ts_data->pm_qos_req, PM_QOS_CPU_DMA_LATENCY,
-			PM_QOS_DEFAULT_VALUE);
+	ts_data->pm_spi_req.type = PM_QOS_REQ_AFFINE_IRQ;
+	ts_data->pm_spi_req.irq = ts_data->irq;
+	pm_qos_add_request(&ts_data->pm_spi_req, PM_QOS_CPU_DMA_LATENCY,
+			        PM_QOS_DEFAULT_VALUE);
+
+	ts_data->pm_touch_req.type = PM_QOS_REQ_AFFINE_IRQ;
+	ts_data->pm_touch_req.irq = ts_data->irq;
+	pm_qos_add_request(&ts_data->pm_touch_req, PM_QOS_CPU_DMA_LATENCY,
+				PM_QOS_DEFAULT_VALUE);
+
 }
 
 static int fts_irq_registration(struct fts_ts_data *ts_data)
@@ -1555,6 +1562,8 @@ static void fts_power_supply_work(struct work_struct *work)
 		}
 	}
 	mutex_unlock(&ts_data->power_supply_lock);
+	pm_qos_update_request(&ts_data->pm_spi_req, PM_QOS_DEFAULT_VALUE);
+        pm_qos_update_request(&ts_data->pm_touch_req, PM_QOS_DEFAULT_VALUE);
 	pm_relax(ts_data->dev);
 }
 
@@ -1743,7 +1752,6 @@ err_gpio_config:
 	kfree_safe(ts_data->point_buf);
 	kfree_safe(ts_data->events);
 err_report_buffer:
-        pm_qos_remove_request(&ts_data->pm_qos_req);
 	input_unregister_device(ts_data->input_dev);
 err_input_init:
 	if (ts_data->ts_workqueue)
@@ -1785,7 +1793,8 @@ static int fts_ts_remove_entry(struct fts_ts_data *ts_data)
 
 	free_irq(ts_data->irq, ts_data);
 	input_unregister_device(ts_data->input_dev);
-	pm_qos_remove_request(&ts_data->pm_qos_req);
+	pm_qos_remove_request(&ts_data->pm_touch_req);
+	pm_qos_remove_request(&ts_data->pm_spi_req);
 	power_supply_unreg_notifier(&ts_data->power_supply_notifier);
 	mutex_destroy(&ts_data->power_supply_lock);
 
