@@ -38,6 +38,7 @@
 #include <linux/of_device.h>
 #include <linux/of_gpio.h>
 #include <linux/of_irq.h>
+#include <linux/pm_qos.h>
 #if defined(CONFIG_DRM)
 #include <drm/drm_notifier_mi.h>
 #elif defined(CONFIG_HAS_EARLYSUSPEND)
@@ -762,6 +763,15 @@ static irqreturn_t fts_irq_handler(int irq, void *data)
 	fts_irq_read_report();
 	pm_relax(fts_data->dev);
 	return IRQ_HANDLED;
+
+	/*
+	 * This *must* be done before request_threaded_irq is called.
+	 * Otherwise, if an interrupt is received before request is added,
+	 * but after the interrupt has been subscribed to, pm_qos_req
+	 * may be accessed before initialization in the interrupt handler.
+	 */
+	pm_qos_add_request(&ts_data->pm_qos_req, PM_QOS_CPU_DMA_LATENCY,
+			PM_QOS_DEFAULT_VALUE);
 }
 
 static int fts_irq_registration(struct fts_ts_data *ts_data)
@@ -1733,6 +1743,7 @@ err_gpio_config:
 	kfree_safe(ts_data->point_buf);
 	kfree_safe(ts_data->events);
 err_report_buffer:
+        pm_qos_remove_request(&ts_data->pm_qos_req);
 	input_unregister_device(ts_data->input_dev);
 err_input_init:
 	if (ts_data->ts_workqueue)
@@ -1774,7 +1785,7 @@ static int fts_ts_remove_entry(struct fts_ts_data *ts_data)
 
 	free_irq(ts_data->irq, ts_data);
 	input_unregister_device(ts_data->input_dev);
-
+	pm_qos_remove_request(&ts_data->pm_qos_req);
 	power_supply_unreg_notifier(&ts_data->power_supply_notifier);
 	mutex_destroy(&ts_data->power_supply_lock);
 
