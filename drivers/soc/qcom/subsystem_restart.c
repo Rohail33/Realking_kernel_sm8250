@@ -1811,6 +1811,7 @@ struct subsys_device *subsys_register(struct subsys_desc *desc)
 	subsys->notif_state = -1;
 	subsys->desc->sysmon_pid = -1;
 	subsys->desc->state = NULL;
+	subsys->restart_level = RESET_SUBSYS_COUPLED;
 	strlcpy(subsys->desc->fw_name, desc->name,
 			sizeof(subsys->desc->fw_name));
 
