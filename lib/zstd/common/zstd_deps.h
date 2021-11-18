@@ -28,6 +28,7 @@
 
 #include <linux/limits.h>
 #include <linux/stddef.h>
+#include <linux/types.h>
 
 #define ZSTD_memcpy(d,s,n) __builtin_memcpy((d),(s),(n))
 #define ZSTD_memmove(d,s,n) __builtin_memmove((d),(s),(n))
