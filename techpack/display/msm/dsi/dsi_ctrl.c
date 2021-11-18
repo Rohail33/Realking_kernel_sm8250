@@ -2374,11 +2374,7 @@ int dsi_ctrl_drv_init(struct dsi_ctrl *dsi_ctrl, struct dentry *parent)
 		goto error;
 	}
 
-	rc = dsi_ctrl_debugfs_init(dsi_ctrl, parent);
-	if (rc) {
-		DSI_CTRL_ERR(dsi_ctrl, "failed to init debug fs, rc=%d\n", rc);
-		goto error;
-	}
+	dsi_ctrl_debugfs_init(dsi_ctrl, parent);
 
 error:
 	mutex_unlock(&dsi_ctrl->ctrl_lock);
