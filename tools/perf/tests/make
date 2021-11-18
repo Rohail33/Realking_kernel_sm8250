@@ -57,7 +57,7 @@ else
 lib = lib
 endif
 
-has = $(shell which $1 2>/dev/null)
+has = $(shell command -v $1 2>/dev/null)
 
 # standard single make variable specified
 make_clean_all      := clean all
