@@ -84,6 +84,7 @@
  * zstd's window anyway. The larger size speeds up initramfs decompression.
  */
 #define ZSTD_IOBUF_SIZE		(1 << 17)
+#define UINTPTR_MAX sizeof(uintptr_t)
 
 static int INIT handle_zstd_error(size_t ret, void (*error)(char *x))
 {
