@@ -871,7 +871,9 @@ static void ipa_rx_switch_to_intr_mode(struct ipa_sys_context *sys)
 	atomic_set(&sys->curr_polling_state, 0);
 	if (!sys->ep->napi_enabled)
 		ipa_handle_rx_core(sys, true, false);
+#ifndef CONFIG_DISABLE_IPA_WAKELOCKS
 	ipa_dec_release_wakelock(sys->ep->wakelock_client);
+#endif
 	return;
 
 fail:
@@ -1004,7 +1006,9 @@ static void ipa_sps_irq_rx_notify(struct sps_event_notify *notify)
 			IPAERR("sps_set_config() failed %d\n", ret);
 			break;
 		}
+#ifndef CONFIG_DISABLE_IPA_WAKELOCKS
 		ipa_inc_acquire_wakelock(sys->ep->wakelock_client);
+#endif
 		atomic_set(&sys->curr_polling_state, 1);
 		trace_intr_to_poll(sys->ep->client);
 		queue_work(sys->wq, &sys->work);
