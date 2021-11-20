@@ -887,10 +887,12 @@ struct ipa_active_clients {
 	int cnt;
 };
 
+#ifndef CONFIG_DISABLE_IPA_WAKELOCKS
 struct ipa_wakelock_ref_cnt {
 	spinlock_t spinlock;
 	u32 cnt;
 };
+#endif
 
 struct ipa_tag_completion {
 	struct completion comp;
@@ -1219,8 +1221,10 @@ struct ipa_context {
 	u32 peer_bam_map_cnt;
 	u32 wdi_map_cnt;
 	bool use_dma_zone;
+#ifndef CONFIG_DISABLE_IPA_WAKELOCKS
 	struct wakeup_source *w_lock;
 	struct ipa_wakelock_ref_cnt wakelock_ref_cnt;
+#endif
 
 	/* RMNET_IOCTL_INGRESS_FORMAT_AGG_DATA */
 	bool ipa_client_apps_wan_cons_agg_gro;
@@ -1974,8 +1978,10 @@ void ipa_flow_control(enum ipa_client_type ipa_client, bool enable,
 			uint32_t qmap_id);
 int ipa2_restore_suspend_handler(void);
 void ipa_sps_irq_control_all(bool enable);
+#ifndef CONFIG_DISABLE_IPA_WAKELOCKS
 void ipa_inc_acquire_wakelock(enum ipa_wakelock_ref_client ref_client);
 void ipa_dec_release_wakelock(enum ipa_wakelock_ref_client ref_client);
+#endif
 int ipa_iommu_map(struct iommu_domain *domain, unsigned long iova,
 	phys_addr_t paddr, size_t size, int prot);
 int ipa2_rx_poll(u32 clnt_hdl, int budget);
