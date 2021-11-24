@@ -25,15 +25,11 @@
 #define TIME_BUF_LEN  17
 #define DBG_EVENT_LEN  143
 
-#define ENABLE_EVENT_LOG 1
+#define ENABLE_EVENT_LOG 0
 
 #define USB_BAM_NR_PORTS	4
 
 #define ARRAY_INDEX_FROM_ADDR(base, addr) ((addr) - (base))
-
-static unsigned int enable_event_log = ENABLE_EVENT_LOG;
-module_param(enable_event_log, uint, 0644);
-MODULE_PARM_DESC(enable_event_log, "enable event logging in debug buffer");
 
 #define LOGLEVEL_NONE 8
 #define LOGLEVEL_DEBUG 7
@@ -47,7 +43,7 @@ do {									\
 		pr_debug(x);						\
 	else if (log_level == LOGLEVEL_ERR)				\
 		pr_err(x);						\
-	if (enable_event_log) {						\
+	if (ENABLE_EVENT_LOG) {						\
 		write_lock_irqsave(&usb_bam_dbg.lck, flags);		\
 		buf = usb_bam_dbg.buf[usb_bam_dbg.idx];			\
 		put_timestamp(buf);					\
