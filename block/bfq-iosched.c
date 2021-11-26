@@ -467,7 +467,7 @@ static struct bfq_io_cq *bfq_bic_lookup(struct request_queue *q)
 
 	if (!current->io_context)
 		return NULL;
-		
+
 	spin_lock_irqsave(&q->queue_lock, flags);
 	icq = icq_to_bic(ioc_lookup_icq(current->io_context, q));
 	spin_unlock_irqrestore(&q->queue_lock, flags);
@@ -698,7 +698,7 @@ static bool bfqq_request_over_limit(struct bfq_queue *bfqq, int limit)
 static void bfq_limit_depth(unsigned int op, struct blk_mq_alloc_data *data)
 {
 	struct bfq_data *bfqd = data->q->elevator->elevator_data;
-	struct bfq_io_cq *bic = icq_to_bic(blk_mq_sched_assign_ioc(data->q,NULL));
+	struct bfq_io_cq *bic = bfq_bic_lookup(data->q);
 	int depth;
 	unsigned limit = data->q->nr_requests;
 	unsigned int act_idx;
