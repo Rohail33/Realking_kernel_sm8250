@@ -515,6 +515,17 @@ struct fuse_entry_out {
 	struct fuse_attr attr;
 };
 
+#define FUSE_ACTION_KEEP	0
+#define FUSE_ACTION_REMOVE	1
+#define FUSE_ACTION_REPLACE	2
+
+struct fuse_entry_bpf_out {
+	uint64_t	backing_action;
+	uint64_t	backing_fd;
+	uint64_t	bpf_action;
+	uint64_t	bpf_fd;
+};
+
 struct fuse_forget_in {
 	uint64_t	nlookup;
 };
@@ -812,7 +823,7 @@ struct fuse_in_header {
 	uint32_t	uid;
 	uint32_t	gid;
 	uint32_t	pid;
-	uint32_t	padding;
+	uint32_t	error_in;
 };
 
 struct fuse_passthrough_out {
@@ -981,12 +992,20 @@ struct fuse_args {
 	bool page_zeroing:1;
 	bool page_replace:1;
 	bool may_block:1;
-	struct fuse_in_arg in_args[3];
-	struct fuse_arg out_args[2];
+	struct fuse_in_arg in_args[5];
+	struct fuse_arg out_args[3];
 	void (*end)(struct fuse_mount *fm, struct fuse_args *args, int error);
 
 	/* Path used for completing d_canonical_path */
 	struct path *canonical_path;
 };
+
+#define FUSE_BPF_USER_FILTER	1
+#define FUSE_BPF_BACKING	2
+#define FUSE_BPF_POST_FILTER	4
+
+#define FUSE_OPCODE_FILTER	0x0ffff
+#define FUSE_PREFILTER		0x10000
+#define FUSE_POSTFILTER		0x20000
 
 #endif /* _LINUX_FUSE_H */
