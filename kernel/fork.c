@@ -2419,8 +2419,6 @@ long _do_fork(unsigned long clone_flags,
 	if (IS_ERR(p))
 		return PTR_ERR(p);
 
-	cpufreq_task_times_alloc(p);
-
 	/*
 	 * Do this prior waking up the new thread - the thread pointer
 	 * might get invalid after that point, if the thread exits quickly.
