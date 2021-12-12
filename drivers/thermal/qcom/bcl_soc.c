@@ -95,9 +95,11 @@ static void bcl_evaluate_soc(struct work_struct *work)
 
 	bcl_perph->trip_val = battery_percentage;
 	mutex_unlock(&bcl_perph->state_trans_lock);
+
+	return; //return before thermal handle trips with percentage
+
 	of_thermal_handle_trip(bcl_perph->tz_dev);
 
-	return;
 eval_exit:
 	mutex_unlock(&bcl_perph->state_trans_lock);
 }
