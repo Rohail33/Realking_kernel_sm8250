@@ -958,7 +958,7 @@ int blk_queue_enter(struct request_queue *q, blk_mq_req_flags_t flags)
 		 */
 		smp_rmb();
 
-		wait_event(q->mq_freeze_wq,
+		wait_event_interruptible(q->mq_freeze_wq,
 			   (atomic_read(&q->mq_freeze_depth) == 0 &&
 			    (pm || !blk_queue_pm_only(q))) ||
 			   blk_queue_dying(q));
