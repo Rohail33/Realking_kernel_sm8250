@@ -147,7 +147,7 @@ void synchronize_irq(unsigned int irq)
 		 * running. Now verify that no threaded handlers are
 		 * active.
 		 */
-		wait_event(desc->wait_for_threads,
+		wait_event_interruptible(desc->wait_for_threads,
 			   !atomic_read(&desc->threads_active));
 	}
 }
