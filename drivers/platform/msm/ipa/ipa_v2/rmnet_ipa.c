@@ -2282,10 +2282,6 @@ static int rmnet_ipa_ap_suspend(struct device *dev)
 	netif_tx_lock_bh(netdev);
 	netif_stop_queue(netdev);
 
-	/* Stoppig Watch dog timer when pipe was in suspend state */
-	if (del_timer(&netdev->watchdog_timer))
-		dev_put(netdev);
-
 	ipa_rm_release_resource(IPA_RM_RESOURCE_WWAN_0_PROD);
 	netif_tx_unlock_bh(netdev);
 	IPAWANDBG_LOW("Exit\n");
@@ -2308,12 +2304,8 @@ static int rmnet_ipa_ap_resume(struct device *dev)
 	struct net_device *netdev = ipa_netdevs[0];
 
 	IPAWANDBG_LOW("Enter...\n");
-	if (netdev) {
+	if (netdev)
 		netif_wake_queue(netdev);
-		/* Starting Watch dog timer, pipe was changes to resume state */
-		if (netif_running(netdev) && netdev->watchdog_timeo <= 0)
-			__netdev_watchdog_up(netdev);
-	}
 	IPAWANDBG_LOW("Exit\n");
 
 	return 0;
