@@ -547,7 +547,7 @@ static int battery_supply_callback(struct notifier_block *nb,
 {
 	struct power_supply *psy = data;
 
-	if (strcmp(psy->desc->name, "battery"))
+	if (strcmp(psy->desc->name, "bms"))
 		return NOTIFY_OK;
 	schedule_work(&bcl_perph->soc_eval_work);
 
