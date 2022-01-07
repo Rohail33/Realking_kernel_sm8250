@@ -1525,6 +1525,7 @@ static int fuse_permission(struct inode *inode, int mask)
 	struct fuse_conn *fc = get_fuse_conn(inode);
 	bool refreshed = false;
 	int err = 0;
+	struct fuse_inode *fi = get_fuse_inode(inode);
 
 	if (fuse_is_bad(inode))
 		return -EIO;
@@ -1537,7 +1538,6 @@ static int fuse_permission(struct inode *inode, int mask)
 	 */
 	if (fc->default_permissions ||
 	    ((mask & MAY_EXEC) && S_ISREG(inode->i_mode))) {
-		struct fuse_inode *fi = get_fuse_inode(inode);
 		u32 perm_mask = STATX_MODE | STATX_UID | STATX_GID;
 
 		if (perm_mask & READ_ONCE(fi->inval_mask) ||
@@ -1577,6 +1577,8 @@ static int fuse_permission(struct inode *inode, int mask)
 			if (!err && !(inode->i_mode & S_IXUGO))
 				return -EACCES;
 		}
+	} else if (!(mask & MAY_NOT_BLOCK) && fi->backing_inode) {
+		err = fuse_access(inode, mask);
 	}
 	return err;
 }
