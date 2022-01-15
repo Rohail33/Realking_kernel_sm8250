@@ -7037,7 +7037,7 @@ static irqreturn_t arm_smmu_debug_capture_bus_match(int irq, void *dev)
 	struct qsmmuv500_tbu_device *tbu = dev;
 	struct arm_smmu_device *smmu = tbu->smmu;
 	void __iomem *tbu_base = tbu->base;
-	u64 mask[NO_OF_MASK_AND_MATCH], match[NO_OF_MASK_AND_MATCH];
+	u64 mask[NO_OF_MASK_AND_MATCH] = { 0 }, match[NO_OF_MASK_AND_MATCH] = { 0 };
 	u64 snapshot[NO_OF_CAPTURE_POINTS][REGS_PER_CAPTURE_POINT];
 	int i, j, val;
 
