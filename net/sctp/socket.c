@@ -5586,7 +5586,7 @@ out:
 static int sctp_getsockopt_peer_addr_params(struct sock *sk, int len,
 					    char __user *optval, int __user *optlen)
 {
-	struct sctp_paddrparams  params;
+	struct sctp_paddrparams params = { 0 };
 	struct sctp_transport   *trans = NULL;
 	struct sctp_association *asoc = NULL;
 	struct sctp_sock        *sp = sctp_sk(sk);
