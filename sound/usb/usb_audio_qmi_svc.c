@@ -1039,7 +1039,7 @@ static void handle_uaudio_stream_req(struct qmi_handle *handle,
 	ktime_t t_request_recvd = ktime_get();
 
 	int pcm_format;
-	u8 pcm_card_num, pcm_dev_num, direction;
+	u8 pcm_card_num = 0, pcm_dev_num, direction;
 	int info_idx = -EINVAL, datainterval = -EINVAL, ret = 0;
 
 	uaudio_dbg("sq_node:%x sq_port:%x sq_family:%x\n", sq->sq_node,
