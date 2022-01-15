@@ -920,7 +920,7 @@ EXPORT_SYMBOL(msm_vidc_release_buffers);
 int msm_vidc_qbuf(void *instance, struct v4l2_buffer *b)
 {
 	struct msm_vidc_inst *inst = instance;
-	struct buffer_info *binfo;
+	struct buffer_info *binfo = NULL;
 	int plane = 0;
 	int rc = 0;
 	int i;
