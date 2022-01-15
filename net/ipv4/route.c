@@ -606,7 +606,7 @@ static void fnhe_flush_routes(struct fib_nh_exception *fnhe)
 
 static void fnhe_remove_oldest(struct fnhe_hash_bucket *hash)
 {
-	struct fib_nh_exception __rcu **fnhe_p, **oldest_p;
+	struct fib_nh_exception __rcu **fnhe_p, **oldest_p = NULL;
 	struct fib_nh_exception *fnhe, *oldest = NULL;
 
 	for (fnhe_p = &hash->chain; ; fnhe_p = &fnhe->fnhe_next) {
