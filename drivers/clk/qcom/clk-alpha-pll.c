@@ -2668,7 +2668,7 @@ static int clk_alpha_pll_calibrate(struct clk_hw *hw)
 	struct clk_hw *parent;
 	const struct pll_vco *vco;
 	u64 a;
-	u32 l, alpha_width = pll_alpha_width(pll);
+	u32 l = 0, alpha_width = pll_alpha_width(pll);
 	int rc;
 
 	parent = clk_hw_get_parent(hw);
