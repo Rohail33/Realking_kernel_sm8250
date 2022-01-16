@@ -1028,7 +1028,7 @@ int mdss_dsi_phy_calc_timing_param(struct mdss_panel_info *pinfo, u32 phy_rev,
 		u64 clk_rate)
 {
 	struct dsi_phy_t_clk_param t_clk;
-	struct dsi_phy_timing t_param;
+	struct dsi_phy_timing t_param = { 0 };
 	int rc = 0;
 
 	if (!pinfo) {
