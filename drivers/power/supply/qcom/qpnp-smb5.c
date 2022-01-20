@@ -3250,7 +3250,7 @@ static int smb5_batt_get_prop(struct power_supply *psy,
 		rc = smblib_night_charging_func(chg, val);
 		break;
 	default:
-		pr_err("batt power supply prop %d not supported\n", psp);
+		pr_debug("batt power supply prop %d not supported\n", psp);
 		return -EINVAL;
 	}
 
