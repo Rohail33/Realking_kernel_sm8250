@@ -875,12 +875,15 @@ free_metadata:
 static int __init dm_android_verity_init(void)
 {
 	int r;
+#ifdef CONFIG_DEBUG_FS
 	struct dentry *file;
+#endif
 
 	r = dm_register_target(&android_verity_target);
 	if (r < 0)
 		DMERR("register failed %d", r);
 
+#ifdef CONFIG_DEBUG_FS
 	/* Tracks the status of the last added target */
 	debug_dir = debugfs_create_dir("android_verity", NULL);
 
@@ -910,14 +913,16 @@ static int __init dm_android_verity_init(void)
 	}
 
 end:
+#endif
 	return r;
 }
 
 static void __exit dm_android_verity_exit(void)
 {
+#ifdef CONFIG_DEBUG_FS
 	if (!IS_ERR_OR_NULL(debug_dir))
 		debugfs_remove_recursive(debug_dir);
-
+#endif
 	dm_unregister_target(&android_verity_target);
 }
 
