@@ -606,6 +606,7 @@ enum {
 	OPT_BLKSIZE,
 	OPT_ROOT_BPF,
 	OPT_ROOT_DIR,
+	OPT_NO_DAEMON,
 	OPT_ERR
 };
 
@@ -622,6 +623,7 @@ static const struct fs_parameter_spec fuse_param_specs[] = {
 	fsparam_string	("subtype",		OPT_SUBTYPE),
 	fsparam_u32	("root_bpf",		OPT_ROOT_BPF),
 	fsparam_u32	("root_dir",		OPT_ROOT_DIR),
+	fsparam_flag	("no_daemon",		OPT_NO_DAEMON),
 	{}
 };
 
@@ -723,6 +725,11 @@ static int fuse_parse_param(struct fs_context *fc, struct fs_parameter *param)
 		ctx->root_dir = fget(result.uint_32);
 		if (!ctx->root_dir)
 			return invalf(fc, "Unable to open root directory");
+		break;
+
+	case OPT_NO_DAEMON:
+		ctx->no_daemon = true;
+		ctx->fd_present = true;
 		break;
 
 	default:
@@ -1280,7 +1287,7 @@ void fuse_send_init(struct fuse_mount *fm)
 	ia->args.nocreds = true;
 	ia->args.end = process_init_reply;
 
-	if (fuse_simple_background(fm, &ia->args, GFP_KERNEL) != 0)
+	if (unlikely(fm->fc->no_daemon) || fuse_simple_background(fm, &ia->args, GFP_KERNEL) != 0)
 		process_init_reply(fm, &ia->args, -ENOTCONN);
 }
 EXPORT_SYMBOL_GPL(fuse_send_init);
@@ -1527,6 +1534,7 @@ int fuse_fill_super_common(struct super_block *sb, struct fuse_fs_context *ctx)
 	fc->destroy = ctx->destroy;
 	fc->no_control = ctx->no_control;
 	fc->no_force_umount = ctx->no_force_umount;
+	fc->no_daemon = ctx->no_daemon;
 
 	err = -ENOMEM;
 	root = fuse_get_root_inode(sb, ctx->rootmode, ctx->root_bpf,
@@ -1578,18 +1586,20 @@ static int fuse_fill_super(struct super_block *sb, struct fs_context *fsc)
 	struct fuse_mount *fm;
 
 	err = -EINVAL;
-	file = fget(ctx->fd);
-	if (!file)
-		goto err;
+	if (!ctx->no_daemon) {
+		file = fget(ctx->fd);
+		if (!file)
+			goto err;
 
-	/*
-	 * Require mount to happen from the same user namespace which
-	 * opened /dev/fuse to prevent potential attacks.
-	 */
-	if ((file->f_op != &fuse_dev_operations) ||
-	    (file->f_cred->user_ns != sb->s_user_ns))
-		goto err_fput;
-	ctx->fudptr = &file->private_data;
+		/*
+		 * Require mount to happen from the same user namespace which
+		 * opened /dev/fuse to prevent potential attacks.
+		 */
+		if ((file->f_op != &fuse_dev_operations) ||
+		    (file->f_cred->user_ns != sb->s_user_ns))
+			goto err_fput;
+		ctx->fudptr = &file->private_data;
+	}
 
 	fc = kmalloc(sizeof(*fc), GFP_KERNEL);
 	err = -ENOMEM;
@@ -1615,7 +1625,8 @@ static int fuse_fill_super(struct super_block *sb, struct fs_context *fsc)
 	 * memory barrier for file->private_data to be visible on all
 	 * CPUs after this
 	 */
-	fput(file);
+	if (!ctx->no_daemon)
+		fput(file);
 	fuse_send_init(get_fuse_mount_super(sb));
 	return 0;
 
@@ -1623,7 +1634,8 @@ static int fuse_fill_super(struct super_block *sb, struct fs_context *fsc)
 	fuse_mount_put(fm);
 	sb->s_fs_info = NULL;
  err_fput:
-	fput(file);
+	if (!ctx->no_daemon)
+		fput(file);
  err:
 	return err;
 }
