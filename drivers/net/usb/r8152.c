@@ -1400,13 +1400,13 @@ static void intr_callback(struct urb *urb)
 	if (INTR_LINK & __le16_to_cpu(d[0])) {
 		if (!netif_carrier_ok(tp->netdev)) {
 			set_bit(RTL8152_LINK_CHG, &tp->flags);
-			schedule_delayed_work(&tp->schedule, 0);
+			queue_delayed_work(system_power_efficient_wq, &tp->schedule, 0);
 		}
 	} else {
 		if (netif_carrier_ok(tp->netdev)) {
 			netif_stop_queue(tp->netdev);
 			set_bit(RTL8152_LINK_CHG, &tp->flags);
-			schedule_delayed_work(&tp->schedule, 0);
+			queue_delayed_work(system_power_efficient_wq, &tp->schedule, 0);
 		}
 	}
 
@@ -2137,7 +2137,7 @@ static void rtl8152_set_rx_mode(struct net_device *netdev)
 
 	if (netif_carrier_ok(netdev)) {
 		set_bit(RTL8152_SET_RX_MODE, &tp->flags);
-		schedule_delayed_work(&tp->schedule, 0);
+		queue_delayed_work(system_power_efficient_wq, &tp->schedule, 0);
 	}
 }
 
@@ -2214,7 +2214,7 @@ static netdev_tx_t rtl8152_start_xmit(struct sk_buff *skb,
 	if (!list_empty(&tp->tx_free)) {
 		if (test_bit(SELECTIVE_SUSPEND, &tp->flags)) {
 			set_bit(SCHEDULE_NAPI, &tp->flags);
-			schedule_delayed_work(&tp->schedule, 0);
+			queue_delayed_work(system_power_efficient_wq, &tp->schedule, 0);
 		} else {
 			usb_mark_last_busy(tp->udev);
 			napi_schedule(&tp->napi);
@@ -3819,7 +3819,7 @@ static void rtl_work_func_t(struct work_struct *work)
 		goto out1;
 
 	if (!mutex_trylock(&tp->control)) {
-		schedule_delayed_work(&tp->schedule, 0);
+		queue_delayed_work(system_power_efficient_wq, &tp->schedule, 0);
 		goto out1;
 	}
 

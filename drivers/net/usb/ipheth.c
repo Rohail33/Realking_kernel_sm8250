@@ -285,7 +285,7 @@ static void ipheth_sndbulk_callback(struct urb *urb)
 		netif_wake_queue(dev->net);
 	else
 		// on URB error, trigger immediate poll
-		schedule_delayed_work(&dev->carrier_work, 0);
+		queue_delayed_work(system_power_efficient_wq, &dev->carrier_work, 0);
 }
 
 static int ipheth_carrier_set(struct ipheth_device *dev)
@@ -330,7 +330,7 @@ static void ipheth_carrier_check_work(struct work_struct *work)
 						 carrier_work.work);
 
 	ipheth_carrier_set(dev);
-	schedule_delayed_work(&dev->carrier_work, IPHETH_CARRIER_CHECK_TIMEOUT);
+	queue_delayed_work(system_power_efficient_wq, &dev->carrier_work, IPHETH_CARRIER_CHECK_TIMEOUT);
 }
 
 static int ipheth_get_macaddr(struct ipheth_device *dev)
@@ -399,7 +399,7 @@ static int ipheth_open(struct net_device *net)
 	if (retval)
 		return retval;
 
-	schedule_delayed_work(&dev->carrier_work, IPHETH_CARRIER_CHECK_TIMEOUT);
+	queue_delayed_work(system_power_efficient_wq, &dev->carrier_work, IPHETH_CARRIER_CHECK_TIMEOUT);
 	return retval;
 }
 

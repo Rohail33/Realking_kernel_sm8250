@@ -485,7 +485,7 @@ static void kaweth_resubmit_int_urb(struct kaweth_device *kaweth, gfp_t mf)
 	status = usb_submit_urb (kaweth->irq_urb, mf);
 	if (unlikely(status == -ENOMEM)) {
 		kaweth->suspend_lowmem_ctrl = 1;
-		schedule_delayed_work(&kaweth->lowmem_work, HZ/4);
+		queue_delayed_work(system_power_efficient_wq, &kaweth->lowmem_work, HZ/4);
 	} else {
 		kaweth->suspend_lowmem_ctrl = 0;
 	}
@@ -565,7 +565,7 @@ static int kaweth_resubmit_rx_urb(struct kaweth_device *kaweth,
 	if((result = usb_submit_urb(kaweth->rx_urb, mem_flags))) {
 		if (result == -ENOMEM) {
 			kaweth->suspend_lowmem_rx = 1;
-			schedule_delayed_work(&kaweth->lowmem_work, HZ/4);
+			queue_delayed_work(system_power_efficient_wq, &kaweth->lowmem_work, HZ/4);
 		}
 		dev_err(&kaweth->intf->dev, "resubmitting rx_urb %d failed\n",
 			result);
