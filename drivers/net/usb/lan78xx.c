@@ -1245,7 +1245,7 @@ static int lan78xx_link_reset(struct lan78xx_net *dev)
 static void lan78xx_defer_kevent(struct lan78xx_net *dev, int work)
 {
 	set_bit(work, &dev->flags);
-	if (!schedule_delayed_work(&dev->wq, 0))
+	if (!queue_delayed_work(system_power_efficient_wq, &dev->wq, 0))
 		netdev_err(dev->net, "kevent %d may have been dropped\n", work);
 }
 
