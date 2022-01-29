@@ -28,8 +28,6 @@
  */
 unsigned int __read_mostly freeze_timeout_msecs = 5 * MSEC_PER_SEC;
 
-#define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
-
 static int try_to_freeze_tasks(bool user_only)
 {
 	struct task_struct *g, *p;
@@ -194,15 +192,13 @@ int freeze_kernel_threads(void)
 void thaw_fingerprintd(void)
 {
 	struct task_struct *p;
-	const char Name[] = "android.hardware.biometrics.fingerprint";
-	const size_t szName = sizeof(Name) - 1;
 
 	pm_freezing = false;
 	pm_nosig_freezing = false;
 
 	read_lock(&tasklist_lock);
 	for_each_process(p) {
-	  if (!strncmp(p->comm, Name, MIN(strlen(p->comm), szName))) {
+	        if (!strstr(p->comm, "erprint")) {
 			__thaw_task(p);
 			break;
 		}
