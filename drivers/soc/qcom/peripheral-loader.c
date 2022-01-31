@@ -1702,10 +1702,11 @@ static int __init msm_pil_init(void)
 	pil_wq = alloc_workqueue("pil_workqueue", WQ_HIGHPRI | WQ_UNBOUND, 0);
 	if (!pil_wq)
 		pr_warn("pil: Defaulting to sequential firmware loading.\n");
-
+#ifdef CONFIG_IPC_LOGGING
 	pil_ipc_log = ipc_log_context_create(2, "PIL-IPC", 0);
 	if (!pil_ipc_log)
 		pr_warn("Failed to setup PIL ipc logging\n");
+#endif
 out:
 	return register_pm_notifier(&pil_pm_notifier);
 }
