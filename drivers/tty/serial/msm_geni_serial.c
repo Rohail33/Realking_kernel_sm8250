@@ -146,10 +146,14 @@
  */
 #define POLL_ITERATIONS		1000
 
+#ifdef CONFIG_IPC_LOGGING
 #define IPC_LOG_MSG(ctx, x...) do { \
 	if (ctx) \
 		ipc_log_string(ctx, x); \
 } while (0)
+#else
+#define IPC_LOG_MSG(x, y...) // no-ops
+#endif
 
 #define DMA_RX_BUF_SIZE		(2048)
 #define UART_CONSOLE_RX_WM	(2)
@@ -3119,6 +3123,7 @@ static void console_unregister(struct uart_driver *drv)
 }
 #endif /* defined(CONFIG_SERIAL_CORE_CONSOLE) || defined(CONFIG_CONSOLE_POLL) */
 
+#if defined(CONFIG_DEBUG_FS) && defined(CONFIG_IPC_LOGGING)
 static void msm_geni_serial_debug_init(struct uart_port *uport, bool console)
 {
 	struct msm_geni_serial_port *msm_port = GET_DEV_PORT(uport);
@@ -3196,6 +3201,11 @@ static void msm_geni_serial_debug_init(struct uart_port *uport, bool console)
 		}
 	}
 }
+#else
+static void msm_geni_serial_debug_init(struct uart_port *uport, bool console)
+{
+}
+#endif
 
 static void msm_geni_serial_cons_pm(struct uart_port *uport,
 		unsigned int new_state, unsigned int old_state)
