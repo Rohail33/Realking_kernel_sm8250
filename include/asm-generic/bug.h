@@ -184,6 +184,8 @@ void __warn(const char *file, int line, void *caller, unsigned taint,
 #define BUG() do {} while (1)
 #endif
 
+#define __WARN_printf(...) do {} while (0)
+
 #ifndef HAVE_ARCH_BUG_ON
 #define BUG_ON(condition) do { if (condition) BUG(); } while (0)
 #endif
