@@ -840,7 +840,9 @@ static u32 dsi_panel_get_backlight(struct dsi_panel *panel)
 
 static u32 interpolate(uint32_t x, uint32_t xa, uint32_t xb, uint32_t ya, uint32_t yb)
 {
-	return ya - (ya - yb) * (x - xa) / (xb - xa);
+	u32 base = ya - (ya - yb) * (x - xa) / (xb - xa);
+
+	return base - 0.0125*base;
 }
 
 u32 dsi_panel_get_fod_dim_alpha(struct dsi_panel *panel)
