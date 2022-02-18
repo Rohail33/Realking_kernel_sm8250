@@ -1515,7 +1515,6 @@ static int fuse_perm_getattr(struct inode *inode, int mask)
 		return -ECHILD;
 
 	forget_all_cached_acls(inode);
-	/* TODO: BPF stuff here? But we have no dentry for path for vfs_getattr */
 	return fuse_do_getattr(inode, NULL, NULL);
 }
 
@@ -1538,12 +1537,23 @@ static int fuse_permission(struct inode *inode, int mask)
 	bool refreshed = false;
 	int err = 0;
 	struct fuse_inode *fi = get_fuse_inode(inode);
+#ifdef CONFIG_FUSE_BPF
+	struct fuse_err_ret fer;
+#endif
 
 	if (fuse_is_bad(inode))
 		return -EIO;
 
 	if (!fuse_allow_current_process(fc))
 		return -EACCES;
+
+#ifdef CONFIG_FUSE_BPF
+	fer = fuse_bpf_backing(inode, struct fuse_access_in,
+			       fuse_access_initialize, fuse_access_backing,
+			       fuse_access_finalize, inode, mask);
+	if (fer.ret)
+		return PTR_ERR(fer.result);
+#endif
 
 	/*
 	 * If attributes are needed, refresh them before proceeding
@@ -1589,10 +1599,6 @@ static int fuse_permission(struct inode *inode, int mask)
 			if (!err && !(inode->i_mode & S_IXUGO))
 				return -EACCES;
 		}
-#ifdef CONFIG_FUSE_BPF
-	} else if (!(mask & MAY_NOT_BLOCK) && fi->backing_inode) {
-		err = fuse_access(inode, mask);
-#endif
 	}
 	return err;
 }
