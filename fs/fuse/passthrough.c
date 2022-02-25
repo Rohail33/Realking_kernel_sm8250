@@ -12,7 +12,7 @@ struct fuse_aio_req {
 	struct kiocb *iocb_fuse;
 };
 
-static void fuse_copyattr(struct file *dst_file, struct file *src_file)
+void fuse_copyattr(struct file *dst_file, struct file *src_file)
 {
 	struct inode *dst = file_inode(dst_file);
 	struct inode *src = file_inode(src_file);

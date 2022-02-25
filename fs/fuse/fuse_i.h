@@ -1275,6 +1275,8 @@ int fuse_passthrough_open(struct fuse_dev *fud,
 /* readdir.c */
 int fuse_readdir(struct file *file, struct dir_context *ctx);
 
+/* passthrough.c */
+void fuse_copyattr(struct file *dst_file, struct file *src_file);
 int fuse_passthrough_setup(struct fuse_conn *fc, struct fuse_file *ff,
                           struct fuse_open_out *openarg);
 void fuse_passthrough_release(struct fuse_passthrough *passthrough);
