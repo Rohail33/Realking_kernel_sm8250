@@ -72,7 +72,6 @@ static uint8_t _std_init_vector_sha512_uint8[] = {
 	0x5B, 0xE0, 0xCD, 0x19, 0x13, 0x7E, 0x21, 0x79
 };
 
-static DEFINE_MUTEX(send_cmd_lock);
 static DEFINE_MUTEX(qcedev_sent_bw_req);
 static DEFINE_MUTEX(hash_access_lock);
 
