@@ -168,6 +168,7 @@ config ARM64
 	select OF_EARLY_FLATTREE
 	select OF_RESERVED_MEM
 	select PCI_ECAM if ACPI
+	select PCI_LOCKLESS_CONFIG if PCI && ARCH_QCOM
 	select POWER_RESET
 	select POWER_SUPPLY
 	select REFCOUNT_FULL
