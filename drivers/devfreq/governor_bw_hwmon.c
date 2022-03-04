@@ -73,7 +73,7 @@ struct hwmon_node {
 
 #define UP_WAKE 1
 #define DOWN_WAKE 2
-static DEFINE_SPINLOCK(irq_lock);
+static DEFINE_RAW_SPINLOCK(irq_lock);
 
 static LIST_HEAD(hwmon_list);
 static DEFINE_MUTEX(list_lock);
@@ -284,9 +284,9 @@ int bw_hwmon_sample_end(struct bw_hwmon *hwmon)
 	unsigned long flags;
 	int wake;
 
-	spin_lock_irqsave(&irq_lock, flags);
+	raw_spin_lock_irqsave(&irq_lock, flags);
 	wake = __bw_hwmon_sample_end(hwmon);
-	spin_unlock_irqrestore(&irq_lock, flags);
+	raw_spin_unlock_irqrestore(&irq_lock, flags);
 
 	return wake;
 }
@@ -315,7 +315,7 @@ static unsigned long get_bw_and_set_irq(struct hwmon_node *node,
 	ktime_t ts;
 	unsigned int ms = 0;
 
-	spin_lock_irqsave(&irq_lock, flags);
+	raw_spin_lock_irqsave(&irq_lock, flags);
 
 	if (!hw->set_hw_events) {
 		ts = ktime_get();
@@ -451,7 +451,7 @@ static unsigned long get_bw_and_set_irq(struct hwmon_node *node,
 	node->wake = 0;
 	node->prev_req = req_mbps;
 
-	spin_unlock_irqrestore(&irq_lock, flags);
+	raw_spin_unlock_irqrestore(&irq_lock, flags);
 
 	adj_mbps = req_mbps + node->guard_band_mbps;
 
