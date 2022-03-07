@@ -1728,7 +1728,7 @@ static int fuse_dir_fsync(struct file *file, loff_t start, loff_t end,
 	if (is_bad_inode(inode))
 		return -EIO;
 
-#ifdef CONFIG_FUSE_BFP
+#ifdef CONFIG_FUSE_BPF
 	{
 		struct fuse_err_ret fer;
 
