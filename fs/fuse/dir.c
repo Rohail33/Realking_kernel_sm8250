@@ -196,7 +196,7 @@ static int fuse_dentry_revalidate(struct dentry *entry, unsigned int flags)
 	else if (time_before64(fuse_dentry_time(entry), get_jiffies_64()) ||
 		 (flags & LOOKUP_REVAL)) {
 		struct fuse_entry_out outarg;
-		struct fuse_entry_bpf_out bpf_outarg;
+		struct fuse_entry_bpf bpf_arg;
 		FUSE_ARGS(args);
 		struct fuse_forget_link *forget;
 		u64 attr_version;
@@ -234,7 +234,7 @@ static int fuse_dentry_revalidate(struct dentry *entry, unsigned int flags)
 		parent = dget_parent(entry);
 
 		fuse_lookup_init(fm->fc, &args, get_node_id(d_inode(parent)),
-				 &entry->d_name, &outarg, &bpf_outarg);
+				 &entry->d_name, &outarg, &bpf_arg.out);
 		ret = fuse_simple_request(fm, &args);
 		dput(parent);
 
@@ -243,15 +243,15 @@ static int fuse_dentry_revalidate(struct dentry *entry, unsigned int flags)
 		 * change the backing file ever, so not sure what is correct
 		 * here yet, especially as we can't return an error to user
 		 */
-		if (bpf_outarg.backing_action == FUSE_ACTION_REPLACE) {
-			struct file *file = (struct file *) bpf_outarg.backing_fd;
+		if (bpf_arg.out.backing_action == FUSE_ACTION_REPLACE) {
+			struct file *file = bpf_arg.backing_file;
 
 			if (file && !IS_ERR(file))
 				fput(file);
 		}
 
-		if (bpf_outarg.bpf_action == FUSE_ACTION_REPLACE) {
-			struct file *file = (struct file *) bpf_outarg.bpf_fd;
+		if (bpf_arg.out.bpf_action == FUSE_ACTION_REPLACE) {
+			struct file *file = bpf_arg.bpf_file;
 
 			if (file && !IS_ERR(file))
 				fput(file);
@@ -500,12 +500,12 @@ bool fuse_invalid_attr(struct fuse_attr *attr)
 
 int fuse_lookup_name(struct super_block *sb, u64 nodeid, const struct qstr *name,
 		     struct fuse_entry_out *outarg,
-		     struct fuse_entry_bpf_out *bpf_outarg,
 		     struct dentry *entry,
 		     struct inode **inode)
 {
 	struct fuse_mount *fm = get_fuse_mount_super(sb);
 	FUSE_ARGS(args);
+	struct fuse_entry_bpf bpf_arg = {0};
 	struct fuse_forget_link *forget;
 	u64 attr_version;
 	int err;
@@ -523,11 +523,11 @@ int fuse_lookup_name(struct super_block *sb, u64 nodeid, const struct qstr *name
 
 	attr_version = fuse_get_attr_version(fm->fc);
 
-	fuse_lookup_init(fm->fc, &args, nodeid, name, outarg, bpf_outarg);
+	fuse_lookup_init(fm->fc, &args, nodeid, name, outarg, &bpf_arg.out);
 	err = fuse_simple_request(fm, &args);
 
 #ifdef CONFIG_FUSE_BPF
-	if (err == sizeof(*bpf_outarg)) {
+	if (err == sizeof(bpf_arg.out)) {
 		/* TODO Make sure this handles invalid handles */
 		/* TODO Do we need the same code in revalidate */
 		struct file *backing_file;
@@ -538,20 +538,20 @@ int fuse_lookup_name(struct super_block *sb, u64 nodeid, const struct qstr *name
 			goto out_queue_forget;
 
 		err = -EINVAL;
-		if (bpf_outarg->backing_action != FUSE_ACTION_REPLACE)
+		if (bpf_arg.out.backing_action != FUSE_ACTION_REPLACE)
 			goto out_queue_forget;
 
-		backing_file = (struct file *) bpf_outarg->backing_fd;
+		backing_file = bpf_arg.backing_file;
 		if (!backing_file || IS_ERR(backing_file))
 			goto out_queue_forget;
 
 		backing_inode = backing_file->f_inode;
 		*inode = fuse_iget_backing(sb, backing_inode);
 		if (!*inode)
-			goto bpf_outarg_out;
+			goto bpf_arg_out;
 
-		if (bpf_outarg->bpf_action == FUSE_ACTION_REPLACE) {
-			struct file *bpf_file = (struct file*) bpf_outarg->bpf_fd;
+		if (bpf_arg.out.bpf_action == FUSE_ACTION_REPLACE) {
+			struct file *bpf_file = bpf_arg.bpf_file;
 			struct bpf_prog *bpf_prog = ERR_PTR(-EINVAL);
 
 			if (bpf_file && !IS_ERR(bpf_file))
@@ -561,7 +561,7 @@ int fuse_lookup_name(struct super_block *sb, u64 nodeid, const struct qstr *name
 				iput(*inode);
 				*inode = NULL;
 				err = PTR_ERR(bpf_prog);
-				goto bpf_outarg_out;
+				goto bpf_arg_out;
 			}
 			get_fuse_inode(*inode)->bpf = bpf_prog;
 		}
@@ -569,7 +569,7 @@ int fuse_lookup_name(struct super_block *sb, u64 nodeid, const struct qstr *name
 		get_fuse_dentry(entry)->backing_path = backing_file->f_path;
 		path_get(&get_fuse_dentry(entry)->backing_path);
 
-bpf_outarg_out:
+bpf_arg_out:
 		fput(backing_file);
 	} else
 #endif
@@ -610,7 +610,6 @@ static struct dentry *fuse_lookup(struct inode *dir, struct dentry *entry,
 {
 	int err;
 	struct fuse_entry_out outarg;
-	struct fuse_entry_bpf_out bpf_outarg = {0};
 	struct inode *inode;
 	struct dentry *newent;
 	bool outarg_valid = true;
@@ -632,7 +631,7 @@ static struct dentry *fuse_lookup(struct inode *dir, struct dentry *entry,
 
 	locked = fuse_lock_inode(dir);
 	err = fuse_lookup_name(dir->i_sb, get_node_id(dir), &entry->d_name,
-			       &outarg, &bpf_outarg, entry, &inode);
+			       &outarg, entry, &inode);
 	fuse_unlock_inode(dir, locked);
 	if (err == -ENOENT) {
 		outarg_valid = false;
