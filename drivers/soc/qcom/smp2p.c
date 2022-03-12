@@ -680,7 +680,6 @@ static int qcom_smp2p_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "failed to request interrupt\n");
 		goto unreg_ws;
 	}
-	enable_irq_wake(smp2p->irq);
 
 	enable_irq_wake(smp2p->irq);
 
