@@ -17,7 +17,7 @@ msm_kgsl_core-y = \
 	kgsl_hfi.o \
 	kgsl_timeline.o
 
-msm_kgsl_core-$(CONFIG_DEBUG_KERNEL) += kgsl_trace.o
+msm_kgsl_core-$(CONFIG_TRACEPOINTS) += kgsl_trace.o
 msm_kgsl_core-$(CONFIG_QCOM_KGSL_IOMMU) += kgsl_iommu.o
 msm_kgsl_core-$(CONFIG_DEBUG_FS) += kgsl_debugfs.o
 msm_kgsl_core-$(CONFIG_SYNC_FILE) += kgsl_sync.o
@@ -44,7 +44,7 @@ msm_adreno-y += \
 	adreno_cp_parser.o \
 	adreno_perfcounter.o
 
-ifdef CONFIG_DEBUG_KERNEL
+ifdef CONFIG_TRACEPOINTS
 msm_adreno-y += adreno_trace.o
 endif
 
