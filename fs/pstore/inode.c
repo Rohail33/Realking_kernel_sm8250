@@ -359,12 +359,12 @@ int pstore_mkfile(struct dentry *root, struct pstore_record *record)
 
 	switch (record->type) {
 	case PSTORE_TYPE_DMESG:
-		scnprintf(name, sizeof(name), "dmesg-%s-%llu%s",
+		scnprintf(name, sizeof(name), "console-%s-%llu%s",
 			  record->psi->name, record->id,
 			  record->compressed ? ".enc.z" : "");
 		break;
 	case PSTORE_TYPE_CONSOLE:
-		scnprintf(name, sizeof(name), "console-%s-%llu",
+		scnprintf(name, sizeof(name), "dmesg-%s-%llu",
 			  record->psi->name, record->id);
 		break;
 	case PSTORE_TYPE_FTRACE:
