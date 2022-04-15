@@ -39,6 +39,8 @@
 #include "oplus_adfr.h"
 #endif
 
+#include "../../../drivers/input/oplus_fp_drivers/include/oplus_fp_common.h"
+
 extern int hbm_mode;
 extern int spr_mode;
 extern int lcd_closebl_flag;
@@ -110,6 +112,8 @@ struct delayed_work dimming_gamma_read_work;
 char dimming_gamma_60hz[30] = {0};
 char dimming_gamma_120hz[15] = {0};
 /* #endif */
+
+struct fp_underscreen_info fp_state = {0};
 
 #define PANEL_CMD_MIN_TX_COUNT 2
 
@@ -3683,6 +3687,12 @@ static ssize_t oplus_display_get_mipi_clk_rate_hz(struct device *dev,
 	return sprintf(buf, "%llu\n", clk_rate_hz);
 }
 
+static ssize_t oplus_display_get_fp_state(struct device *obj,
+	struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d,%d,%d\n", fp_state.x, fp_state.y, fp_state.touch_state);
+}
+
 static struct kobject *oplus_display_kobj;
 
 static DEVICE_ATTR(hbm, S_IRUGO|S_IWUSR, oplus_display_get_hbm, oplus_display_set_hbm);
@@ -3723,6 +3733,7 @@ static DEVICE_ATTR(mipi_clk_rate_hz, S_IRUGO|S_IWUSR, oplus_display_get_mipi_clk
 static DEVICE_ATTR(aod_area, S_IRUGO|S_IWUSR, oplus_display_get_aod_area, oplus_display_set_aod_area);
 static DEVICE_ATTR(video, S_IRUGO|S_IWUSR, oplus_display_get_video, oplus_display_set_video);
 #endif /* OPLUS_FEATURE_AOD_RAMLESS */
+static DEVICE_ATTR(fp_state, S_IRUGO, oplus_display_get_fp_state, NULL);
 
 #ifdef OPLUS_FEATURE_ADFR
 static DEVICE_ATTR(adfr_debug, S_IRUGO|S_IWUSR, oplus_adfr_get_debug, oplus_adfr_set_debug);
@@ -3794,6 +3805,7 @@ static struct attribute *oplus_display_attrs[] = {
 /*#endif*/
 	/* fp type config */
 	&dev_attr_fp_type.attr,
+	&dev_attr_fp_state.attr,
 	NULL,	/* need to NULL terminate the list of attributes */
 };
 
@@ -3814,6 +3826,14 @@ int oplus_display_get_resolution(unsigned int *xres, unsigned int *yres)
 	return 0;
 }
 EXPORT_SYMBOL(oplus_display_get_resolution);
+
+static int oplus_opticalfp_irq_handler(struct fp_underscreen_info *tp_info) {
+	fp_state.x = tp_info->x;
+	fp_state.y = tp_info->y;
+	fp_state.touch_state = tp_info->touch_state;
+	sysfs_notify(kernel_kobj, "oplus_display", dev_attr_fp_state.attr.name);
+	return IRQ_HANDLED;
+}
 
 static int __init oplus_display_private_api_init(void)
 {
@@ -3839,7 +3859,11 @@ static int __init oplus_display_private_api_init(void)
 	if(oplus_ffl_thread_init())
 		pr_err("fail to init oplus_ffl_thread\n");
 
+	opticalfp_irq_handler_register(oplus_opticalfp_irq_handler);
 
+	if (retval) {
+		goto error_remove_sysfs_group;
+	}
 
 	return 0;
 
