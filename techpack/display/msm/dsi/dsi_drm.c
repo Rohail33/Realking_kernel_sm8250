@@ -154,16 +154,7 @@ void dsi_convert_to_drm_mode(const struct dsi_display_mode *dsi_mode,
 #endif /*OPLUS_FEATURE_ADFR*/
 
 	/* set mode name */
-#ifndef OPLUS_FEATURE_ADFR
-	snprintf(drm_mode->name, DRM_DISPLAY_MODE_LEN, "%dx%dx%dx%d%s",
-			drm_mode->hdisplay, drm_mode->vdisplay,
-			drm_mode->vrefresh, drm_mode->clock,
-#else
-	snprintf(drm_mode->name, DRM_DISPLAY_MODE_LEN, "%dx%dx%dx%dx%d%s",
-			drm_mode->hdisplay, drm_mode->vdisplay,
-			drm_mode->vrefresh, drm_mode->clock, dsi_mode->vsync_source,
-#endif /*OPLUS_FEATURE_ADFR*/
-			video_mode ? "vid" : "cmd");
+	*drm_mode->name = '\0';
 }
 
 static int dsi_bridge_attach(struct drm_bridge *bridge)
