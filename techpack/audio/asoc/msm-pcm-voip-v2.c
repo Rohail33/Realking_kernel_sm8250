@@ -471,7 +471,7 @@ static void voip_process_ul_pkt(uint8_t *voc_pkt,
 					      &prtd->out_queue);
 			} else {
 				/* Drop the second frame */
-				pr_err("%s: UL data dropped, read is slow\n",
+				pr_debug("%s: UL data dropped, read is slow\n",
 				       __func__);
 			}
 			break;
@@ -497,7 +497,7 @@ static void voip_process_ul_pkt(uint8_t *voc_pkt,
 		snd_pcm_period_elapsed(prtd->capture_substream);
 	} else {
 		spin_unlock_irqrestore(&prtd->dsp_ul_lock, dsp_flags);
-		pr_err("UL data dropped\n");
+		pr_debug("UL data dropped\n");
 	}
 
 	wake_up(&prtd->out_wait);
