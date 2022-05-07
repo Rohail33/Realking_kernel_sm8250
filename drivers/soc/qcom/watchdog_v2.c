@@ -425,7 +425,7 @@ static void ping_other_cpus(struct msm_watchdog_data *wdog_dd)
 	 * disabled (which is what smp_call_function_single() does in
 	 * synchronous mode).
 	 */
-	migrate_disable();
+	preempt_disable();
 	this_cpu = raw_smp_processor_id();
 	atomic_set(&wdog_dd->alive_mask, BIT(this_cpu));
 	online_mask = *cpumask_bits(cpu_online_mask) & ~BIT(this_cpu);
@@ -439,7 +439,7 @@ static void ping_other_cpus(struct msm_watchdog_data *wdog_dd)
 				    keep_alive_response,
 				    (void *)(BIT(cpu + 32) | final_alive_mask));
 	}
-	migrate_enable();
+	preempt_enable();
 
 	atomic_set(&wdog_dd->pinged_mask, final_alive_mask);
 	while (1) {
