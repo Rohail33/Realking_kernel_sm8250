@@ -4566,7 +4566,7 @@ i915_gem_object_pin(struct drm_i915_gem_object *obj,
 	}
 
 	vma = i915_vma_instance(obj, vm, view);
-	if (unlikely(IS_ERR(vma)))
+	if (IS_ERR(vma))
 		return vma;
 
 	if (i915_vma_misplaced(vma, size, alignment, flags)) {
