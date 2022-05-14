@@ -58,6 +58,9 @@
 #define NR_TOP_HITTERS		10
 #define COMPARE_RET		-1
 
+#define migrate_disable() preempt_disable()
+#define migrate_enable() preempt_enable()
+
 typedef int (*compare_t) (const void *lhs, const void *rhs);
 
 #ifdef CONFIG_QCOM_INITIAL_LOGBUF
