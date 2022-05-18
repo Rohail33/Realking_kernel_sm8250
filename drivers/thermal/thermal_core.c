@@ -419,8 +419,10 @@ static void handle_critical_trips(struct thermal_zone_device *tz,
 
 	trace_thermal_zone_trip(tz, trip, trip_type, true);
 
+#ifdef CONFIG_ACPI_THERMAL
 	if (tz->ops->notify)
 		tz->ops->notify(tz, trip, trip_type);
+#endif
 
 	if (trip_type == THERMAL_TRIP_CRITICAL) {
 		dev_emerg(&tz->device,
