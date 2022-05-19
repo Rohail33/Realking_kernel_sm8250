@@ -6364,12 +6364,6 @@ static void bfq_completed_request(struct bfq_queue *bfqq, struct bfq_data *bfqd)
 		bfq_schedule_dispatch(bfqd);
 }
 
-static void bfq_finish_requeue_request_body(struct bfq_queue *bfqq)
-{
-	bfqq_request_freed(bfqq);
-	bfq_put_queue(bfqq);
-}
-
 /*
  * The processes associated with bfqq may happen to generate their
  * cumulative I/O at a lower rate than the rate at which the device
@@ -6601,10 +6595,10 @@ static void bfq_finish_requeue_request(struct request *rq)
 			bfqg_stats_update_io_remove(bfqq_group(bfqq),
 						    rq->cmd_flags);
 		}
-		bfq_finish_requeue_request_body(bfqq);
+		bfqq_request_freed(bfqq);
+	    bfq_put_queue(bfqq);
 		RQ_BIC(rq)->requests--;
 	}
-
 	/*
 	 * Reset private fields. In case of a requeue, this allows
 	 * this function to correctly do nothing if it is spuriously
