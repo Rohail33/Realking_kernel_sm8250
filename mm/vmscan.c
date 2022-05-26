@@ -2657,8 +2657,11 @@ static int get_swappiness(struct lruvec *lruvec, struct scan_control *sc)
 {
 	struct mem_cgroup *memcg = lruvec_memcg(lruvec);
 
-	if (mem_cgroup_get_nr_swap_pages(memcg) < MIN_LRU_BATCH)
+	if (mem_cgroup_get_nr_swap_pages(memcg) < MIN_LRU_BATCH) {
+		count_vm_event(current_is_kswapd() ? LRU_KSWAPD_SWAP_FULL:
+						     LRU_DIRECT_SWAP_FULL);
 		return 0;
+	}
 
 	return mem_cgroup_swappiness(memcg);
 }
@@ -4071,10 +4074,9 @@ static void lru_gen_age_node(struct pglist_data *pgdat, struct scan_control *sc)
 	 * younger than min_ttl. However, another possibility is all memcgs are
 	 * either below min or empty.
 	 */
-	if (mutex_trylock(&oom_lock)) {
+	if (!sc->order && mutex_trylock(&oom_lock)) {
 		struct oom_control oc = {
 			.gfp_mask = sc->gfp_mask,
-			.order = sc->order,
 		};
 
 		out_of_memory(&oc);
@@ -4284,8 +4286,13 @@ static bool isolate_page(struct lruvec *lruvec, struct page *page, struct scan_c
 
 	/* swapping inhibited */
 	if (!(sc->may_writepage && (sc->gfp_mask & __GFP_IO)) &&
-	    (PageDirty(page) || (PageAnon(page) && !PageSwapCache(page))))
+	    (PageDirty(page) || (PageAnon(page) && !PageSwapCache(page)))) {
+		if (!sc->may_writepage)
+			__count_vm_event(LRU_NO_WRITEPAGE);
+		if (!(sc->gfp_mask & __GFP_IO))
+			__count_vm_event(LRU_NO_GFP_IO);
 		return false;
+	}
 
 	/* raced with release_pages() */
 	if (!get_page_unless_zero(page))
@@ -4537,6 +4544,10 @@ static int evict_pages(struct lruvec *lruvec, struct scan_control *sc, int swapp
 	free_unref_page_list(&list);
 
 	sc->nr_reclaimed += reclaimed;
+	if (!reclaimed) {
+		item = current_is_kswapd() ? LRU_KSWAPD_ANON : LRU_DIRECT_ANON;
+		count_vm_event(item + type);
+	}
 
 	if (need_swapping && type == LRU_GEN_ANON)
 		*need_swapping = true;
@@ -6513,8 +6524,11 @@ static int balance_pgdat(pg_data_t *pgdat, int order, int classzone_idx)
 			sc.priority--;
 	} while (sc.priority >= 1);
 
-	if (!sc.nr_reclaimed)
-		pgdat->kswapd_failures++;
+	if (!sc.nr_reclaimed) {
+		count_vm_event(LRU_KSWAPD_NO_PROGRESS);
+		if (!lru_gen_enabled())
+			pgdat->kswapd_failures++;
+	}
 
 out:
 	snapshot_refaults(NULL, pgdat);
