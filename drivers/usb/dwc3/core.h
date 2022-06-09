@@ -21,6 +21,7 @@
 #include <linux/debugfs.h>
 #include <linux/wait.h>
 #include <linux/workqueue.h>
+#include <linux/irq_work.h>
 
 #include <linux/usb/ch9.h>
 #include <linux/usb/gadget.h>
@@ -1289,6 +1290,7 @@ struct dwc3 {
 	const char		*hsphy_interface;
 
 	struct work_struct	wakeup_work;
+	struct irq_work		wakeup_irq_work;
 
 	unsigned		connected:1;
 	unsigned		delayed_status:1;
