@@ -32,6 +32,7 @@ int __init random_init(const char *command_line)
 	lrng_pool_insert_aux(command_line, strlen(command_line), 0);
 	return ret;
 }
+early_initcall(rand_initialize);
 
 bool lrng_ready_chain_has_sleeper(void)
 {
