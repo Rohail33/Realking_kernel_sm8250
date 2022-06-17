@@ -296,3 +296,6 @@ obj-$(CONFIG_GENERIC_LIB_CMPDI2) += cmpdi2.o
 obj-$(CONFIG_GENERIC_LIB_UCMPDI2) += ucmpdi2.o
 
 obj-y += crypto/
+
+obj-$(CONFIG_CRYPTO_LIB_SHA256) += libsha256.o
+libsha256-y := sha256.o
