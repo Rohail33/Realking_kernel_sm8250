@@ -589,4 +589,7 @@ int afe_get_spk_v_vali_flag(void);
 void afe_get_spk_v_vali_sts(int *spk_v_vali_sts);
 void afe_set_spk_initial_cal(int initial_cal);
 void afe_set_spk_v_vali_flag(int v_vali_flag);
+
+int set_smartpa_pm_status_apr(void *buf, int cmd_size);
+int get_smartpa_pm_result_apr(void *buf, int cmd_size);
 #endif /* __Q6AFE_V2_H__ */
