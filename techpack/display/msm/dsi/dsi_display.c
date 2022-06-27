@@ -45,6 +45,9 @@ DEFINE_MUTEX(dsi_display_clk_mutex);
 
 extern int mi_disp_lhbm_attach_primary_dsi_display(struct dsi_display *display);
 
+int backlight_scale = MAX_BL_SCALE_LEVEL;
+module_param(backlight_scale, int, 0644);
+
 static char dsi_display_primary[MAX_CMDLINE_PARAM_LEN];
 static char dsi_display_secondary[MAX_CMDLINE_PARAM_LEN];
 static struct dsi_display_boot_param boot_displays[MAX_DSI_ACTIVE_DISPLAY] = {
@@ -228,7 +231,7 @@ int dsi_display_set_backlight(struct drm_connector *connector,
 
 	/* scale backlight */
 	bl_scale = panel->bl_config.bl_scale;
-	bl_temp = bl_lvl * bl_scale / MAX_BL_SCALE_LEVEL;
+	bl_temp = bl_lvl * bl_scale / min(max(0, backlight_scale), 2048);
 
 	bl_scale_sv = panel->bl_config.bl_scale_sv;
 	bl_temp = (u32)bl_temp * bl_scale_sv / MAX_SV_BL_SCALE_LEVEL;
