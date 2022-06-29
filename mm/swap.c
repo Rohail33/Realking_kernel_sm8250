@@ -1171,4 +1171,7 @@ void __init swap_setup(void)
 	 * Right now other parts of the system means that we
 	 * _really_ don't want to cluster much more
 	 */
+#ifdef CONFIG_OPLUS_MM_HACKS
+	page_cluster = 0;
+#endif /* CONFIG_OPLUS_MM_HACKS */
 }
