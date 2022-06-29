@@ -67,6 +67,9 @@
  */
 #define ZS_ALIGN		8
 
+#ifdef CONFIG_OPLUS_MM_HACKS
+#define ZS_MAX_ZSPAGE_ORDER 3
+#endif /* CONFIG_OPLUS_MM_HACKS */
 #define ZS_HANDLE_SIZE (sizeof(unsigned long))
 
 /*
@@ -115,7 +118,11 @@
 
 #define FULLNESS_BITS	2
 #define CLASS_BITS	8
+#ifdef CONFIG_OPLUS_MM_HACKS
+#define ISOLATED_BITS	(ZS_MAX_ZSPAGE_ORDER+1)
+#else
 #define ISOLATED_BITS	5
+#endif /* CONFIG_OPLUS_MM_HACKS */
 #define MAGIC_VAL_BITS	8
 
 #define MAX(a, b) ((a) >= (b) ? (a) : (b))
