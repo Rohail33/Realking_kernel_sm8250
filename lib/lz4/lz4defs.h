@@ -36,7 +36,7 @@
  */
 
 #include <asm/unaligned.h>
-#include <linux/string.h>	 /* memset, memcpy */
+#include <linux/string.h> /* memset, memcpy */
 
 #define FORCE_INLINE __always_inline
 
@@ -45,10 +45,10 @@
  **************************************/
 #include <linux/types.h>
 
-typedef	uint8_t BYTE;
+typedef uint8_t BYTE;
 typedef uint16_t U16;
 typedef uint32_t U32;
-typedef	int32_t S32;
+typedef int32_t S32;
 typedef uint64_t U64;
 typedef uintptr_t uptrval;
 
@@ -67,22 +67,28 @@ typedef uintptr_t uptrval;
 #define LZ4_LITTLE_ENDIAN 0
 #endif
 
+#define DEBUGLOG(l, ...) \
+	{                \
+	} /* disabled */
+
+#ifndef assert
+#define assert(condition) ((void)0)
+#endif
+
 /*-************************************
  *	Constants
  **************************************/
+#define LZ4_DISTANCE_ABSOLUTE_MAX 65535
+#define LZ4_DISTANCE_MAX 65535
 #define MINMATCH 4
 
 #define WILDCOPYLENGTH 8
-#define LASTLITERALS 5
-#define MFLIMIT (WILDCOPYLENGTH + MINMATCH)
-/*
- * ensure it's possible to write 2 x wildcopyLength
- * without overflowing output buffer
- */
-#define MATCH_SAFEGUARD_DISTANCE  ((2 * WILDCOPYLENGTH) - MINMATCH)
-
-/* Increase this value ==> compression run slower on incompressible data */
-#define LZ4_SKIPTRIGGER 6
+#define LASTLITERALS 5 /* see ../doc/lz4_Block_format.md#parsing-restrictions */
+#define MFLIMIT 12 /* see ../doc/lz4_Block_format.md#parsing-restrictions */
+#define MATCH_SAFEGUARD_DISTANCE \
+	((2 * WILDCOPYLENGTH) -  \
+	 MINMATCH) /* ensure it's possible to write 2 x wildcopyLength without overflowing output buffer */
+#define FASTLOOP_SAFE_DISTANCE 64
 
 #define HASH_UNIT sizeof(size_t)
 
@@ -90,12 +96,16 @@ typedef uintptr_t uptrval;
 #define MB (1 << 20)
 #define GB (1U << 30)
 
-#define MAXD_LOG 16
-#define MAX_DISTANCE ((1 << MAXD_LOG) - 1)
+#if defined(__x86_64__)
+typedef U64 reg_t; /* 64-bits in x32 mode */
+#else
+typedef size_t reg_t; /* 32-bits in x32 mode */
+#endif
+
 #define STEPSIZE sizeof(size_t)
 
-#define ML_BITS	4
-#define ML_MASK	((1U << ML_BITS) - 1)
+#define ML_BITS 4
+#define ML_MASK ((1U << ML_BITS) - 1)
 #define RUN_BITS (8 - ML_BITS)
 #define RUN_MASK ((1U << RUN_BITS) - 1)
 
@@ -148,40 +158,22 @@ static FORCE_INLINE void LZ4_writeLE16(void *memPtr, U16 value)
 #define LZ4_memcpy(dst, src, size) __builtin_memcpy(dst, src, size)
 #define LZ4_memmove(dst, src, size) __builtin_memmove(dst, src, size)
 
-static FORCE_INLINE void LZ4_copy8(void *dst, const void *src)
-{
-#if LZ4_ARCH64
-	U64 a = get_unaligned((const U64 *)src);
-
-	put_unaligned(a, (U64 *)dst);
-#else
-	U32 a = get_unaligned((const U32 *)src);
-	U32 b = get_unaligned((const U32 *)src + 1);
-
-	put_unaligned(a, (U32 *)dst);
-	put_unaligned(b, (U32 *)dst + 1);
-#endif
-}
-
-/*
- * customized variant of memcpy,
- * which can overwrite up to 7 bytes beyond dstEnd
- */
-static FORCE_INLINE void LZ4_wildCopy(void *dstPtr,
-	const void *srcPtr, void *dstEnd)
+/* customized variant of memcpy, which can overwrite up to 8 bytes beyond dstEnd */
+static FORCE_INLINE void LZ4_wildCopy8(void *dstPtr, const void *srcPtr,
+				       void *dstEnd)
 {
 	BYTE *d = (BYTE *)dstPtr;
 	const BYTE *s = (const BYTE *)srcPtr;
 	BYTE *const e = (BYTE *)dstEnd;
 
 	do {
-		LZ4_copy8(d, s);
+		LZ4_memcpy(d, s, 8);
 		d += 8;
 		s += 8;
 	} while (d < e);
 }
 
-static FORCE_INLINE unsigned int LZ4_NbCommonBytes(register size_t val)
+static FORCE_INLINE unsigned int LZ4_NbCommonBytes(reg_t val)
 {
 #if LZ4_LITTLE_ENDIAN
 	return __ffs(val) >> 3;
@@ -190,56 +182,64 @@ static FORCE_INLINE unsigned int LZ4_NbCommonBytes(register size_t val)
 #endif
 }
 
-static FORCE_INLINE unsigned int LZ4_count(
-	const BYTE *pIn,
-	const BYTE *pMatch,
-	const BYTE *pInLimit)
+static FORCE_INLINE unsigned int LZ4_count(const BYTE *pIn, const BYTE *pMatch,
+					   const BYTE *pInLimit)
 {
 	const BYTE *const pStart = pIn;
 
-	while (likely(pIn < pInLimit - (STEPSIZE - 1))) {
-		size_t const diff = LZ4_read_ARCH(pMatch) ^ LZ4_read_ARCH(pIn);
+	if (likely(pIn < pInLimit - (STEPSIZE - 1))) {
+		reg_t const diff = LZ4_read_ARCH(pMatch) ^ LZ4_read_ARCH(pIn);
+		if (!diff) {
+			pIn += STEPSIZE;
+			pMatch += STEPSIZE;
+		} else {
+			return LZ4_NbCommonBytes(diff);
+		}
+	}
 
+	while (likely(pIn < pInLimit - (STEPSIZE - 1))) {
+		reg_t const diff = LZ4_read_ARCH(pMatch) ^ LZ4_read_ARCH(pIn);
 		if (!diff) {
 			pIn += STEPSIZE;
 			pMatch += STEPSIZE;
 			continue;
 		}
-
 		pIn += LZ4_NbCommonBytes(diff);
-
-		return (unsigned int)(pIn - pStart);
+		return (unsigned)(pIn - pStart);
 	}
 
-#if LZ4_ARCH64
-	if ((pIn < (pInLimit - 3))
-		&& (LZ4_read32(pMatch) == LZ4_read32(pIn))) {
+	if ((STEPSIZE == 8) && (pIn < (pInLimit - 3)) &&
+	    (LZ4_read32(pMatch) == LZ4_read32(pIn))) {
 		pIn += 4;
 		pMatch += 4;
 	}
-#endif
-
-	if ((pIn < (pInLimit - 1))
-		&& (LZ4_read16(pMatch) == LZ4_read16(pIn))) {
+	if ((pIn < (pInLimit - 1)) && (LZ4_read16(pMatch) == LZ4_read16(pIn))) {
 		pIn += 2;
 		pMatch += 2;
 	}
-
 	if ((pIn < pInLimit) && (*pMatch == *pIn))
 		pIn++;
-
-	return (unsigned int)(pIn - pStart);
+	return (unsigned)(pIn - pStart);
 }
 
-typedef enum { noLimit = 0, limitedOutput = 1 } limitedOutput_directive;
-typedef enum { byPtr, byU32, byU16 } tableType_t;
+typedef enum {
+	notLimited = 0,
+	limitedOutput = 1,
+	fillOutput = 2
+} limitedOutput_directive;
+typedef enum { clearedTable = 0, byPtr, byU32, byU16 } tableType_t;
 
-typedef enum { noDict = 0, withPrefix64k, usingExtDict } dict_directive;
+typedef enum {
+	noDict = 0,
+	withPrefix64k,
+	usingExtDict,
+	usingDictCtx
+} dict_directive;
 typedef enum { noDictIssue = 0, dictSmall } dictIssue_directive;
 
 typedef enum { endOnOutputSize = 0, endOnInputSize = 1 } endCondition_directive;
 typedef enum { decode_full_block = 0, partial_decode = 1 } earlyEnd_directive;
 
-#define LZ4_STATIC_ASSERT(c)	BUILD_BUG_ON(!(c))
+#define LZ4_STATIC_ASSERT(c) BUILD_BUG_ON(!(c))
 
 #endif
