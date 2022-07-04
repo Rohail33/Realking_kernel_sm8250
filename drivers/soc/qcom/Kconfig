@@ -971,7 +971,7 @@ config ICNSS
 
 config ICNSS_DEBUG
 	bool "ICNSS debug support"
-	depends on ICNSS
+	depends on ICNSS && DEBUG_FS
 	help
 	  Say 'Y' here to enable ICNSS driver debug support. Debug support
 	  primarily consists of logs consisting of information related to
