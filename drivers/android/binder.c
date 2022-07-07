@@ -5551,6 +5551,51 @@ binder_defer_work(struct binder_proc *proc, enum binder_deferred_state defer)
 	mutex_unlock(&binder_deferred_lock);
 }
 
+static const char *const binder_return_strings[] = {
+	"BR_ERROR",
+	"BR_OK",
+	"BR_TRANSACTION",
+	"BR_REPLY",
+	"BR_ACQUIRE_RESULT",
+	"BR_DEAD_REPLY",
+	"BR_TRANSACTION_COMPLETE",
+	"BR_INCREFS",
+	"BR_ACQUIRE",
+	"BR_RELEASE",
+	"BR_DECREFS",
+	"BR_ATTEMPT_ACQUIRE",
+	"BR_NOOP",
+	"BR_SPAWN_LOOPER",
+	"BR_FINISHED",
+	"BR_DEAD_BINDER",
+	"BR_CLEAR_DEATH_NOTIFICATION_DONE",
+	"BR_FAILED_REPLY",
+	"BR_FROZEN_REPLY",
+	"BR_ONEWAY_SPAM_SUSPECT",
+};
+
+static const char *const binder_command_strings[] = {
+	"BC_TRANSACTION",
+	"BC_REPLY",
+	"BC_ACQUIRE_RESULT",
+	"BC_FREE_BUFFER",
+	"BC_INCREFS",
+	"BC_ACQUIRE",
+	"BC_RELEASE",
+	"BC_DECREFS",
+	"BC_INCREFS_DONE",
+	"BC_ACQUIRE_DONE",
+	"BC_ATTEMPT_ACQUIRE",
+	"BC_REGISTER_LOOPER",
+	"BC_ENTER_LOOPER",
+	"BC_EXIT_LOOPER",
+	"BC_REQUEST_DEATH_NOTIFICATION",
+	"BC_CLEAR_DEATH_NOTIFICATION",
+	"BC_DEAD_BINDER_DONE",
+	"BC_TRANSACTION_SG",
+	"BC_REPLY_SG",
+};
+
 #ifdef CONFIG_ANDROID_BINDER_LOGS
 static void print_binder_transaction_ilocked(struct seq_file *m,
 					     struct binder_proc *proc,
@@ -5786,51 +5831,6 @@ static void print_binder_proc(struct seq_file *m,
 	if (!print_all && m->count == header_pos)
 		m->count = start_pos;
 }
-
-static const char * const binder_return_strings[] = {
-	"BR_ERROR",
-	"BR_OK",
-	"BR_TRANSACTION",
-	"BR_REPLY",
-	"BR_ACQUIRE_RESULT",
-	"BR_DEAD_REPLY",
-	"BR_TRANSACTION_COMPLETE",
-	"BR_INCREFS",
-	"BR_ACQUIRE",
-	"BR_RELEASE",
-	"BR_DECREFS",
-	"BR_ATTEMPT_ACQUIRE",
-	"BR_NOOP",
-	"BR_SPAWN_LOOPER",
-	"BR_FINISHED",
-	"BR_DEAD_BINDER",
-	"BR_CLEAR_DEATH_NOTIFICATION_DONE",
-	"BR_FAILED_REPLY",
-	"BR_FROZEN_REPLY",
-	"BR_ONEWAY_SPAM_SUSPECT",
-};
-
-static const char * const binder_command_strings[] = {
-	"BC_TRANSACTION",
-	"BC_REPLY",
-	"BC_ACQUIRE_RESULT",
-	"BC_FREE_BUFFER",
-	"BC_INCREFS",
-	"BC_ACQUIRE",
-	"BC_RELEASE",
-	"BC_DECREFS",
-	"BC_INCREFS_DONE",
-	"BC_ACQUIRE_DONE",
-	"BC_ATTEMPT_ACQUIRE",
-	"BC_REGISTER_LOOPER",
-	"BC_ENTER_LOOPER",
-	"BC_EXIT_LOOPER",
-	"BC_REQUEST_DEATH_NOTIFICATION",
-	"BC_CLEAR_DEATH_NOTIFICATION",
-	"BC_DEAD_BINDER_DONE",
-	"BC_TRANSACTION_SG",
-	"BC_REPLY_SG",
-};
 
 static const char * const binder_objstat_strings[] = {
 	"proc",
