@@ -554,7 +554,7 @@ struct mac80211_hwsim_data {
 	struct dentry *debugfs;
 
 
-	atomic64_t pending_cookie;
+	atomic_t pending_cookie;
 
 	struct sk_buff_head pending;	/* packets pending */
 	/*
@@ -1075,7 +1075,7 @@ static void mac80211_hwsim_tx_frame_nl(struct ieee80211_hw *hw,
 	int i;
 	struct hwsim_tx_rate tx_attempts[IEEE80211_TX_MAX_RATES];
 	struct hwsim_tx_rate_flag tx_attempts_flags[IEEE80211_TX_MAX_RATES];
-	u64 cookie;
+	uintptr_t cookie;
 
 	if (data->ps != PS_DISABLED)
 		hdr->frame_control |= cpu_to_le16(IEEE80211_FCTL_PM);
@@ -1145,7 +1145,7 @@ static void mac80211_hwsim_tx_frame_nl(struct ieee80211_hw *hw,
 
 	/* We create a cookie to identify this skb */
 
-	cookie = (u64)atomic64_inc_return(&data->pending_cookie);
+	cookie = atomic_inc_return(&data->pending_cookie);
 
 	info->rate_driver_data[0] = (void *)cookie;
 	if (nla_put_u64_64bit(skb, HWSIM_ATTR_COOKIE, cookie, HWSIM_ATTR_PAD))
@@ -3155,7 +3155,8 @@ static int hwsim_tx_info_frame_received_nl(struct sk_buff *skb_2,
 
 		txi = IEEE80211_SKB_CB(skb);
 
-		skb_cookie = (u64)(uintptr_t)txi->rate_driver_data[0];
+		skb_cookie = (uintptr_t)txi->rate_driver_data[0];
+
 
 
 
