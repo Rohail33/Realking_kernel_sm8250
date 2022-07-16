@@ -58,6 +58,7 @@
 		mhi-netdev0 = &mhi_netdev_0;
 		/* #ifdef OPLUS_ARCH_EXTENDS */
 		i2c2 = &qupv3_se15_i2c;
+		i2c6 = &qupv3_se11_i2c; /* For aw8697*/
 		/* #endif OPLUS_ARCH_EXTENDS */
 	};
 
