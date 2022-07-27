@@ -189,7 +189,7 @@
 			mi,mdss-dsi-doze-hbm-command-state = "dsi_lp_mode";
 			mi,mdss-dsi-doze-lbm-command-state = "dsi_lp_mode";
 
-			mi,mdss-dsi-hbm-fod-on-command = [
+			qcom,mdss-dsi-dispparam-hbm-fod-on-command = [
 				39 00 00 00 00 00 03 F0 5A 5A
 				/* elvss dimming off */
 				39 00 00 00 00 00 02 B0 07
@@ -199,8 +199,8 @@
 				39 01 00 00 01 00 02 53 E0
 				/* HBM ON 800nit */
 				39 01 00 00 01 00 03 51 03 FF];
-			mi,mdss-dsi-hbm-fod-on-command-state = "dsi_hs_mode";
-			mi,mdss-dsi-hbm-fod-off-command = [
+			qcom,mdss-dsi-dispparam-hbm-fod-on-command-state = "dsi_hs_mode";
+			qcom,mdss-dsi-dispparam-hbm-fod-off-command = [
 				15 01 00 00 00 00 02 53 20
 				/* parameter will be updated base on last brightness */
 				39 01 00 00 00 00 03 51 03 FF
@@ -209,7 +209,7 @@
 				39 00 00 00 00 00 02 B0 07
 				39 00 00 00 00 00 02 B7 D1
 				39 01 00 00 00 00 03 F0 A5 A5];
-			mi,mdss-dsi-hbm-fod-off-command-state = "dsi_hs_mode";
+			qcom,mdss-dsi-dispparam-hbm-fod-off-command-state = "dsi_hs_mode";
 
 			mi,mdss-dsi-hbm-off-command = [
 				15 01 00 00 00 00 02 53 28
