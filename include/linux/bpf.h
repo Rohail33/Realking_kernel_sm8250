@@ -1460,6 +1460,9 @@ int bpf_prog_test_run_flow_dissector(struct bpf_prog *prog,
 int bpf_prog_test_run_raw_tp(struct bpf_prog *prog,
 			     const union bpf_attr *kattr,
 			     union bpf_attr __user *uattr);
+int bpf_prog_test_run_sk_lookup(struct bpf_prog *prog,
+				const union bpf_attr *kattr,
+				union bpf_attr __user *uattr);
 bool btf_ctx_access(int off, int size, enum bpf_access_type type,
 		    const struct bpf_prog *prog,
 		    struct bpf_insn_access_aux *info);
@@ -1673,9 +1676,11 @@ static inline int bpf_prog_test_run_flow_dissector(struct bpf_prog *prog,
 	return -ENOTSUPP;
 }
 
-static inline bool unprivileged_ebpf_enabled(void)
+static inline int bpf_prog_test_run_sk_lookup(struct bpf_prog *prog,
+					      const union bpf_attr *kattr,
+					      union bpf_attr __user *uattr)
 {
-	return false;
+	return -ENOTSUPP;
 }
 
 static inline void bpf_map_put(struct bpf_map *map)
@@ -1691,6 +1696,11 @@ static inline const struct bpf_func_proto *
 bpf_base_func_proto(enum bpf_func_id func_id)
 {
 	return NULL;
+}
+
+static inline bool unprivileged_ebpf_enabled(void)
+{
+	return false;
 }
 #endif /* CONFIG_BPF_SYSCALL */
 
