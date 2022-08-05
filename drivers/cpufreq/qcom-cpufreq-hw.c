@@ -188,6 +188,7 @@ static void limits_dcvsh_poll(struct work_struct *work)
 		writel_relaxed(regval, c->reg_bases[REG_INTR_CLR]);
 
 		c->is_irq_enabled = true;
+		sysfs_attr_init(&c->freq_limit_attr.attr);
 		enable_irq(c->dcvsh_irq);
 	}
 
