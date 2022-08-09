@@ -632,7 +632,8 @@ static void smp_send_cmd(struct l2cap_conn *conn, u8 code, u16 len, void *data)
 	smp = chan->data;
 
 	cancel_delayed_work_sync(&smp->security_timer);
-	schedule_delayed_work(&smp->security_timer, SMP_TIMEOUT);
+	queue_delayed_work(system_power_efficient_wq,
+			&smp->security_timer, SMP_TIMEOUT);
 }
 
 static u8 authreq_to_seclevel(u8 authreq)

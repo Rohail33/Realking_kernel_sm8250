@@ -688,7 +688,8 @@ static struct l2cap_chan *add_peer_chan(struct l2cap_chan *chan,
 	/* Notifying peers about us needs to be done without locks held */
 	if (new_netdev)
 		INIT_DELAYED_WORK(&dev->notify_peers, do_notify_peers);
-	schedule_delayed_work(&dev->notify_peers, msecs_to_jiffies(100));
+	queue_delayed_work(system_power_efficient_wq,
+		&dev->notify_peers, msecs_to_jiffies(100));
 
 	return peer->chan;
 }
