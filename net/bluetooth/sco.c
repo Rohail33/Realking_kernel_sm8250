@@ -111,7 +111,8 @@ static void sco_sock_set_timer(struct sock *sk, long timeout)
 
 	BT_DBG("sock %p state %d timeout %ld", sk, sk->sk_state, timeout);
 	cancel_delayed_work(&sco_pi(sk)->conn->timeout_work);
-	schedule_delayed_work(&sco_pi(sk)->conn->timeout_work, timeout);
+	queue_delayed_work(system_power_efficient_wq,
+		&sco_pi(sk)->conn->timeout_work, timeout);
 }
 
 static void sco_sock_clear_timer(struct sock *sk)
