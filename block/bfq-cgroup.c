@@ -187,17 +187,12 @@ void bfqg_stats_update_completion(struct bfq_group *bfqg, u64 start_time_ns,
 
 #else /* CONFIG_BFQ_GROUP_IOSCHED && CONFIG_DEBUG_BLK_CGROUP */
 
-void bfqg_stats_update_io_add(struct bfq_group *bfqg, struct bfq_queue *bfqq,
-			      unsigned int op) { }
 void bfqg_stats_update_io_remove(struct bfq_group *bfqg, unsigned int op) { }
 void bfqg_stats_update_io_merged(struct bfq_group *bfqg, unsigned int op) { }
 void bfqg_stats_update_completion(struct bfq_group *bfqg, u64 start_time_ns,
 				  u64 io_start_time_ns, unsigned int op) { }
 void bfqg_stats_update_dequeue(struct bfq_group *bfqg) { }
-void bfqg_stats_set_start_empty_time(struct bfq_group *bfqg) { }
-void bfqg_stats_update_idle_time(struct bfq_group *bfqg) { }
 void bfqg_stats_set_start_idle_time(struct bfq_group *bfqg) { }
-void bfqg_stats_update_avg_queue_size(struct bfq_group *bfqg) { }
 
 #endif /* CONFIG_BFQ_GROUP_IOSCHED && CONFIG_DEBUG_BLK_CGROUP */
 
