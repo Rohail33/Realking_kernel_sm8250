@@ -691,17 +691,25 @@ static int m1120_get_data(short *data)
 
 static int m1120_enable_irq(bool enable)
 {
+        struct irq_data *irq_data = NULL;
+
 	TRI_KEY_LOG("%s", __func__);
 
 	if (p_m1120_data == NULL) {
 		TRI_KEY_ERR("p_m1120_data == NULL");
 		return -EINVAL;
 	}
-
-	if (enable)
-		enable_irq(p_m1120_data->irq);
-	else
+	
+        if (enable) {
+		irq_data = irq_get_irq_data(p_m1120_data->irq);
+		if (irq_data && irqd_irq_disabled(irq_data)) {
+			printk("hall_m1120_down.c: TRI_KEY_DBG: m1120_enable_irq: enabling irq (p_m1120_data->irq)");
+			enable_irq(p_m1120_data->irq);
+		}
+	} else {
+		printk("hall_m1120_down.c: TRI_KEY_DBG: m1120_enable_irq: disabling irq (p_m1120_data->irq)");
 		disable_irq_nosync(p_m1120_data->irq);
+	}
 
 	return 0;
 }

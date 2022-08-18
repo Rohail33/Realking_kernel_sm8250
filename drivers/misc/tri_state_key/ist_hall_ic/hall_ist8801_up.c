@@ -686,15 +686,24 @@ static int ist8801_set_detection_mode(u8 mode)
 
 static int ist8801_enable_irq(bool enable)
 {
+	struct irq_data *irq_data = NULL;
+
 	if (g_ist8801_data == NULL) {
 		TRI_KEY_LOG("g_ist8801_data NULL\n");
 		return -EINVAL;
 	}
 
-	if (enable)
-		enable_irq(g_ist8801_data->irq);
-	else
+	if (enable) {
+		irq_data = irq_get_irq_data(g_ist8801_data->irq);
+		if (irq_data && irqd_irq_disabled(irq_data)) {
+			printk("hall_ist8801_up.c: TRI_KEY_DBG: ist8801_enable_irq: enabling irq (g_ist8801_data->irq)");
+			enable_irq(g_ist8801_data->irq);
+		}
+	} else {
+		printk("hall_ist8801_up.c: TRI_KEY_DBG: ist8801_enable_irq: disabling irq (g_ist8801_data->irq)");
 		disable_irq_nosync(g_ist8801_data->irq);
+	}
+
 	return 0;
 }
 
