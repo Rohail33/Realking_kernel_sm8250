@@ -1,3 +1,4 @@
+
 #include <net/tcp.h>
 
 /* The bandwidth estimator estimates the rate at which the network
@@ -130,11 +131,11 @@ void tcp_rate_gen(struct sock *sk, u32 delivered, u32 lost,
 	 * were SACKed before the reneg.
 	 */
 	if (!rs->prior_mstamp || is_sack_reneg) {
-		rs->delivered = -1;
+		rs->delivered_ce = -1;
 		rs->interval_us = -1;
 		return;
 	}
-	rs->delivered   = tp->delivered - rs->prior_delivered;
+	rs->delivered_ce   = tp->delivered - rs->prior_delivered;
 
 	/* Model sending data and receiving ACKs as separate pipeline phases
 	 * for a window. Usually the ACK phase is longer, but with ACK
@@ -160,7 +161,7 @@ void tcp_rate_gen(struct sock *sk, u32 delivered, u32 lost,
 	if (unlikely(rs->interval_us < tcp_min_rtt(tp))) {
 		if (!rs->is_retrans)
 			pr_debug("tcp rate: %ld %d %u %u %u\n",
-				 rs->interval_us, rs->delivered,
+				 rs->interval_us, rs->delivered_ce,
 				 inet_csk(sk)->icsk_ca_state,
 				 tp->rx_opt.sack_ok, tcp_min_rtt(tp));
 		rs->interval_us = -1;
@@ -169,9 +170,9 @@ void tcp_rate_gen(struct sock *sk, u32 delivered, u32 lost,
 
 	/* Record the last non-app-limited or the highest app-limited bw */
 	if (!rs->is_app_limited ||
-	    ((u64)rs->delivered * tp->rate_interval_us >=
+	    ((u64)rs->delivered_ce * tp->rate_interval_us >=
 	     (u64)tp->rate_delivered * rs->interval_us)) {
-		tp->rate_delivered = rs->delivered;
+		tp->rate_delivered = rs->delivered_ce;
 		tp->rate_interval_us = rs->interval_us;
 		tp->rate_app_limited = rs->is_app_limited;
 	}

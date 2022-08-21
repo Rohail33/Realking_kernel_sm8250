@@ -75,7 +75,7 @@ void tcp_time_wait(struct sock *sk, int state, int timeo);
 
 /* Specify interval when tcp mtu probing will stop */
 #define TCP_PROBE_THRESHOLD	8
-
+#define TCP_CONG_WANTS_CE_EVENTS	0x100000
 /* After receiving this amount of duplicate ACKs fast retransmit starts. */
 #define TCP_FASTRETRANS_THRESH 3
 
@@ -1036,6 +1036,7 @@ struct tcp_skb_cb {
 			__u32 delivered;
 			/* start of send pipeline phase */
 			u64 first_tx_mstamp;
+			u32 lost;
 			/* when we reached the "delivered" count */
 			u64 delivered_mstamp;
 		} tx;   /* only used for outgoing skbs */
@@ -1188,7 +1189,11 @@ struct ack_sample {
 struct rate_sample {
 	u64  prior_mstamp; /* starting timestamp for interval */
 	u32  prior_delivered;	/* tp->delivered at "prior_mstamp" */
-	s32  delivered;		/* number of packets delivered over interval */
+	u32 tx_in_flight;	/* packets in flight at starting timestamp */
+	s32  lost;		/* number of packets lost over interval */	
+	u32  prior_delivered_ce;/* tp->delivered_ce at "prior_mstamp" */
+	s32  delivered_ce;	
+	bool is_ece;		/* did this ACK have ECN marked? */
 	long interval_us;	/* time for tp->delivered to incr "delivered" */
 	u32 snd_interval_us;	/* snd interval for delivered packets */
 	u32 rcv_interval_us;	/* rcv interval for delivered packets */
@@ -1205,6 +1210,7 @@ struct tcp_congestion_ops {
 	struct list_head	list;
 	u32 key;
 	u32 flags;
+	void (*skb_marked_lost)(struct sock *sk, const struct sk_buff *skb);
 
 	/* initialize private data (optional) */
 	void (*init)(struct sock *sk);
