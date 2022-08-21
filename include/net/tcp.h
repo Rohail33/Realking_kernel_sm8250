@@ -1023,9 +1023,10 @@ struct tcp_skb_cb {
 #endif
 	union {
 		struct {
+		#define TCPCB_DELIVERED_CE_MASK ((1U<<20) - 1)
 			/* There is space for up to 24 bytes */
+
 			__u32 in_flight:30,/* Bytes in flight at transmit */
-			      is_app_limited:1, /* cwnd not fully used? */
 			      unused:1;
 			/* pkts S/ACKed so far upon tx of skb, incl retrans: */
 			__u32 delivered;
@@ -1035,8 +1036,9 @@ struct tcp_skb_cb {
 			u32 delivered_mstamp;
 #define TCPCB_IN_FLIGHT_BITS 20
 #define TCPCB_IN_FLIGHT_MAX ((1U << TCPCB_IN_FLIGHT_BITS) - 1)
-			u32 in_flight:20,   /* packets in flight at transmit */
-			    unused2:12;
+			     __u32 is_app_limited:1, /* cwnd not fully used? */
+			      delivered_ce:20;
+			u32 lost;
 		} tx;   /* only used for outgoing skbs */
 		union {
 			struct inet_skb_parm	h4;
@@ -1191,6 +1193,7 @@ struct rate_sample {
 	u32  prior_lost;	/* tp->lost at "prior_mstamp" */
 	u32  prior_delivered;	/* tp->delivered at "prior_mstamp" */
 	u32  prior_delivered_ce;/* tp->delivered_ce at "prior_mstamp" */
+	s32  lost;		/* number of packets lost over interval */
 	u32 tx_in_flight;	/* packets in flight at starting timestamp */
 	s32  delivered;		/* number of packets delivered over interval */
 	s32  delivered_ce;	/* packets delivered w/ CE mark over interval */
@@ -1211,7 +1214,7 @@ struct tcp_congestion_ops {
 	struct list_head	list;
 	u32 key;
 	u32 flags;
-	void (*skb_marked_lost)(struct sock *sk, const struct sk_buff *skb);
+	//void (*skb_marked_lost)(struct sock *sk, const struct sk_buff *skb);
 
 	/* initialize private data (optional) */
 	void (*init)(struct sock *sk);
