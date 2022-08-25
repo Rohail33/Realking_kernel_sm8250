@@ -129,15 +129,6 @@ static bool sugov_should_update_freq(struct sugov_policy *sg_policy, u64 time)
 	return delta_ns >= sg_policy->min_rate_limit_ns;
 }
 
-static inline bool use_pelt(void)
-{
-#ifdef CONFIG_SCHED_WALT
-	return false;
-#else
-	return true;
-#endif
-}
-
 static inline bool conservative_pl(void)
 {
 #ifdef CONFIG_SCHED_WALT
@@ -198,8 +189,9 @@ static void sugov_track_cycles(struct sugov_policy *sg_policy,
 	u64 delta_ns, cycles;
 	u64 next_ws = sg_policy->last_ws + sched_ravg_window;
 
-	if (use_pelt())
-		return;
+#ifndef CONFIG_SCHED_WALT
+	return;
+#endif
 
 	upto = min(upto, next_ws);
 	/* Track cycles in current window */
@@ -217,8 +209,9 @@ static void sugov_calc_avg_cap(struct sugov_policy *sg_policy, u64 curr_ws,
 	u64 last_ws = sg_policy->last_ws;
 	unsigned int avg_freq;
 
-	if (use_pelt())
-		return;
+#ifndef CONFIG_SCHED_WALT
+	return;
+#endif
 
 	BUG_ON(curr_ws < last_ws);
 	if (curr_ws <= last_ws)
@@ -267,8 +260,9 @@ static void sugov_deferred_update(struct sugov_policy *sg_policy, u64 time,
 	if (!sugov_update_next_freq(sg_policy, time, next_freq))
 		return;
 
-	if (use_pelt())
-		sg_policy->work_in_progress = true;
+#ifndef CONFIG_SCHED_WALT
+	sg_policy->work_in_progress = true;
+#endif
 	irq_work_queue(&sg_policy->irq_work);
 }
 
@@ -634,8 +628,9 @@ static void sugov_walt_adjust(struct sugov_cpu *sg_cpu, unsigned long *util,
 	bool is_hiload;
 	unsigned long pl = sg_cpu->walt_load.pl;
 
-	if (use_pelt())
-		return;
+#ifndef CONFIG_SCHED_WALT
+	return;
+#endif
 
 	if (is_rtg_boost)
 		*util = max(*util, sg_policy->rtg_boost_util);
@@ -697,9 +692,15 @@ static void sugov_update_single(struct update_util_data *hook, u64 time,
 	if (!sugov_should_update_freq(sg_policy, time))
 		return;
 
-	/* Limits may have changed, don't skip frequency update */
-	busy = use_pelt() && !sg_policy->need_freq_update &&
-		sugov_cpu_is_busy(sg_cpu);
+	/* 
+	 * Limits may have changed, don't skip frequency update.
+	 * Check only if pelt is enabled.
+	 */
+#ifdef CONFIG_SCHED_WALT
+	busy = false;
+#else
+	busy = !sg_policy->need_freq_update && sugov_cpu_is_busy(sg_cpu);
+#endif
 
 	sg_cpu->util = util = sugov_get_util(sg_cpu);
 	max = sg_cpu->max;
@@ -868,8 +869,9 @@ static void sugov_work(struct kthread_work *work)
 	 */
 	raw_spin_lock_irqsave(&sg_policy->update_lock, flags);
 	freq = sg_policy->next_freq;
-	if (use_pelt())
-		sg_policy->work_in_progress = false;
+#ifndef CONFIG_SCHED_WALT
+	sg_policy->work_in_progress = false;
+#endif
 	sugov_track_cycles(sg_policy, sg_policy->policy->cur,
 			   ktime_get_ns());
 	raw_spin_unlock_irqrestore(&sg_policy->update_lock, flags);
