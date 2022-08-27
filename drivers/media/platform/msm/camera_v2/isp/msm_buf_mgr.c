@@ -927,7 +927,7 @@ static int msm_isp_buf_enqueue(struct msm_isp_buf_mgr *buf_mgr,
 
 	bufq = msm_isp_get_bufq(buf_mgr, info->handle);
 	if (!bufq) {
-		pr_err("%s: Invalid bufq, handle 0x%x, stream id %x num_plane %d\n"
+		CDBG("%s: Invalid bufq, handle 0x%x, stream id %x num_plane %d\n"
 			, __func__, info->handle, (info->handle >> 8),
 			info->buffer.num_planes);
 		return -EINVAL;
@@ -935,7 +935,7 @@ static int msm_isp_buf_enqueue(struct msm_isp_buf_mgr *buf_mgr,
 
 	buf_state = msm_isp_buf_prepare(buf_mgr, info, NULL);
 	if (buf_state < 0) {
-		pr_err_ratelimited("%s: Buf prepare failed\n", __func__);
+		CDBG("%s: Buf prepare failed\n", __func__);
 		return -EINVAL;
 	}
 
@@ -943,7 +943,7 @@ static int msm_isp_buf_enqueue(struct msm_isp_buf_mgr *buf_mgr,
 		buf_info = msm_isp_get_buf_ptr(buf_mgr,
 						info->handle, info->buf_idx);
 		if (!buf_info) {
-			pr_err("%s: buf not found\n", __func__);
+			CDBG("%s: buf not found\n", __func__);
 			return -EINVAL;
 		}
 		if (info->dirty_buf) {
@@ -956,7 +956,7 @@ static int msm_isp_buf_enqueue(struct msm_isp_buf_mgr *buf_mgr,
 				info->handle, info->buf_idx);
 		} else {
 			if (BUF_SRC(bufq->stream_id))
-				pr_err("%s: Invalid native buffer state\n",
+				CDBG("%s: Invalid native buffer state\n",
 					__func__);
 			else {
 				buf_info->buf_debug.put_state[
@@ -973,7 +973,7 @@ static int msm_isp_buf_enqueue(struct msm_isp_buf_mgr *buf_mgr,
 			buf_info = msm_isp_get_buf_ptr(buf_mgr,
 				info->handle, info->buf_idx);
 			if (!buf_info) {
-				pr_err("%s: buf not found\n", __func__);
+				CDBG("%s: buf not found\n", __func__);
 				return -EINVAL;
 			}
 
@@ -984,7 +984,7 @@ static int msm_isp_buf_enqueue(struct msm_isp_buf_mgr *buf_mgr,
 			rc = msm_isp_put_buf(buf_mgr,
 					info->handle, info->buf_idx);
 			if (rc < 0) {
-				pr_err("%s: Buf put failed stream %x\n",
+				CDBG("%s: Buf put failed stream %x\n",
 					__func__, bufq->stream_id);
 				return rc;
 			}
