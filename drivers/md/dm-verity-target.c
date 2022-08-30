@@ -961,6 +961,7 @@ int verity_ctr(struct dm_target *ti, unsigned argc, char **argv)
 	struct dm_verity *v;
 	struct dm_arg_set as;
 	unsigned int num;
+	unsigned int wq_flags;
 	unsigned long long num_ll;
 	int r;
 	int i;
@@ -1185,7 +1186,18 @@ int verity_ctr(struct dm_target *ti, unsigned argc, char **argv)
 	}
 
 	/* WQ_UNBOUND greatly improves performance when running on ramdisk */
-	v->verify_wq = alloc_workqueue("kverityd", WQ_MEM_RECLAIM | WQ_UNBOUND, num_online_cpus());
+	wq_flags = WQ_MEM_RECLAIM | WQ_UNBOUND;
+	/*
+	 * Using WQ_HIGHPRI improves throughput and completion latency by
+	 * reducing wait times when reading from a dm-verity device.
+	 *
+	 * Also as required for the "try_verify_in_tasklet" feature: WQ_HIGHPRI
+	 * allows verify_wq to preempt softirq since verification in tasklet
+	 * will fall-back to using it for error handling (or if the bufio cache
+	 * doesn't have required hashes).
+	 */
+	wq_flags |= WQ_HIGHPRI;
+	v->verify_wq = alloc_workqueue("kverityd", wq_flags, num_online_cpus());
 	if (!v->verify_wq) {
 		ti->error = "Cannot allocate workqueue";
 		r = -ENOMEM;
