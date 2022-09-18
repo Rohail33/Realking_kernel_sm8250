@@ -219,7 +219,8 @@ typedef struct {
 	int			bms_temp;
 	int			ibus_limits;
 	int			effective_ibus;
-	int			thermal_l;
+    int			thermal_l;
+	int			bms_i2c_error_count;
 
 	struct bq2597x			bq2597x;
 	struct sw_charger			sw_chager;
