@@ -3841,11 +3841,11 @@ void sched_set_refresh_rate(enum fps fps)
 {
 	if (HZ == 250 && sysctl_sched_dynamic_ravg_window_enable) {
 		if (fps > FPS90)
-			display_sched_ravg_window_nr_ticks = 2;
-		else if (fps == FPS90)
 			display_sched_ravg_window_nr_ticks = 3;
+		else if (fps == FPS90)
+			display_sched_ravg_window_nr_ticks = 18 / 5;
 		else
-			display_sched_ravg_window_nr_ticks = 5;
+			display_sched_ravg_window_nr_ticks = 6;
 
 		sched_window_nr_ticks_change();
 	}
