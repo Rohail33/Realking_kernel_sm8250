@@ -231,7 +231,7 @@ int dsi_display_set_backlight(struct drm_connector *connector,
 
 	/* scale backlight */
 	bl_scale = panel->bl_config.bl_scale;
-	bl_temp = bl_lvl * bl_scale / min(max(0, backlight_scale), 2048);
+	bl_temp = bl_lvl * bl_scale / min(max(0, backlight_scale), 2047);
 
 	bl_scale_sv = panel->bl_config.bl_scale_sv;
 	bl_temp = (u32)bl_temp * bl_scale_sv / MAX_SV_BL_SCALE_LEVEL;
