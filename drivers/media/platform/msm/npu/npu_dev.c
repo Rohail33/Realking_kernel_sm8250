@@ -2587,7 +2587,9 @@ static int npu_probe(struct platform_device *pdev)
 		goto error_res_init;
 	}
 
+#ifdef CONFIG_DEBUG_FS
 	npu_debugfs_init(npu_dev);
+#endif
 
 	rc = npu_host_init(npu_dev);
 	if (rc) {
@@ -2641,7 +2643,9 @@ static int npu_remove(struct platform_device *pdev)
 
 	npu_dev = platform_get_drvdata(pdev);
 	npu_host_deinit(npu_dev);
+#ifdef CONFIG_DEBUG_FS
 	npu_debugfs_deinit(npu_dev);
+#endif
 	npu_cdsprm_cxlimit_deinit(npu_dev);
 	if (npu_dev->tcdev)
 		thermal_cooling_device_unregister(npu_dev->tcdev);
