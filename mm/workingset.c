@@ -262,27 +262,27 @@ void lru_gen_refault(struct page *page, void *shadow)
 
 	unpack_shadow(shadow, &memcg_id, &pgdat, &token, &workingset);
 
-	if (page_pgdat(page) != pgdat)
+	if (pgdat != page_pgdat(page))
 		return;
 
-	/* see the comment in page_lru_refs() */
-	refs = (token & (BIT(LRU_REFS_WIDTH) - 1)) + workingset;
-	tier = lru_tier_from_refs(refs);
-
 	rcu_read_lock();
+
 	memcg = mem_cgroup_from_id(memcg_id);
 	if (!mem_cgroup_disabled() && !memcg)
 		goto unlock;
 
 	lruvec = mem_cgroup_lruvec(pgdat, memcg);
 	lrugen = &lruvec->lrugen;
-	min_seq = READ_ONCE(lrugen->min_seq[type]);
 
-	token >>= LRU_REFS_WIDTH;
-	if (token != (min_seq & (EVICTION_MASK >> LRU_REFS_WIDTH)))
+	min_seq = READ_ONCE(lrugen->min_seq[type]);
+	if ((token >> LRU_REFS_WIDTH) != (min_seq & (EVICTION_MASK >> LRU_REFS_WIDTH)))
 		goto unlock;
 
 	hist = lru_hist_from_seq(min_seq);
+	/* see the comment in page_lru_refs() */
+	refs = (token & (BIT(LRU_REFS_WIDTH) - 1)) + workingset;
+	tier = lru_tier_from_refs(refs);
+
 	atomic_long_add(delta, &lrugen->refaulted[hist][type][tier]);
 	mod_lruvec_state(lruvec, WORKINGSET_REFAULT, delta);
 
@@ -290,8 +290,8 @@ void lru_gen_refault(struct page *page, void *shadow)
 	 * Count the following two cases as stalls:
 	 * 1. For pages accessed through page tables, hotter pages pushed out
 	 *    hot pages which refaulted immediately.
-	 * 2. For pages accessed through file descriptors, numbers of accesses
-	 *    might have been beyond the limit.
+	 * 2. For pages accessed multiple times through file descriptors,
+	 *    numbers of accesses might have been out of the range.
 	 */
 	if (lru_gen_in_fault() || refs == BIT(LRU_REFS_WIDTH)) {
 		SetPageWorkingset(page);
@@ -299,6 +299,17 @@ void lru_gen_refault(struct page *page, void *shadow)
 	}
 unlock:
 	rcu_read_unlock();
+}
+
+#else /* !CONFIG_LRU_GEN */
+
+static void *lru_gen_eviction(struct page *page)
+{
+	return NULL;
+}
+
+static void lru_gen_refault(struct page *page, void *shadow)
+{
 }
 
 #endif /* CONFIG_LRU_GEN */

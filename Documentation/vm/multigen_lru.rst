@@ -95,15 +95,15 @@ at most ``MAX_NR_GENS`` generations. The gen counter stores a value
 within ``[1, MAX_NR_GENS]`` while a page is on one of
 ``lrugen->lists[]``; otherwise it stores zero.
 
-Each generation is divided into multiple tiers. Tiers represent
-different ranges of numbers of accesses through file descriptors. A
-page accessed ``N`` times through file descriptors is in tier
-``order_base_2(N)``. In contrast to moving across generations, which
-requires the LRU lock, moving across tiers only involves atomic
-operations on ``page->flags`` and therefore has a negligible cost. A
-feedback loop modeled after the PID controller monitors refaults over
-all the tiers from anon and file types and decides which tiers from
-which types to evict or protect.
+Each generation is divided into multiple tiers. A page accessed ``N``
+times through file descriptors is in tier ``order_base_2(N)``. Unlike
+generations, tiers do not have dedicated ``lrugen->lists[]``. In
+contrast to moving across generations, which requires the LRU lock,
+moving across tiers only involves atomic operations on
+``page->flags`` and therefore has a negligible cost. A feedback loop
+modeled after the PID controller monitors refaults over all the tiers
+from anon and file types and decides which tiers from which types to
+evict or protect.
 
 There are two conceptually independent procedures: the aging and the
 eviction. They form a closed-loop system, i.e., the page reclaim.
@@ -138,7 +138,7 @@ accessed through page tables and updated its gen counter. It also
 moves a page to the next generation, i.e., ``min_seq+1``, if this page
 was accessed multiple times through file descriptors and the feedback
 loop has detected outlying refaults from the tier this page is in. To
-do this, the feedback loop uses the first tier as the baseline, for
+this end, the feedback loop uses the first tier as the baseline, for
 the reason stated earlier.
 
 Summary
@@ -146,8 +146,8 @@ Summary
 The multi-gen LRU can be disassembled into the following parts:
 
 * Generations
-* Page table walks
 * Rmap walks
+* Page table walks
 * Bloom filters
 * PID controller
 
