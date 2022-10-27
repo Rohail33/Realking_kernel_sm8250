@@ -249,9 +249,9 @@ struct zone_reclaim_stat {
  * Evictable pages are divided into multiple generations. The youngest and the
  * oldest generation numbers, max_seq and min_seq, are monotonically increasing.
  * They form a sliding window of a variable size [MIN_NR_GENS, MAX_NR_GENS]. An
- * offset within MAX_NR_GENS, gen, indexes the LRU list of the corresponding
- * generation. The gen counter in page->flags stores gen+1 while a page is on
- * one of lrugen->lists[]. Otherwise it stores 0.
+ * offset within MAX_NR_GENS, i.e., gen, indexes the LRU list of the
+ * corresponding generation. The gen counter in page->flags stores gen+1 while
+ * a page is on one of lrugen->lists[]. Otherwise it stores 0.
  *
  * A page is added to the youngest generation on faulting. The aging needs to
  * check the accessed bit at least twice before handing this page over to the
@@ -259,16 +259,17 @@ struct zone_reclaim_stat {
  * fault; the second check makes sure this page hasn't been used since then.
  * This process, AKA second chance, requires a minimum of two generations,
  * hence MIN_NR_GENS. And to maintain ABI compatibility with the active/inactive
- * LRU, these two generations are considered active; the rest of generations, if
- * they exist, are considered inactive. See lru_gen_is_active(). PG_active is
- * always cleared while a page is on one of lrugen->lists[] so that the aging
- * needs not to worry about it. And it's set again when a page considered active
- * is isolated for non-reclaiming purposes, e.g., migration. See
- * lru_gen_add_page() and lru_gen_del_page().
+ * LRU, e.g., /proc/vmstat, these two generations are considered active; the
+ * rest of generations, if they exist, are considered inactive. See
+ * lru_gen_is_active(). PG_active is always cleared while a page is on one of
+ * lrugen->lists[] so that the aging needs not to worry about it. And it's set
+ * again when a page considered active is isolated for non-reclaiming purposes,
+ * e.g., migration. See lru_gen_add_page() and lru_gen_del_page().
  *
- * MAX_NR_GENS is set to 4 so that the multi-gen LRU can support twice of the
- * categories of the active/inactive LRU when keeping track of accesses through
- * page tables. It requires order_base_2(MAX_NR_GENS+1) bits in page->flags.
+ * MAX_NR_GENS is set to 4 so that the multi-gen LRU can support twice the
+ * number of categories of the active/inactive LRU when keeping track of
+ * accesses through page tables. It requires order_base_2(MAX_NR_GENS+1) bits in
+ * page->flags (LRU_GEN_MASK).
  */
 #define MIN_NR_GENS		2U
 #define MAX_NR_GENS		4U
@@ -279,18 +280,20 @@ struct zone_reclaim_stat {
  * times through file descriptors is in tier order_base_2(N). A page in the
  * first tier (N=0,1) is marked by PG_referenced unless it was faulted in
  * though page tables or read ahead. A page in any other tier (N>1) is marked
- * by PG_referenced and PG_workingset.
+ * by PG_referenced and PG_workingset. This implies a minimum of two tiers is
+ * supported without using additional bits in page->flags.
  *
  * In contrast to moving across generations which requires the LRU lock, moving
- * across tiers only requires operations on page->flags and therefore has a
- * negligible cost in the buffered access path. In the eviction path,
+ * across tiers only involves atomic operations on page->flags and therefore
+ * has a negligible cost in the buffered access path. In the eviction path,
  * comparisons of refaulted/(evicted+protected) from the first tier and the
  * rest infer whether pages accessed multiple times through file descriptors
  * are statistically hot and thus worth protecting.
  *
- * MAX_NR_TIERS is set to 4 so that the multi-gen LRU can support twice of the
- * categories of the active/inactive LRU when keeping track of accesses through
- * file descriptors. It requires MAX_NR_TIERS-2 additional bits in page->flags.
+ * MAX_NR_TIERS is set to 4 so that the multi-gen LRU can support twice the
+ * number of categories of the active/inactive LRU when keeping track of
+ * accesses through file descriptors. It uses MAX_NR_TIERS-2 spare bits in
+ * page->flags (LRU_REFS_MASK).
  */
 #define MAX_NR_TIERS		4U
 
@@ -302,7 +305,6 @@ struct page_vma_mapped_walk;
 
 #define LRU_GEN_MASK		((BIT(LRU_GEN_WIDTH) - 1) << LRU_GEN_PGOFF)
 #define LRU_REFS_MASK		((BIT(LRU_REFS_WIDTH) - 1) << LRU_REFS_PGOFF)
-#define LRU_REFS_FLAGS		(BIT(PG_referenced) | BIT(PG_workingset))
 
 #ifdef CONFIG_LRU_GEN
 
@@ -337,6 +339,9 @@ enum {
  * Normally anon and file min_seq are in sync. But if swapping is constrained,
  * e.g., out of swap space, file min_seq is allowed to advance and leave anon
  * min_seq behind.
+ *
+ * nr_pages[] are eventually consistent and therefore can be transiently
+ * negative when reset_batch_size() is pending.
  */
 struct lru_gen_struct {
 	/* the aging increments the youngest generation number */
@@ -348,7 +353,7 @@ struct lru_gen_struct {
 	/* the multi-gen LRU lists */
 	struct list_head lists[MAX_NR_GENS][ANON_AND_FILE][MAX_NR_ZONES];
 	/* the sizes of the above lists */
-	unsigned long nr_pages[MAX_NR_GENS][ANON_AND_FILE][MAX_NR_ZONES];
+	long nr_pages[MAX_NR_GENS][ANON_AND_FILE][MAX_NR_ZONES];
 	/* the exponential moving average of refaulted */
 	unsigned long avg_refaulted[ANON_AND_FILE][MAX_NR_TIERS];
 	/* the exponential moving average of evicted+protected */
@@ -411,7 +416,7 @@ struct lru_gen_mm_walk {
 	/* total batched items */
 	int batched;
 	bool can_swap;
-	bool full_scan;
+	bool force_scan;
 };
 
 void lru_gen_init_lruvec(struct lruvec *lruvec);

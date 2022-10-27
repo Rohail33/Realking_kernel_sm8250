@@ -5,6 +5,17 @@
 #include <linux/huge_mm.h>
 #include <linux/swap.h>
 
+#ifndef try_cmpxchg
+#define try_cmpxchg(_ptr, _oldp, _new) \
+({ \
+	typeof(*(_ptr)) *___op = (_oldp), ___o = *___op, ___r; \
+	___r = cmpxchg((_ptr), ___o, (_new)); \
+	if (unlikely(___r != ___o)) \
+		*___op = ___r; \
+	likely(___r == ___o); \
+})
+#endif /* try_cmpxchg */
+
 /**
  * page_is_file_cache - should the page be on a file LRU or anon LRU?
  * @page: the page to test
@@ -121,17 +132,38 @@ static inline int lru_hist_from_seq(unsigned long seq)
 
 static inline int lru_tier_from_refs(int refs)
 {
-	VM_BUG_ON(refs > BIT(LRU_REFS_WIDTH));
+	VM_WARN_ON_ONCE(refs > BIT(LRU_REFS_WIDTH));
 
-	/* see the comment on MAX_NR_TIERS */
+	/* see the comment in page_lru_refs() */
 	return order_base_2(refs + 1);
+}
+
+static inline int page_lru_refs(struct page *page)
+{
+	unsigned long flags = READ_ONCE(page->flags);
+	bool workingset = flags & BIT(PG_workingset);
+
+	/*
+	 * Return the number of accesses beyond PG_referenced, i.e., N-1 if the
+	 * total number of accesses is N>1, since N=0,1 both map to the first
+	 * tier. lru_tier_from_refs() will account for this off-by-one. Also see
+	 * the comment on MAX_NR_TIERS.
+	 */
+	return ((flags & LRU_REFS_MASK) >> LRU_REFS_PGOFF) + workingset;
+}
+
+static inline int page_lru_gen(struct page *page)
+{
+	unsigned long flags = READ_ONCE(page->flags);
+
+	return ((flags & LRU_GEN_MASK) >> LRU_GEN_PGOFF) - 1;
 }
 
 static inline bool lru_gen_is_active(struct lruvec *lruvec, int gen)
 {
 	unsigned long max_seq = lruvec->lrugen.max_seq;
 
-	VM_BUG_ON(gen >= MAX_NR_GENS);
+	VM_WARN_ON_ONCE(gen >= MAX_NR_GENS);
 
 	/* see the comment on MIN_NR_GENS */
 	return gen == lru_gen_from_seq(max_seq) || gen == lru_gen_from_seq(max_seq - 1);
@@ -146,9 +178,9 @@ static inline void lru_gen_update_size(struct lruvec *lruvec, struct page *page,
 	enum lru_list lru = type * LRU_INACTIVE_FILE;
 	struct lru_gen_struct *lrugen = &lruvec->lrugen;
 
-	VM_BUG_ON(old_gen != -1 && old_gen >= MAX_NR_GENS);
-	VM_BUG_ON(new_gen != -1 && new_gen >= MAX_NR_GENS);
-	VM_BUG_ON(old_gen == -1 && new_gen == -1);
+	VM_WARN_ON_ONCE(old_gen != -1 && old_gen >= MAX_NR_GENS);
+	VM_WARN_ON_ONCE(new_gen != -1 && new_gen >= MAX_NR_GENS);
+	VM_WARN_ON_ONCE(old_gen == -1 && new_gen == -1);
 
 	if (old_gen >= 0)
 		WRITE_ONCE(lrugen->nr_pages[old_gen][type][zone],
@@ -180,16 +212,18 @@ static inline void lru_gen_update_size(struct lruvec *lruvec, struct page *page,
 	}
 
 	/* demotion requires isolation, e.g., lru_deactivate_fn() */
-	VM_BUG_ON(lru_gen_is_active(lruvec, old_gen) && !lru_gen_is_active(lruvec, new_gen));
+	VM_WARN_ON_ONCE(lru_gen_is_active(lruvec, old_gen) && !lru_gen_is_active(lruvec, new_gen));
 }
 
 static inline bool lru_gen_add_page(struct lruvec *lruvec, struct page *page, bool reclaiming)
 {
-	int gen;
-	unsigned long old_flags, new_flags;
+	unsigned long mask, flags;
+	int gen = page_lru_gen(page);
 	int type = page_is_file_cache(page);
 	int zone = page_zonenum(page);
 	struct lru_gen_struct *lrugen = &lruvec->lrugen;
+
+	VM_WARN_ON_ONCE_PAGE(gen != -1, page);
 
 	if (PageUnevictable(page) || !lrugen->enabled)
 		return false;
@@ -210,14 +244,10 @@ static inline bool lru_gen_add_page(struct lruvec *lruvec, struct page *page, bo
 	else
 		gen = lru_gen_from_seq(lrugen->min_seq[type]);
 
-	do {
-		new_flags = old_flags = READ_ONCE(page->flags);
-		VM_BUG_ON_PAGE(new_flags & LRU_GEN_MASK, page);
-
-		/* see the comment on MIN_NR_GENS */
-		new_flags &= ~(LRU_GEN_MASK | BIT(PG_active));
-		new_flags |= (gen + 1UL) << LRU_GEN_PGOFF;
-	} while (cmpxchg(&page->flags, old_flags, new_flags) != old_flags);
+	/* see the comment on MIN_NR_GENS */
+	mask = LRU_GEN_MASK | BIT(PG_active);
+	flags = (gen + 1UL) << LRU_GEN_PGOFF;
+	set_mask_bits(&page->flags, mask, flags);
 
 	lru_gen_update_size(lruvec, page, -1, gen);
 	/* for rotate_reclaimable_page() */
@@ -231,28 +261,25 @@ static inline bool lru_gen_add_page(struct lruvec *lruvec, struct page *page, bo
 
 static inline bool lru_gen_del_page(struct lruvec *lruvec, struct page *page, bool reclaiming)
 {
-	int gen;
-	unsigned long old_flags, new_flags;
+	unsigned long mask, flags;
+	int gen = page_lru_gen(page);
 
-	do {
-		new_flags = old_flags = READ_ONCE(page->flags);
-		if (!(new_flags & LRU_GEN_MASK))
-			return false;
+	if (gen < 0)
+		return false;
 
-		VM_BUG_ON_PAGE(PageActive(page), page);
-		VM_BUG_ON_PAGE(PageUnevictable(page), page);
+	VM_WARN_ON_ONCE_PAGE(PageActive(page), page);
+	VM_WARN_ON_ONCE_PAGE(PageUnevictable(page), page);
 
-		gen = ((new_flags & LRU_GEN_MASK) >> LRU_GEN_PGOFF) - 1;
+	mask = LRU_GEN_MASK;
+	flags = 0;
+	/* for shrink_page_list() or page_migrate_flags() */
+	if (reclaiming)
+		mask |= BIT(PG_referenced) | BIT(PG_reclaim);
+	else if (lru_gen_is_active(lruvec, gen))
+		flags |= BIT(PG_active);
 
-		new_flags &= ~LRU_GEN_MASK;
-		if (!(new_flags & BIT(PG_referenced)))
-			new_flags &= ~(LRU_REFS_MASK | LRU_REFS_FLAGS);
-		/* for shrink_page_list() */
-		if (reclaiming)
-			new_flags &= ~(BIT(PG_referenced) | BIT(PG_reclaim));
-		else if (lru_gen_is_active(lruvec, gen))
-			new_flags |= BIT(PG_active);
-	} while (cmpxchg(&page->flags, old_flags, new_flags) != old_flags);
+	flags = set_mask_bits(&page->flags, mask, flags);
+	gen = ((flags & LRU_GEN_MASK) >> LRU_GEN_PGOFF) - 1;
 
 	lru_gen_update_size(lruvec, page, gen, -1);
 	list_del(&page->lru);
