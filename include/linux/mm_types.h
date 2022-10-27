@@ -3,7 +3,6 @@
 #define _LINUX_MM_TYPES_H
 
 #include <linux/mm_types_task.h>
-#include <linux/sched.h>
 
 #include <linux/auxvec.h>
 #include <linux/list.h>
@@ -15,7 +14,6 @@
 #include <linux/uprobes.h>
 #include <linux/page-flags-layout.h>
 #include <linux/workqueue.h>
-#include <linux/mmdebug.h>
 #include <linux/android_kabi.h>
 
 #include <asm/mmu.h>
@@ -580,11 +578,12 @@ static inline void lru_gen_init_mm(struct mm_struct *mm)
 
 static inline void lru_gen_use_mm(struct mm_struct *mm)
 {
-	/* unlikely but not a bug when racing with lru_gen_migrate_mm() */
-	VM_WARN_ON_ONCE(list_empty(&mm->lru_gen.list));
-
-	if (!(current->flags & PF_KTHREAD))
-		WRITE_ONCE(mm->lru_gen.bitmap, -1);
+	/*
+	 * When the bitmap is set, page reclaim knows this mm_struct has been
+	 * used since the last time it cleared the bitmap. So it might be worth
+	 * walking the page tables of this mm_struct to clear the accessed bit.
+	 */
+	WRITE_ONCE(mm->lru_gen.bitmap, -1);
 }
 
 #else /* !CONFIG_LRU_GEN */

@@ -322,7 +322,7 @@ enum {
 };
 
 #define MIN_LRU_BATCH		BITS_PER_LONG
-#define MAX_LRU_BATCH		(MIN_LRU_BATCH * 128)
+#define MAX_LRU_BATCH		(MIN_LRU_BATCH * 64)
 
 /* whether to keep historical stats from evicted generations */
 #ifdef CONFIG_LRU_GEN_STATS

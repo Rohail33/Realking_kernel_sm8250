@@ -119,15 +119,18 @@ within ``age_in_ms``. E.g., ``min_gen_nr`` contains the coldest pages
 and ``max_gen_nr`` contains the hottest pages, since ``age_in_ms`` of
 the former is the largest and that of the latter is the smallest.
 
-Users can write ``+ memcg_id node_id max_gen_nr
-[can_swap [force_scan]]`` to ``lru_gen`` to create a new generation
-``max_gen_nr+1``. ``can_swap`` defaults to the swap setting and, if it
-is set to ``1``, it forces the scan of anon pages when swap is off,
-and vice versa. ``force_scan`` defaults to ``1`` and, if it is set to
-``0``, it employs heuristics to reduce the overhead, which is likely
-to reduce the coverage as well.
+Users can write the following command to ``lru_gen`` to create a new
+generation ``max_gen_nr+1``:
 
-A typical use case is that a job scheduler writes to ``lru_gen`` at a
+    ``+ memcg_id node_id max_gen_nr [can_swap [force_scan]]``
+
+``can_swap`` defaults to the swap setting and, if it is set to ``1``,
+it forces the scan of anon pages when swap is off, and vice versa.
+``force_scan`` defaults to ``1`` and, if it is set to ``0``, it
+employs heuristics to reduce the overhead, which is likely to reduce
+the coverage as well.
+
+A typical use case is that a job scheduler runs this command at a
 certain time interval to create new generations, and it ranks the
 servers it manages based on the sizes of their cold pages defined by
 this time interval.
@@ -137,20 +140,23 @@ Proactive reclaim
 Proactive reclaim induces page reclaim when there is no memory
 pressure. It usually targets cold pages only. E.g., when a new job
 comes in, the job scheduler wants to proactively reclaim cold pages on
-the server it selected to improve the chance of successfully landing
+the server it selected, to improve the chance of successfully landing
 this new job.
 
-Users can write ``- memcg_id node_id min_gen_nr [swappiness
-[nr_to_reclaim]]`` to ``lru_gen`` to evict generations less than or
-equal to ``min_gen_nr``. Note that ``min_gen_nr`` should be less than
-``max_gen_nr-1`` as ``max_gen_nr`` and ``max_gen_nr-1`` are not fully
-aged and therefore cannot be evicted. ``swappiness`` overrides the
-default value in ``/proc/sys/vm/swappiness``. ``nr_to_reclaim`` limits
-the number of pages to evict.
+Users can write the following command to ``lru_gen`` to evict
+generations less than or equal to ``min_gen_nr``.
 
-A typical use case is that a job scheduler writes to ``lru_gen``
-before it tries to land a new job on a server. If it fails to
-materialize enough cold pages because of the overestimation, it
-retries on the next server according to the ranking result obtained
-from the working set estimation step. This less forceful approach
-limits the impacts on the existing jobs.
+    ``- memcg_id node_id min_gen_nr [swappiness [nr_to_reclaim]]``
+
+``min_gen_nr`` should be less than ``max_gen_nr-1``, since
+``max_gen_nr`` and ``max_gen_nr-1`` are not fully aged (equivalent to
+the active list) and therefore cannot be evicted. ``swappiness``
+overrides the default value in ``/proc/sys/vm/swappiness``.
+``nr_to_reclaim`` limits the number of pages to evict.
+
+A typical use case is that a job scheduler runs this command before it
+tries to land a new job on a server. If it fails to materialize enough
+cold pages because of the overestimation, it retries on the next
+server according to the ranking result obtained from the working set
+estimation step. This less forceful approach limits the impacts on the
+existing jobs.
