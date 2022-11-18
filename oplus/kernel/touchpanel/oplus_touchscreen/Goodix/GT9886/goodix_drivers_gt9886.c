@@ -5714,7 +5714,7 @@ static struct of_device_id tp_match_table[] = {
 };
 
 static const struct dev_pm_ops tp_pm_ops = {
-#ifdef CONFIG_FB
+#if defined(CONFIG_FB) || defined(CONFIG_DRM_MSM)
     .suspend = goodix_i2c_suspend,
     .resume = goodix_i2c_resume,
 #endif

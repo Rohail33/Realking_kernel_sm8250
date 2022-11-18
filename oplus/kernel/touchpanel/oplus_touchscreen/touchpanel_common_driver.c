@@ -8165,7 +8165,11 @@ static int fb_notifier_callback(struct notifier_block *self, unsigned long event
 {
 	int *blank;
 	int timed_out = -1;
+#ifdef CONFIG_DRM_MSM
+	struct msm_drm_notifier *evdata = data;
+#else
 	struct fb_event *evdata = data;
+#endif
 	struct touchpanel_data *ts = container_of(self, struct touchpanel_data, fb_notif);
 
 	//to aviod some kernel bug (at fbmem.c some local veriable are not initialized)
