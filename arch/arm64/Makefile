@@ -164,6 +164,8 @@ KBUILD_DTBS	:= dtbs
 
 KBUILD_DTBO_IMG := dtbo.img
 
+KBUILD_DTB_IMG := dtb
+
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
 export DTC_FLAGS := -@
 endif
@@ -201,6 +203,10 @@ $(KBUILD_DTBO_IMG): dtbs
 	$(Q)$(MAKE) $(build)=$(boot) $(boot)/$@
 
 all: $(KBUILD_DTBO_IMG)
+$(KBUILD_DTB_IMG): dtbs
+	$(Q)$(MAKE) $(build)=$(boot) $(boot)/$@
+
+all: $(KBUILD_DTB_IMG)
 endif
 
 PHONY += vdso_install
