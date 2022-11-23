@@ -27,5 +27,7 @@ patch_vbmeta_flag=auto;
 ## AnyKernel boot install
 dump_boot;
 
+vbmeta_disable_verification;
+
 write_boot;
 ## end boot install
