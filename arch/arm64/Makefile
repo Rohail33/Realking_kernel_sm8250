@@ -64,8 +64,7 @@ ifeq ($(CONFIG_LD_IS_LLD), y)
 KBUILD_LDFLAGS  += -mllvm -march=armv8.2-a+crypto+crc -mtune=cortex-a55 -mcpu=cortex-a55
 endif
 else
-KBUILD_CFLAGS   += -mcpu=cortex-a77.cortex-a55
-KBUILD_AFLAGS   += -mcpu=cortex-a77.cortex-a55
+KBUILD_CFLAGS   += -mcpu=cortex-a77
 endif
 endif
 
