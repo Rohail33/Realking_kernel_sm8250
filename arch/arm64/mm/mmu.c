@@ -613,7 +613,6 @@ early_param("rodata", parse_rodata);
 static int __init map_entry_trampoline(void)
 {
 	int i;
-
 	pgprot_t prot = rodata_enabled ? PAGE_KERNEL_ROX : PAGE_KERNEL_EXEC;
 	phys_addr_t pa_start = __pa_symbol(__entry_tramp_text_start);
 
