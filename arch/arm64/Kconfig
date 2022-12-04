@@ -1214,6 +1214,15 @@ config RODATA_FULL_DEFAULT_ENABLED
 
 	  This requires the linear region to be mapped down to pages,
 	  which may adversely affect performance in some cases.
+	  
+config MITIGATE_SPECTRE_BRANCH_HISTORY
+	bool "Mitigate Spectre style attacks against branch history" if EXPERT
+	default y
+	help
+	  Speculation attacks against some high-performance processors can
+	  make use of branch history to influence future speculation.
+	  When taking an exception from user-space, a sequence of branches
+	  or a firmware call overwrites the branch history.
 
 menuconfig ARMV8_DEPRECATED
 	bool "Emulate deprecated/obsolete ARMv8 instructions"
