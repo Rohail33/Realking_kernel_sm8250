@@ -3,7 +3,7 @@
 * Copyright (C) 2018-2020 Oplus. All rights reserved.
 */
 &mdss_mdp {
-	dsi_oplus19101samsung_amb655uv01_1080_2400_cmd: qcom,mdss_dsi_oplus19101samsung_amb655uv01_1080_2400_cmd {
+	dsi_oplus19101samsung_amb655uv01_1080_2400_cmd: qcom,mdss_dsi_oppo19101samsung_amb655uv01_1080_2400_cmd {
 		qcom,mdss-dsi-panel-name = "samsung amb655uv01 amoled fhd+ panel with DSC";
 		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
 		qcom,mdss-dsi-virtual-channel-id = <0>;

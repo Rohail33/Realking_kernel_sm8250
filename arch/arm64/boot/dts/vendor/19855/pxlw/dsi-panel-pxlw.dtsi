@@ -39,5 +39,5 @@
 	pxlw,soft-iris-enable;
 };
 &mdss_mdp {
-	pxlw,dsi-display-primary-active = "qcom,mdss_dsi_oplus19101samsung_amb655uv01_1080_2400_cmd";
+	pxlw,dsi-display-primary-active = "qcom,mdss_dsi_oppo19101samsung_amb655uv01_1080_2400_cmd";
 };
