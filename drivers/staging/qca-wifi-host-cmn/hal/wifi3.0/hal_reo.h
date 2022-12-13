@@ -143,6 +143,19 @@ enum hal_reo_cmd_type {
 };
 
 /**
+ * struct hal_reo_cmd_ctx: REO command context used to store ring access state,
+ * for use with beginning/ending a reo send cmd session.
+ * @hal_ring_hdl: ring handle that the context is associated with
+ * @hal_soc_hdl: soc handle that the context is associated with
+ * @resume_device: whether we want to resume device before ending ring access
+ */
+struct hal_reo_cmd_ctx {
+	hal_ring_handle_t hal_ring_hdl;
+	hal_soc_handle_t hal_soc_hdl;
+	bool resume_device;
+};
+
+/**
  * struct hal_reo_cmd_params_std: Standard REO command parameters
  * @need_status: Status required for the command
  * @addr_lo: Lower 32 bits of REO queue descriptor address
@@ -493,27 +506,23 @@ union hal_reo_status {
 
 /* Prototypes */
 /* REO command ring routines */
+void hal_reo_cmd_start(struct hal_reo_cmd_ctx *ctx_hdl);
+void hal_reo_cmd_end(struct hal_reo_cmd_ctx *ctx_hdl);
 void hal_reo_cmd_set_descr_addr(uint32_t *reo_desc,
 				enum hal_reo_cmd_type type,
 				uint32_t paddr_lo,
 				uint8_t paddr_hi);
-int hal_reo_cmd_queue_stats(hal_ring_handle_t hal_ring_hdl,
-			    hal_soc_handle_t hal_soc_hdl,
+int hal_reo_cmd_queue_stats(struct hal_reo_cmd_ctx *ctx,
 			    struct hal_reo_cmd_params *cmd);
-int hal_reo_cmd_flush_queue(hal_ring_handle_t hal_ring_hdl,
-			    hal_soc_handle_t hal_soc_hdl,
+int hal_reo_cmd_flush_queue(struct hal_reo_cmd_ctx *ctx,
 			    struct hal_reo_cmd_params *cmd);
-int hal_reo_cmd_flush_cache(hal_ring_handle_t hal_ring_hdl,
-			    hal_soc_handle_t hal_soc_hdl,
+int hal_reo_cmd_flush_cache(struct hal_reo_cmd_ctx *ctx,
 			    struct hal_reo_cmd_params *cmd);
-int hal_reo_cmd_unblock_cache(hal_ring_handle_t hal_ring_hdl,
-			      hal_soc_handle_t hal_soc_hdl,
+int hal_reo_cmd_unblock_cache(struct hal_reo_cmd_ctx *ctx,
 			      struct hal_reo_cmd_params *cmd);
-int hal_reo_cmd_flush_timeout_list(hal_ring_handle_t hal_ring_hdl,
-				   hal_soc_handle_t hal_soc_hdl,
+int hal_reo_cmd_flush_timeout_list(struct hal_reo_cmd_ctx *ctx,
 				   struct hal_reo_cmd_params *cmd);
-int hal_reo_cmd_update_rx_queue(hal_ring_handle_t hal_ring_hdl,
-				hal_soc_handle_t hal_soc_hdl,
+int hal_reo_cmd_update_rx_queue(struct hal_reo_cmd_ctx *ctx,
 				struct hal_reo_cmd_params *cmd);
 
 /* REO status ring routines */

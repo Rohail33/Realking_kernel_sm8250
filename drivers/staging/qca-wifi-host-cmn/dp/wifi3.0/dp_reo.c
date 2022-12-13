@@ -63,41 +63,45 @@ QDF_STATUS dp_reo_send_cmd(struct dp_soc *soc, enum hal_reo_cmd_type type,
 {
 	struct dp_reo_cmd_info *reo_cmd;
 	int num;
+	QDF_STATUS ret;
+
+	struct hal_reo_cmd_ctx reo_ctx = {
+		.hal_ring_hdl	= soc->reo_cmd_ring.hal_srng,
+		.hal_soc_hdl	= soc->hal_soc,
+		.resume_device	= false,
+	};
+	hal_reo_cmd_start(&reo_ctx);
 
 	switch (type) {
 	case CMD_GET_QUEUE_STATS:
-		num = hal_reo_cmd_queue_stats(soc->reo_cmd_ring.hal_srng,
-					      soc->hal_soc, params);
+		num = hal_reo_cmd_queue_stats(&reo_ctx, params);
 		break;
 	case CMD_FLUSH_QUEUE:
-		num = hal_reo_cmd_flush_queue(soc->reo_cmd_ring.hal_srng,
-					      soc->hal_soc, params);
+		num = hal_reo_cmd_flush_queue(&reo_ctx, params);
 		break;
 	case CMD_FLUSH_CACHE:
-		num = hal_reo_cmd_flush_cache(soc->reo_cmd_ring.hal_srng,
-					      soc->hal_soc, params);
+		num = hal_reo_cmd_flush_cache(&reo_ctx, params);
 		break;
 	case CMD_UNBLOCK_CACHE:
-		num = hal_reo_cmd_unblock_cache(soc->reo_cmd_ring.hal_srng,
-						soc->hal_soc, params);
+		num = hal_reo_cmd_unblock_cache(&reo_ctx, params);
 		break;
 	case CMD_FLUSH_TIMEOUT_LIST:
-		num = hal_reo_cmd_flush_timeout_list(soc->reo_cmd_ring.hal_srng,
-						     soc->hal_soc, params);
+		num = hal_reo_cmd_flush_timeout_list(&reo_ctx, params);
 		break;
 	case CMD_UPDATE_RX_REO_QUEUE:
-		num = hal_reo_cmd_update_rx_queue(soc->reo_cmd_ring.hal_srng,
-						  soc->hal_soc, params);
+		num = hal_reo_cmd_update_rx_queue(&reo_ctx, params);
 		break;
 	default:
 		dp_err_log("Invalid REO command type: %d", type);
-		return QDF_STATUS_E_INVAL;
+		ret = QDF_STATUS_E_INVAL;
+		goto fail;
 	};
 
 	dp_reo_cmd_srng_event_record(soc, type, num);
 
 	if (num < 0) {
-		return QDF_STATUS_E_FAILURE;
+		ret = QDF_STATUS_E_FAILURE;
+		goto fail;
 	}
 
 	if (callback_fn) {
@@ -105,7 +109,8 @@ QDF_STATUS dp_reo_send_cmd(struct dp_soc *soc, enum hal_reo_cmd_type type,
 		if (!reo_cmd) {
 			dp_err_log("alloc failed for REO cmd:%d!!",
 				   type);
-			return QDF_STATUS_E_NOMEM;
+			ret = QDF_STATUS_E_NOMEM;
+			goto fail;
 		}
 
 		reo_cmd->cmd = num;
@@ -117,8 +122,11 @@ QDF_STATUS dp_reo_send_cmd(struct dp_soc *soc, enum hal_reo_cmd_type type,
 				  reo_cmd_list_elem);
 		qdf_spin_unlock_bh(&soc->rx.reo_cmd_lock);
 	}
+	ret = QDF_STATUS_SUCCESS;
 
-	return QDF_STATUS_SUCCESS;
+fail:
+	hal_reo_cmd_end(&reo_ctx);
+	return ret;
 }
 
 uint32_t dp_reo_status_ring_handler(struct dp_intr *int_ctx, struct dp_soc *soc)

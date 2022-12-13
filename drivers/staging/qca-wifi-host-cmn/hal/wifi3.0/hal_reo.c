@@ -381,6 +381,30 @@ static inline uint8_t hal_find_zero_bit(uint8_t x)
 	return pos-1;
 }
 
+inline void hal_reo_cmd_start(struct hal_reo_cmd_ctx *ctx) {
+	hal_srng_access_start(ctx->hal_soc_hdl, ctx->hal_ring_hdl);
+}
+
+inline void hal_reo_cmd_end(struct hal_reo_cmd_ctx *ctx)
+{
+	struct hal_soc *hal_soc = (struct hal_soc *)ctx->hal_soc_hdl;
+
+	if (ctx->resume_device) {
+		if (hif_pm_runtime_get(hal_soc->hif_handle,
+				       RTPM_ID_HAL_REO_CMD) == 0) {
+			hal_srng_access_end(ctx->hal_soc_hdl, ctx->hal_ring_hdl);
+			hif_pm_runtime_put(hal_soc->hif_handle,
+					   RTPM_ID_HAL_REO_CMD);
+		} else {
+			hal_srng_access_end_reap(ctx->hal_soc_hdl, ctx->hal_ring_hdl);
+			hal_srng_set_event(ctx->hal_ring_hdl, HAL_SRNG_FLUSH_EVENT);
+			hal_srng_inc_flush_cnt(ctx->hal_ring_hdl);
+		}
+	} else {
+		hal_srng_access_end(ctx->hal_soc_hdl, ctx->hal_ring_hdl);
+	}
+}
+
 inline void hal_reo_cmd_set_descr_addr(uint32_t *reo_desc,
 				       enum hal_reo_cmd_type type,
 				       uint32_t paddr_lo,
@@ -418,15 +442,15 @@ inline void hal_reo_cmd_set_descr_addr(uint32_t *reo_desc,
 	}
 }
 
-inline int hal_reo_cmd_queue_stats(hal_ring_handle_t  hal_ring_hdl,
-				   hal_soc_handle_t hal_soc_hdl,
+inline int hal_reo_cmd_queue_stats(struct hal_reo_cmd_ctx *ctx,
 				   struct hal_reo_cmd_params *cmd)
 
 {
 	uint32_t *reo_desc, val;
+	hal_ring_handle_t hal_ring_hdl = ctx->hal_ring_hdl;
+	hal_soc_handle_t hal_soc_hdl = ctx->hal_soc_hdl;
 	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
 
-	hal_srng_access_start(hal_soc_hdl, hal_ring_hdl);
 	reo_desc = hal_srng_src_get_next(hal_soc, hal_ring_hdl);
 	if (!reo_desc) {
 		QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_DEBUG,
@@ -455,16 +479,7 @@ inline int hal_reo_cmd_queue_stats(hal_ring_handle_t  hal_ring_hdl,
 	HAL_DESC_SET_FIELD(reo_desc, REO_GET_QUEUE_STATS_2, CLEAR_STATS,
 			      cmd->u.stats_params.clear);
 
-	if (hif_pm_runtime_get(hal_soc->hif_handle,
-			       RTPM_ID_HAL_REO_CMD) == 0) {
-		hal_srng_access_end(hal_soc_hdl, hal_ring_hdl);
-		hif_pm_runtime_put(hal_soc->hif_handle,
-				   RTPM_ID_HAL_REO_CMD);
-	} else {
-		hal_srng_access_end_reap(hal_soc_hdl, hal_ring_hdl);
-		hal_srng_set_event(hal_ring_hdl, HAL_SRNG_FLUSH_EVENT);
-		hal_srng_inc_flush_cnt(hal_ring_hdl);
-	}
+	ctx->resume_device = true;
 
 	val = reo_desc[CMD_HEADER_DW_OFFSET];
 	return HAL_GET_FIELD(UNIFORM_REO_CMD_HEADER_0, REO_CMD_NUMBER,
@@ -472,14 +487,14 @@ inline int hal_reo_cmd_queue_stats(hal_ring_handle_t  hal_ring_hdl,
 }
 qdf_export_symbol(hal_reo_cmd_queue_stats);
 
-inline int hal_reo_cmd_flush_queue(hal_ring_handle_t hal_ring_hdl,
-				   hal_soc_handle_t hal_soc_hdl,
+inline int hal_reo_cmd_flush_queue(struct hal_reo_cmd_ctx *ctx,
 				   struct hal_reo_cmd_params *cmd)
 {
 	uint32_t *reo_desc, val;
+	hal_ring_handle_t hal_ring_hdl = ctx->hal_ring_hdl;
+	hal_soc_handle_t hal_soc_hdl = ctx->hal_soc_hdl;
 	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
 
-	hal_srng_access_start(hal_soc_hdl, hal_ring_hdl);
 	reo_desc = hal_srng_src_get_next(hal_soc, hal_ring_hdl);
 	if (!reo_desc) {
 		QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_DEBUG,
@@ -513,25 +528,23 @@ inline int hal_reo_cmd_flush_queue(hal_ring_handle_t hal_ring_hdl,
 			BLOCK_RESOURCE_INDEX, cmd->u.fl_queue_params.index);
 	}
 
-	hal_srng_access_end(hal_soc, hal_ring_hdl);
 	val = reo_desc[CMD_HEADER_DW_OFFSET];
 	return HAL_GET_FIELD(UNIFORM_REO_CMD_HEADER_0, REO_CMD_NUMBER,
 				     val);
 }
 qdf_export_symbol(hal_reo_cmd_flush_queue);
 
-inline int hal_reo_cmd_flush_cache(hal_ring_handle_t hal_ring_hdl,
-				   hal_soc_handle_t hal_soc_hdl,
+inline int hal_reo_cmd_flush_cache(struct hal_reo_cmd_ctx *ctx,
 				   struct hal_reo_cmd_params *cmd)
 {
 	uint32_t *reo_desc, val;
 	struct hal_reo_cmd_flush_cache_params *cp;
 	uint8_t index = 0;
+	hal_ring_handle_t hal_ring_hdl = ctx->hal_ring_hdl;
+	hal_soc_handle_t hal_soc_hdl = ctx->hal_soc_hdl;
 	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
 
 	cp = &cmd->u.fl_cache_params;
-
-	hal_srng_access_start(hal_soc_hdl, hal_ring_hdl);
 
 	/* We need a cache block resource for this operation, and REO HW has
 	 * only 4 such blocking resources. These resources are managed using
@@ -593,16 +606,7 @@ inline int hal_reo_cmd_flush_cache(hal_ring_handle_t hal_ring_hdl,
 	HAL_DESC_SET_FIELD(reo_desc, REO_FLUSH_CACHE_2, FLUSH_ENTIRE_CACHE,
 		cp->flush_entire_cache);
 
-	if (hif_pm_runtime_get(hal_soc->hif_handle,
-			       RTPM_ID_HAL_REO_CMD) == 0) {
-		hal_srng_access_end(hal_soc_hdl, hal_ring_hdl);
-		hif_pm_runtime_put(hal_soc->hif_handle,
-				   RTPM_ID_HAL_REO_CMD);
-	} else {
-		hal_srng_access_end_reap(hal_soc_hdl, hal_ring_hdl);
-		hal_srng_set_event(hal_ring_hdl, HAL_SRNG_FLUSH_EVENT);
-		hal_srng_inc_flush_cnt(hal_ring_hdl);
-	}
+	ctx->resume_device = true;
 
 	val = reo_desc[CMD_HEADER_DW_OFFSET];
 	return HAL_GET_FIELD(UNIFORM_REO_CMD_HEADER_0, REO_CMD_NUMBER,
@@ -610,16 +614,15 @@ inline int hal_reo_cmd_flush_cache(hal_ring_handle_t hal_ring_hdl,
 }
 qdf_export_symbol(hal_reo_cmd_flush_cache);
 
-inline int hal_reo_cmd_unblock_cache(hal_ring_handle_t hal_ring_hdl,
-				     hal_soc_handle_t hal_soc_hdl,
+inline int hal_reo_cmd_unblock_cache(struct hal_reo_cmd_ctx *ctx,
 				     struct hal_reo_cmd_params *cmd)
 
 {
-	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
 	uint32_t *reo_desc, val;
 	uint8_t index = 0;
-
-	hal_srng_access_start(hal_soc_hdl, hal_ring_hdl);
+	hal_ring_handle_t hal_ring_hdl = ctx->hal_ring_hdl;
+	hal_soc_handle_t hal_soc_hdl = ctx->hal_soc_hdl;
+	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
 
 	if (cmd->u.unblk_cache_params.type == UNBLOCK_RES_INDEX) {
 		index = hal_find_one_bit(hal_soc->reo_res_bitmap);
@@ -661,21 +664,20 @@ inline int hal_reo_cmd_unblock_cache(hal_ring_handle_t hal_ring_hdl,
 			cmd->u.unblk_cache_params.index);
 	}
 
-	hal_srng_access_end(hal_soc, hal_ring_hdl);
 	val = reo_desc[CMD_HEADER_DW_OFFSET];
 	return HAL_GET_FIELD(UNIFORM_REO_CMD_HEADER_0, REO_CMD_NUMBER,
 				     val);
 }
 qdf_export_symbol(hal_reo_cmd_unblock_cache);
 
-inline int hal_reo_cmd_flush_timeout_list(hal_ring_handle_t hal_ring_hdl,
-					  hal_soc_handle_t hal_soc_hdl,
+inline int hal_reo_cmd_flush_timeout_list(struct hal_reo_cmd_ctx *ctx,
 					  struct hal_reo_cmd_params *cmd)
 {
-	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
 	uint32_t *reo_desc, val;
+	hal_ring_handle_t hal_ring_hdl = ctx->hal_ring_hdl;
+	hal_soc_handle_t hal_soc_hdl = ctx->hal_soc_hdl;
+	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
 
-	hal_srng_access_start(hal_soc_hdl, hal_ring_hdl);
 	reo_desc = hal_srng_src_get_next(hal_soc, hal_ring_hdl);
 	if (!reo_desc) {
 		QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_DEBUG,
@@ -708,24 +710,23 @@ inline int hal_reo_cmd_flush_timeout_list(hal_ring_handle_t hal_ring_hdl,
 		MINIMUM_FORWARD_BUF_COUNT,
 		cmd->u.fl_tim_list_params.min_fwd_buf);
 
-	hal_srng_access_end(hal_soc, hal_ring_hdl);
 	val = reo_desc[CMD_HEADER_DW_OFFSET];
 	return HAL_GET_FIELD(UNIFORM_REO_CMD_HEADER_0, REO_CMD_NUMBER,
 				     val);
 }
 qdf_export_symbol(hal_reo_cmd_flush_timeout_list);
 
-inline int hal_reo_cmd_update_rx_queue(hal_ring_handle_t hal_ring_hdl,
-				       hal_soc_handle_t hal_soc_hdl,
+inline int hal_reo_cmd_update_rx_queue(struct hal_reo_cmd_ctx *ctx,
 				       struct hal_reo_cmd_params *cmd)
 {
-	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
 	uint32_t *reo_desc, val;
 	struct hal_reo_cmd_update_queue_params *p;
+	hal_ring_handle_t hal_ring_hdl = ctx->hal_ring_hdl;
+	hal_soc_handle_t hal_soc_hdl = ctx->hal_soc_hdl;
+	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
 
 	p = &cmd->u.upd_queue_params;
 
-	hal_srng_access_start(hal_soc_hdl, hal_ring_hdl);
 	reo_desc = hal_srng_src_get_next(hal_soc, hal_ring_hdl);
 	if (!reo_desc) {
 		QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_DEBUG,
@@ -918,16 +919,7 @@ inline int hal_reo_cmd_update_rx_queue(hal_ring_handle_t hal_ring_hdl,
 	HAL_DESC_SET_FIELD(reo_desc, REO_UPDATE_RX_REO_QUEUE_8,
 		PN_127_96, p->pn_127_96);
 
-	if (hif_pm_runtime_get(hal_soc->hif_handle,
-			       RTPM_ID_HAL_REO_CMD) == 0) {
-		hal_srng_access_end(hal_soc_hdl, hal_ring_hdl);
-		hif_pm_runtime_put(hal_soc->hif_handle,
-				   RTPM_ID_HAL_REO_CMD);
-	} else {
-		hal_srng_access_end_reap(hal_soc_hdl, hal_ring_hdl);
-		hal_srng_set_event(hal_ring_hdl, HAL_SRNG_FLUSH_EVENT);
-		hal_srng_inc_flush_cnt(hal_ring_hdl);
-	}
+	ctx->resume_device = true;
 
 	val = reo_desc[CMD_HEADER_DW_OFFSET];
 	return HAL_GET_FIELD(UNIFORM_REO_CMD_HEADER_0, REO_CMD_NUMBER,
