@@ -372,7 +372,6 @@
 		irq_need_dev_resume_ok;
 		//report_rate_white_list_support;
 		old_firmware_flag_check;/*for old lsi project*/
-		exception_upload_support;
 
 		/*
 		 *Virtual Key Config:

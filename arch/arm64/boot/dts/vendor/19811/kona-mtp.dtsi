@@ -386,7 +386,6 @@
 		lcd_tp_refresh_support;
 		oos_lcd_tp_refresh_support;
 		oos_game_switch_support;
-		exception_upload_support;
 
 		/*
 		 *Virtual Key Config:
