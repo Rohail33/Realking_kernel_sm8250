@@ -369,7 +369,6 @@
 		freq_hop_simulate_support;
 		report_flow_unlock_support;
 		screenoff_fingerprint_info_support;
-		exception_upload_support;
 		/*
 		 *Virtual Key Config:
 		 *1:touchpanel,button-type: <virtualkey_type  supportted_button-map>
