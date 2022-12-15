@@ -644,6 +644,7 @@
 	qcom,platform-reset-gpio = <&tlmm 75 0>;
 	oplus,mdss-dsi-vendor-name = "AMB655UV01";
 	oplus,mdss-dsi-manufacture = "samsung1024";
+	oplus,dp-support-customized;
 
 	oplus,dsi-fod-brightness = <0 0xff>,
 				<2 0xf1>,
