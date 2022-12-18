@@ -34,10 +34,6 @@
 #include "binder_alloc.h"
 #include "binder_trace.h"
 
-#if IS_ENABLED(CONFIG_MILLET)
-#include <linux/millet.h>
-#endif
-
 struct list_lru binder_alloc_lru;
 
 static DEFINE_MUTEX(binder_alloc_mmap_lock);
@@ -48,7 +44,7 @@ enum {
 	BINDER_DEBUG_BUFFER_ALLOC           = 1U << 2,
 	BINDER_DEBUG_BUFFER_ALLOC_ASYNC     = 1U << 3,
 };
-static uint32_t binder_alloc_debug_mask = 0;
+static uint32_t binder_alloc_debug_mask = BINDER_DEBUG_USER_ERROR;
 
 module_param_named(debug_mask, binder_alloc_debug_mask,
 		   uint, 0644);
@@ -388,10 +384,6 @@ static void debug_low_async_space_locked(struct binder_alloc *alloc, int pid)
 	}
 }
 
-#if IS_ENABLED(CONFIG_MILLET)
-extern struct task_struct *binder_buff_owner(struct binder_alloc *alloc);
-#endif
-
 static struct binder_buffer *binder_alloc_new_buf_locked(
 				struct binder_alloc *alloc,
 				size_t data_size,
@@ -432,26 +424,6 @@ static struct binder_buffer *binder_alloc_new_buf_locked(
 				alloc->pid, extra_buffers_size);
 		return ERR_PTR(-EINVAL);
 	}
-#if IS_ENABLED(CONFIG_MILLET)
-	if (is_async
-		&& (alloc->free_async_space
-			< WARN_AHEAD_MSGS * (size + sizeof(struct binder_buffer))
-			|| alloc->free_async_space < binder_warn_ahead_space)) {
-			struct millet_data data;
-			struct task_struct *owner;
-
-			owner = binder_buff_owner(alloc);
-			if (owner) {
-				memset(&data, 0, sizeof(struct millet_data));
-				data.pri[0] =  BINDER_BUFF_WARN;
-				data.mod.k_priv.binder.trans.dst_task = owner;
-				data.mod.k_priv.binder.trans.src_task = current;
-				millet_sendmsg(BINDER_TYPE, owner, &data);
-			}
-	}
-	if (false)
-		binder_alloc_debug(BINDER_DEBUG_BUFFER_ALLOC, "%s", NAME_ARRAY[0]);
-#endif
 	if (is_async &&
 	    alloc->free_async_space < size + sizeof(struct binder_buffer)) {
 		binder_alloc_debug(BINDER_DEBUG_BUFFER_ALLOC,
@@ -584,35 +556,6 @@ err_alloc_buf_struct_failed:
 				 end_page_addr);
 	return ERR_PTR(-ENOMEM);
 }
-
-
-#if IS_ENABLED(CONFIG_MIHW)
-/**
-  * binder_alloc_get_free_space() - get free space available
-  * @alloc:      binder_alloc for this proc
-  *
-  * Return:      the bytes remaining in the address-space
- */
-size_t binder_alloc_get_free_space(struct binder_alloc *alloc)
-{
-	struct binder_buffer *buffer;
-	struct rb_node *n;
-	size_t buffer_size;
-	size_t free_buffers = 0;
-	size_t total_free_size = 0;
-	mutex_lock(&alloc->mutex);
-	n = alloc->free_buffers.rb_node;
-	for (n = rb_first(&alloc->free_buffers); n != NULL;
-		n = rb_next(n)) {
-		buffer = rb_entry(n, struct binder_buffer, rb_node);
-		buffer_size = binder_alloc_buffer_size(alloc, buffer);
-		free_buffers++;
-		total_free_size += buffer_size;
-	}
-	mutex_unlock(&alloc->mutex);
-	return total_free_size;
-}
-#endif
 
 /**
  * binder_alloc_new_buf() - Allocate a new binder buffer
@@ -761,8 +704,6 @@ static void binder_free_buf_locked(struct binder_alloc *alloc,
 	binder_insert_free_buffer(alloc, buffer);
 }
 
-static void binder_alloc_clear_buf(struct binder_alloc *alloc,
-				   struct binder_buffer *buffer);
 /**
  * binder_alloc_free_buf() - free a binder buffer
  * @alloc:	binder_alloc for this proc
@@ -773,18 +714,6 @@ static void binder_alloc_clear_buf(struct binder_alloc *alloc,
 void binder_alloc_free_buf(struct binder_alloc *alloc,
 			    struct binder_buffer *buffer)
 {
-	/*
-	 * We could eliminate the call to binder_alloc_clear_buf()
-	 * from binder_alloc_deferred_release() by moving this to
-	 * binder_alloc_free_buf_locked(). However, that could
-	 * increase contention for the alloc mutex if clear_on_free
-	 * is used frequently for large buffers. The mutex is not
-	 * needed for correctness here.
-	 */
-	if (buffer->clear_on_free) {
-		binder_alloc_clear_buf(alloc, buffer);
-		buffer->clear_on_free = false;
-	}
 	mutex_lock(&alloc->mutex);
 	binder_free_buf_locked(alloc, buffer);
 	mutex_unlock(&alloc->mutex);
@@ -879,10 +808,6 @@ void binder_alloc_deferred_release(struct binder_alloc *alloc)
 		/* Transaction should already have been freed */
 		BUG_ON(buffer->transaction);
 
-		if (buffer->clear_on_free) {
-			binder_alloc_clear_buf(alloc, buffer);
-			buffer->clear_on_free = false;
-		}
 		binder_free_buf_locked(alloc, buffer);
 		buffers++;
 	}
@@ -1213,36 +1138,6 @@ static struct page *binder_alloc_get_page(struct binder_alloc *alloc,
 	lru_page = &alloc->pages[index];
 	*pgoffp = pgoff;
 	return lru_page->page_ptr;
-}
-
-/**
- * binder_alloc_clear_buf() - zero out buffer
- * @alloc: binder_alloc for this proc
- * @buffer: binder buffer to be cleared
- *
- * memset the given buffer to 0
- */
-static void binder_alloc_clear_buf(struct binder_alloc *alloc,
-				   struct binder_buffer *buffer)
-{
-	size_t bytes = binder_alloc_buffer_size(alloc, buffer);
-	binder_size_t buffer_offset = 0;
-
-	while (bytes) {
-		unsigned long size;
-		struct page *page;
-		pgoff_t pgoff;
-		void *kptr;
-
-		page = binder_alloc_get_page(alloc, buffer,
-					     buffer_offset, &pgoff);
-		size = min_t(size_t, bytes, PAGE_SIZE - pgoff);
-		kptr = kmap(page) + pgoff;
-		memset(kptr, 0, size);
-		kunmap(page);
-		bytes -= size;
-		buffer_offset += size;
-	}
 }
 
 /**

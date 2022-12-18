@@ -233,6 +233,6 @@ source "drivers/gpu/msm/Kconfig"
 
 source "drivers/energy_model/Kconfig"
 
-source "drivers/mihw/Kconfig"
+source "drivers/kernelsu/Kconfig"
 
 endmenu
