@@ -2178,6 +2178,15 @@ static inline int set_stune_boost(char *st_name, int boost, int *boost_default)
 }
 #endif /* CONFIG_DYNAMIC_STUNE_BOOST */
 
+#ifdef CONFIG_CPU_FREQ_GOV_SCHEDUTIL
+unsigned long sched_cpu_util(int cpu);
+#else
+static inline unsigned long sched_cpu_util(int cpu)
+{
+	return 0;
+}
+#endif
+
 #ifdef CONFIG_RSEQ
 
 /*
