@@ -8390,8 +8390,8 @@ static ssize_t aw8697_activate_store(struct device *dev,
 	}
 
 	mutex_lock(&aw8697->lock);
-	if (aw8697->gain >= 0x75) {
-		aw8697->gain = 0x75;
+	if (aw8697->gain >= 0x80) {
+		aw8697->gain = 0x80;
 	}
 	aw8697_haptic_set_gain(aw8697, aw8697->gain);
 	if (val == 0) {
@@ -8540,15 +8540,15 @@ static struct aw8697_vmax_map vmax_map[] = {
 	{1300, 0x00, 0x60},
 	{1400, 0x00, 0x64},
 	{1500, 0x00, 0x70},
-	{1600, 0x00, 0x75},
-	{1700, 0x02, 0x75},
-	{1800, 0x04, 0x75},
-	{1900, 0x06, 0x75},
-	{2000, 0x08, 0x75},
-	{2100, 0x10, 0x75},
-	{2200, 0x12, 0x75},
-	{2300, 0x14, 0x75},
-	{2400, 0x16, 0x75},
+	{1600, 0x00, 0x80},
+	{1700, 0x02, 0x80},
+	{1800, 0x04, 0x80},
+	{1900, 0x06, 0x80},
+	{2000, 0x08, 0x80},
+	{2100, 0x10, 0x80},
+	{2200, 0x12, 0x80},
+	{2300, 0x14, 0x80},
+	{2400, 0x16, 0x80},
 };
 #else
 static struct aw8697_vmax_map vmax_map[] = {
@@ -10212,8 +10212,8 @@ static ssize_t aw8697_waveform_index_store(struct device *dev, struct device_att
 		aw8697_haptic_set_wav_loop(aw8697, 0, 0);
 #ifdef CONFIG_OPLUS_HAPTIC_OOS
 	if(databuf[0] == 0x10 || databuf[0] == 0x11 || databuf[0] == 0x12) {
-		if(aw8697->gain > 0x75) {
-			aw8697->gain = 0x75;
+		if(aw8697->gain > 0x80) {
+			aw8697->gain = 0x80;
 		}
 	}
 #endif
