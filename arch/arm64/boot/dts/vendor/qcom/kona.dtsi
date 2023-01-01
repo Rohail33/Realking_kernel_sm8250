@@ -350,7 +350,7 @@
 	};
 
 	chosen {
-		bootargs = "noirqdebug nodebugmon rcu_nocbs=0-7 kpti=off cgroup_disable=pressure";
+		bootargs = "rcupdate.rcu_normal_after_boot=1 quiet noirqdebug nodebugmon rcu_nocbs=0-7 kpti=off cgroup_disable=pressure";
 	};
 
 	firmware: firmware {
