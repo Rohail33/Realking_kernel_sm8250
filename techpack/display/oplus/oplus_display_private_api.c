@@ -2380,31 +2380,6 @@ int dsi_display_oplus_set_power(struct drm_connector *connector,
 			rc = dsi_panel_set_lp2(display->panel);
 			set_oplus_display_scene(OPLUS_DISPLAY_AOD_SCENE);
 			break;
-		case OPLUS_DISPLAY_AOD_HBM_SCENE:
-			/* Skip aod off if fingerprintpress exist */
-			if (!sde_crtc_get_fingerprint_pressed(connector->state->crtc->state)) {
-				mutex_lock(&display->panel->panel_lock);
-				dsi_display_clk_ctrl(display->dsi_clk_handle,
-						     DSI_CORE_CLK, DSI_CLK_ON);
-				if (display->panel->panel_initialized) {
-					if (!strcmp(display->panel->oplus_priv.vendor_name, "S6E3HC3") && (display->panel->panel_id2 >= 5)) {
-						rc = dsi_panel_tx_cmd_set(display->panel, DSI_CMD_AOD_HBM_OFF_PVT);
-					} else {
-						rc = dsi_panel_tx_cmd_set(display->panel, DSI_CMD_AOD_HBM_OFF);
-					}
-					display->panel->is_hbm_enabled = false;
-
-					oplus_update_aod_light_mode_unlock(display->panel);
-				} else {
-					pr_err("[%s][%d]failed to setting dsi command", __func__, __LINE__);
-				}
-				dsi_display_clk_ctrl(display->dsi_clk_handle,
-						     DSI_CORE_CLK, DSI_CLK_OFF);
-				mutex_unlock(&display->panel->panel_lock);
-				set_oplus_display_scene(OPLUS_DISPLAY_AOD_SCENE);
-			}
-
-			break;
 		case OPLUS_DISPLAY_AOD_SCENE:
 		default:
 			break;
@@ -2432,39 +2407,11 @@ int dsi_display_oplus_set_power(struct drm_connector *connector,
 				}
 			}
 #endif /* OPLUS_FEATURE_ADFR */
-			if (sde_crtc_get_fingerprint_mode(connector->state->crtc->state)) {
-				mutex_lock(&display->panel->panel_lock);
-				dsi_display_clk_ctrl(display->dsi_clk_handle,
-						     DSI_CORE_CLK, DSI_CLK_ON);
-				if (display->panel->panel_initialized) {
-					if (!strcmp(display->panel->oplus_priv.vendor_name, "S6E3HC3") && (display->panel->panel_id2 >= 5)) {
-						rc = dsi_panel_tx_cmd_set(display->panel, DSI_CMD_AOD_HBM_ON_PVT);
-					} else {
-						rc = dsi_panel_tx_cmd_set(display->panel, DSI_CMD_AOD_HBM_ON);
-
-						if ((display->panel->oplus_priv.is_oplus_project) &&
-							(!strcmp(display->panel->oplus_priv.vendor_name, "AMB655X")) &&
-							(get_oplus_display_scene() == OPLUS_DISPLAY_AOD_HBM_SCENE)) {
-							dsi_panel_tx_cmd_set(display->panel, DSI_CMD_HBM_ON);
-						}
-					}
-					if (!oplus_dimlayer_bl_enable_v2) {
-						display->panel->is_hbm_enabled = true;
-					}
-				} else {
-					pr_err("[%s][%d]failed to setting dsi command", __func__, __LINE__);
-				}
-				dsi_display_clk_ctrl(display->dsi_clk_handle,
-						     DSI_CORE_CLK, DSI_CLK_OFF);
-				mutex_unlock(&display->panel->panel_lock);
-				set_oplus_display_scene(OPLUS_DISPLAY_AOD_HBM_SCENE);
-			} else {
-				if (!strcmp(display->panel->oplus_priv.vendor_name, "AMS644VK04")) {
-					display->panel->need_power_on_backlight = true;
-				}
-				rc = dsi_panel_set_nolp(display->panel);
-				set_oplus_display_scene(OPLUS_DISPLAY_NORMAL_SCENE);
+			if (!strcmp(display->panel->oplus_priv.vendor_name, "AMS644VK04")) {
+				display->panel->need_power_on_backlight = true;
 			}
+			rc = dsi_panel_set_nolp(display->panel);
+			set_oplus_display_scene(OPLUS_DISPLAY_NORMAL_SCENE);
 		}
 		if (!strcmp(display->panel->oplus_priv.vendor_name, "S6E3HC3")) {
 			if (!sde_crtc_get_fingerprint_mode(connector->state->crtc->state)) {
