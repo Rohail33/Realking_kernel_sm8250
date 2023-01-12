@@ -33,6 +33,7 @@
 #include <linux/atomic.h>
 #include <linux/delay.h>
 #include <linux/gpio.h>
+#include <linux/input.h>
 #include <linux/interrupt.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -48,6 +49,8 @@
 #include <drm/drm_bridge.h>
 #include <drm/drm_notifier_mi.h>
 #endif
+
+#define FPC1020_NAME "fpc1020"
 
 #define FPC_GPIO_NO_DEFAULT -1
 #define FPC_GPIO_NO_DEFINED -2
@@ -128,6 +131,64 @@ struct fpc1020_data {
 	bool wait_finger_down;
 	struct work_struct work;
 #endif
+	struct input_handler input_handler;
+};
+
+static int input_connect(struct input_handler *handler,
+		struct input_dev *dev, const struct input_device_id *id) {
+	int rc;
+	struct input_handle *handle;
+	struct fpc1020_data *fpc1020 =
+		container_of(handler, struct fpc1020_data, input_handler);
+
+	if (!strstr(dev->name, "uinput-fpc"))
+		return -ENODEV;
+
+	handle = kzalloc(sizeof(struct input_handle), GFP_KERNEL);
+	if (!handle)
+		return -ENOMEM;
+
+	handle->dev = dev;
+	handle->handler = handler;
+	handle->name = FPC1020_NAME;
+	handle->private = fpc1020;
+
+	rc = input_register_handle(handle);
+	if (rc)
+		goto err_input_register_handle;
+
+	rc = input_open_device(handle);
+	if (rc)
+		goto err_input_open_device;
+
+	return 0;
+
+err_input_open_device:
+	input_unregister_handle(handle);
+err_input_register_handle:
+	kfree(handle);
+	return rc;
+}
+
+static bool input_filter(struct input_handle *handle, unsigned int type,
+		unsigned int code, int value)
+{
+	return true;
+}
+
+static void input_disconnect(struct input_handle *handle)
+{
+	input_close_device(handle);
+	input_unregister_handle(handle);
+	kfree(handle);
+}
+
+static const struct input_device_id ids[] = {
+	{
+		.flags = INPUT_DEVICE_ID_MATCH_EVBIT,
+		.evbit = { BIT_MASK(EV_KEY) },
+	},
+	{ },
 };
 
 static int reset_gpio_res(struct fpc1020_data *fpc1020);
@@ -1020,6 +1081,17 @@ static inline int fpc1020_probe(struct platform_device *pdev)
 	if (!fpc1020->ttw_wl)
 		return -ENOMEM;
 
+        fpc1020->input_handler.filter = input_filter;
+	fpc1020->input_handler.connect = input_connect;
+	fpc1020->input_handler.disconnect = input_disconnect;
+	fpc1020->input_handler.name = FPC1020_NAME;
+	fpc1020->input_handler.id_table = ids;
+	rc = input_register_handler(&fpc1020->input_handler);
+	if (rc) {
+		dev_err(dev, "failed to register key handler\n");
+		goto exit;
+	}
+
 	rc = sysfs_create_group(&dev->kobj, &attribute_group);
 	if (rc) {
 		dev_err(dev, "fpc could not create sysfs\n");
@@ -1085,7 +1157,7 @@ MODULE_DEVICE_TABLE(of, fpc1020_of_match);
 
 static struct platform_driver fpc1020_driver = {
 	.driver = {
-		   .name = "fpc1020",
+		   .name = FPC1020_NAME,
 		   .owner = THIS_MODULE,
 		   .of_match_table = fpc1020_of_match,
 		   },
