@@ -58,63 +58,6 @@ int gf_parse_dts(struct gf_dev *gf_dev)
 	return 0;
 }
 
-void gf_cleanup(struct gf_dev *gf_dev)
-{
-	pr_info("[info] %s\n", __func__);
-
-	if (gpio_is_valid(gf_dev->irq_gpio)) {
-		gpio_free(gf_dev->irq_gpio);
-		pr_info("remove irq_gpio success\n");
-	}
-
-	if (gpio_is_valid(gf_dev->reset_gpio)) {
-		gpio_free(gf_dev->reset_gpio);
-		pr_info("remove reset_gpio success\n");
-	}
-
-#ifdef GF_PW_CTL
-
-	if (gpio_is_valid(gf_dev->pwr_gpio)) {
-		gpio_free(gf_dev->pwr_gpio);
-		pr_info("remove pwr_gpio success\n");
-	}
-
-#endif
-}
-
-int gf_power_on(struct gf_dev *gf_dev)
-{
-	int rc = 0;
-#ifdef GF_PW_CTL
-
-	if (gpio_is_valid(gf_dev->pwr_gpio)) {
-		rc = gpio_direction_output(gf_dev->pwr_gpio, 1);
-		pr_info("---- power on result: %d----\n", rc);
-	} else {
-		pr_info("%s: gpio_is_invalid\n", __func__);
-	}
-
-#endif
-	msleep(10);
-	return rc;
-}
-
-int gf_power_off(struct gf_dev *gf_dev)
-{
-	int rc = 0;
-#ifdef GF_PW_CTL
-
-	if (gpio_is_valid(gf_dev->pwr_gpio)) {
-		rc = gpio_direction_output(gf_dev->pwr_gpio, 0);
-		pr_info("---- power off result: %d----\n", rc);
-	} else {
-		pr_info("%s: gpio_is_invalid\n", __func__);
-	}
-
-#endif
-	return rc;
-}
-
 int gf_hw_reset(struct gf_dev *gf_dev, unsigned int delay_ms)
 {
 	if (gf_dev == NULL) {
