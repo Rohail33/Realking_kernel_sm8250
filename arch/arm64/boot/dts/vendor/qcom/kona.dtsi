@@ -351,6 +351,7 @@
 
 	chosen {
 		bootargs = "noirqdebug nodebugmon rcupdate.rcu_expedited=1 nosoftlockup mce=ignore_ce  rcu_nocbs=0-7 kpti=off cgroup_disable=pressure";
+		rng-seed = <0x12345678>;
 	};
 
 	firmware: firmware {
