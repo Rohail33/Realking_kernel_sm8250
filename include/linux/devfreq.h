@@ -287,9 +287,6 @@ struct devfreq_passive_data {
 };
 #endif
 
-/* Caution: devfreq->lock must be locked before calling update_devfreq */
-extern int update_devfreq(struct devfreq *devfreq);
-
 #else /* !CONFIG_PM_DEVFREQ */
 static inline struct devfreq *devfreq_add_device(struct device *dev,
 					  struct devfreq_dev_profile *profile,
@@ -392,11 +389,6 @@ static inline struct devfreq *devfreq_get_devfreq_by_phandle(struct device *dev,
 }
 
 static inline int devfreq_update_stats(struct devfreq *df)
-{
-	return -EINVAL;
-}
-
-static inline int update_devfreq(struct devfreq *devfreq)
 {
 	return -EINVAL;
 }
