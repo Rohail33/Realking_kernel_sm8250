@@ -252,6 +252,7 @@ int synx_deinit_object(struct synx_table_row *row)
 		}
 	}
 
+
 	memset(row, 0, sizeof(*row));
 	clear_bit(index, synx_dev->bitmap);
 
