@@ -59,7 +59,7 @@ EXTRA_CFLAGS += -Wheader-guard
 endif
 
 # Module information used by KBuild framework
-obj-m += audio_extend_dlkm.o
+obj-y += audio_extend_dlkm.o
 audio_extend_dlkm-y := $(AUDIO_EXTEND_OBJS)
 
 # inject some build related information
