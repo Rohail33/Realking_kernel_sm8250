@@ -456,7 +456,7 @@ static enum tfa_error tfa98xx_write_re25(struct tfa_device *tfa, int value)
 static struct dentry *tfa98xx_debugfs = NULL;
 #endif /* CONFIG_DEBUG_FS */
 #define TFA98XX_DEBUG_FS_NAME "ftm_tfa98xx"
-int ftm_mode = 0;
+int tfa_ftm_mode = 0;
 static char ftm_load_file[15] = "load_file_ok";
 static char ftm_clk[9] = "clk_ok";
 char ftm_SpeakerCalibration[17] = "calibration_ok";
@@ -487,7 +487,7 @@ static ssize_t kernel_debug_read(struct file *file, char __user *buf,
 	n += scnprintf(buffer + n, sizeof(buffer) - n, "%s ", ftm_path);
 	n += scnprintf(buffer + n, sizeof(buffer) - n, "%s ", ftm_spk_resistance);
 	n += scnprintf(buffer + n, sizeof(buffer) - n, "%s ", ftm_tfa98xx_flag);
-	n += scnprintf(buffer + n, sizeof(buffer) - n, "%d ", ftm_mode);
+	n += scnprintf(buffer + n, sizeof(buffer) - n, "%d ", tfa_ftm_mode);
 
 	return simple_read_from_buffer(buf, count, pos, buffer, n);
 }
@@ -881,7 +881,7 @@ static enum tfa_error tfa98xx_tfa_start(struct tfa98xx *tfa98xx, int next_profil
 
 	#ifdef OPLUS_ARCH_EXTENDS
 	/*10h bit13/bit6(AREFS/CLKS)*/
-	if (ftm_mode == BOOT_MODE_FACTORY) {
+	if (tfa_ftm_mode == BOOT_MODE_FACTORY) {
 		tfa98xx_dsp_system_stable_v6(tfa98xx->tfa, &ready);
 		if (!ready) {
 			strcpy(ftm_clk, "clk_fail");
@@ -3751,7 +3751,7 @@ static void tfa98xx_dsp_init(struct tfa98xx *tfa98xx)
 		cancel_delayed_work(&tfa98xx->init_work);
 		tfa98xx->init_count = 0;
 		#ifdef OPLUS_ARCH_EXTENDS
-		if (ftm_mode == BOOT_MODE_FACTORY) {
+		if (tfa_ftm_mode == BOOT_MODE_FACTORY) {
 			strcpy(ftm_path, "open_path_fail");
 		}
 		#endif /* OPLUS_ARCH_EXTENDS */
@@ -3817,7 +3817,7 @@ static void tfa98xx_dsp_init(struct tfa98xx *tfa98xx)
 		}
 
 		#ifdef OPLUS_ARCH_EXTENDS
-		if (ftm_mode == BOOT_MODE_FACTORY) {
+		if (tfa_ftm_mode == BOOT_MODE_FACTORY) {
 			pr_info("finish for ftm ringtone\n");
 			strcpy(ftm_tfa98xx_flag, "ok");
 		}
@@ -5013,8 +5013,8 @@ static int tfa98xx_i2c_probe(struct i2c_client *i2c,
 				S_IFREG | S_IRUGO | S_IWUSR, NULL, &tfa98xx_debug_ops, (void *)TFA98XX_DEBUG_FS_NAME);
 	#endif /*CONFIG_DEBUG_FS*/
 
-	ftm_mode = get_boot_mode();
-	pr_info("ftm_mode=%d\n", ftm_mode);
+	tfa_ftm_mode = get_boot_mode();
+	pr_info("tfa_ftm_mode=%d\n", tfa_ftm_mode);
 	#endif /* OPLUS_ARCH_EXTENDS */
 
 	/* Register the sysfs files for climax backdoor access */

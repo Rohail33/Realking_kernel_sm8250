@@ -14,7 +14,7 @@
 #include "tfa_internal.h"
 
 #ifdef OPLUS_ARCH_EXTENDS
-extern int ftm_mode;
+extern int tfa_ftm_mode;
 extern char ftm_SpeakerCalibration[17];
 extern char ftm_spk_resistance[24];
 
@@ -2936,7 +2936,7 @@ enum Tfa98xx_Error tfaRunSpeakerCalibration_result_v6(struct tfa_device *tfa, in
 		pr_info("%s: valid mohms[%d, %d]\n", __func__, tfa->min_mohms, tfa->max_mohms);
 		if ((tfa->mohm[0] < tfa->min_mohms) || (tfa->mohm[0] > tfa->max_mohms)) {
 			pr_info("speaker_resistance_fail\n");
-			if (ftm_mode == BOOT_MODE_FACTORY) {
+			if (tfa_ftm_mode == BOOT_MODE_FACTORY) {
 				strcpy(ftm_spk_resistance, "speaker_resistance_fail");
 			}
 			g_speaker_resistance_fail = true;
@@ -3246,7 +3246,7 @@ enum Tfa98xx_Error tfaRunWaitCalibration_v6(struct tfa_device *tfa, int *calibra
 
 	if (*calibrateDone != 1) {
 		#ifdef OPLUS_ARCH_EXTENDS
-		if (ftm_mode == BOOT_MODE_FACTORY) {
+		if (tfa_ftm_mode == BOOT_MODE_FACTORY) {
 			strcpy(ftm_SpeakerCalibration, "calibration_fail");
 		}
 		#endif /* OPLUS_ARCH_EXTENDS */
