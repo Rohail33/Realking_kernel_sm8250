@@ -272,6 +272,10 @@ void operate_mode_switch(struct touchpanel_data *ts)
 			ts->ts_ops->tp_refresh_switch(ts->chip_data, ts->lcd_fps);
 		}
 
+		if (ts->oos_edge_limit_support) {
+			ts->ts_ops->mode_switch(ts->chip_data, MODE_LIMIT_SWITCH, ts->limit_switch);
+		}
+
         ts->ts_ops->mode_switch(ts->chip_data, MODE_NORMAL, true);
     }
 }
@@ -2767,6 +2771,226 @@ static const struct file_operations proc_limit_area_ops = {
 	.owner = THIS_MODULE,
 };
 
+static ssize_t proc_limit_switch_write(struct file *file, const char __user *buffer, size_t count, loff_t *ppos)
+{
+	int value = 0;
+	char buf[4] = {0};
+	struct touchpanel_data *ts = PDE_DATA(file_inode(file));
+
+	if (count > 4) {
+		TPD_INFO("%s:count > 4\n", __func__);
+		return count;
+	}
+
+	if (!ts) {
+		TPD_INFO("%s: ts is NULL\n", __func__);
+		return count;
+	}
+
+	if (copy_from_user(buf, buffer, count)) {
+		TPD_INFO("%s: read proc input error.\n", __func__);
+		return count;
+	}
+	sscanf(buf, "%d", &value);
+	ts->limit_switch = value;
+
+	TPD_DEBUG("%s: ts->limit_switch = %d\n", __func__, value);
+	if (ts->is_suspended == 0) {
+		mutex_lock(&ts->mutex);
+		ts->ts_ops->mode_switch(ts->chip_data, MODE_LIMIT_SWITCH, ts->limit_switch);
+		mutex_unlock(&ts->mutex);
+	}
+	return count;
+}
+
+static ssize_t proc_limit_switch_read(struct file *file, char __user *user_buf, size_t count, loff_t *ppos)
+{
+	int ret = 0;
+	char page[4] = {0};
+	struct touchpanel_data *ts = PDE_DATA(file_inode(file));
+
+	if (!ts) {
+		sprintf(page, "%d\n", -1); /*no support*/
+	} else {
+		sprintf(page, "%d\n", ts->limit_switch); /*support*/
+	}
+	ret = simple_read_from_buffer(user_buf, count, ppos, page, strlen(page));
+	return ret;
+}
+
+static ssize_t proc_dead_zone_write(struct file *file, const char __user *buffer, size_t count, loff_t *ppos)
+{
+	char buf[8] = {0};
+	int data[6] = {0};
+	int ret = -1;
+	struct touchpanel_data *ts = PDE_DATA(file_inode(file));
+
+	if (!ts) {
+		TPD_INFO("%s: ts is NULL\n", __func__);
+		return count;
+	}
+
+	ret = copy_from_user(buf, buffer, count);
+	if (ret) {
+		TPD_INFO("%s: read proc input error.\n", __func__);
+		return count;
+	}
+
+	if (sscanf(buf, "%d,%d", &data[0], &data[1]) == 2) {
+		if (data[0] > 50 || data[1] > 50) {
+			TPD_INFO("data not allow\n");
+			return count;
+		}
+		ts->dead_zone_l = data[0];
+		ts->dead_zone_p = data[1];
+	}
+	TPD_INFO("data[0] is %d, data[1] is %d\n", data[0], data[1]);
+
+	if (ts->is_suspended == 0) {
+		mutex_lock(&ts->mutex);
+		ts->ts_ops->mode_switch(ts->chip_data, MODE_LIMIT_SWITCH, ts->limit_switch);
+		mutex_unlock(&ts->mutex);
+	}
+	return count;
+}
+
+static ssize_t proc_dead_zone_read(struct file *file, char __user *user_buf, size_t count, loff_t *ppos)
+{
+	int ret = 0;
+	char page[9] = {0};
+	struct touchpanel_data *ts = PDE_DATA(file_inode(file));
+
+	if (!ts) {
+		sprintf(page, "%d\n", -1); /*no support*/
+	} else {
+		sprintf(page, "%d,%d\n", ts->dead_zone_l, ts->dead_zone_p);
+	}
+	ret = simple_read_from_buffer(user_buf, count, ppos, page, strlen(page));
+	return ret;
+}
+
+static const struct file_operations proc_limit_switch_fops = {
+	.write = proc_limit_switch_write,
+	.read  = proc_limit_switch_read,
+	.open  = simple_open,
+	.owner = THIS_MODULE,
+};
+
+static const struct file_operations proc_tp_dead_zone_fops = {
+	.write = proc_dead_zone_write,
+	.read = proc_dead_zone_read,
+	.open  = simple_open,
+	.owner = THIS_MODULE,
+};
+
+static ssize_t proc_corner_dead_zone_l_write(struct file *file, const char __user *buffer, size_t count, loff_t *ppos)
+{
+	char buf[8] = {0};
+	int data[6] = {0};
+	int ret = -1;
+	struct touchpanel_data *ts = PDE_DATA(file_inode(file));
+
+	if (!ts) {
+		TPD_INFO("%s: ts is NULL\n", __func__);
+		return count;
+	}
+
+	ret = copy_from_user(buf, buffer, count);
+	if (ret) {
+		TPD_INFO("%s: read proc input error.\n", __func__);
+		return count;
+	}
+
+	if (sscanf(buf, "%d,%d", &data[0], &data[1]) == 2) {
+		ts->corner_dead_zone_xl = data[0];
+		ts->corner_dead_zone_yl = data[1];
+	}
+	TPD_INFO("data[0] is %d, data[1] is %d\n", data[0], data[1]);
+
+	if (ts->is_suspended == 0) {
+		mutex_lock(&ts->mutex);
+		ts->ts_ops->mode_switch(ts->chip_data, MODE_LIMIT_SWITCH, ts->limit_switch);
+		mutex_unlock(&ts->mutex);
+	}
+	return count;
+}
+
+static ssize_t proc_corner_dead_zone_l_read(struct file *file, char __user *user_buf, size_t count, loff_t *ppos)
+{
+	int ret = 0;
+	char page[9] = {0};
+	struct touchpanel_data *ts = PDE_DATA(file_inode(file));
+
+	if (!ts) {
+		sprintf(page, "%d\n", -1);
+	} else {
+		sprintf(page, "%d,%d\n", ts->corner_dead_zone_xl, ts->corner_dead_zone_yl);
+	}
+	ret = simple_read_from_buffer(user_buf, count, ppos, page, strlen(page));
+	return ret;
+}
+
+static const struct file_operations proc_tp_corner_dead_zone_l_fops = {
+	.write = proc_corner_dead_zone_l_write,
+	.read = proc_corner_dead_zone_l_read,
+	.open  = simple_open,
+	.owner = THIS_MODULE,
+};
+
+static ssize_t proc_corner_dead_zone_p_write(struct file *file, const char __user *buffer, size_t count, loff_t *ppos)
+{
+	char buf[8] = {0};
+	int data[6] = {0};
+	int ret = -1;
+	struct touchpanel_data *ts = PDE_DATA(file_inode(file));
+
+	if (!ts) {
+		TPD_INFO("%s: ts is NULL\n", __func__);
+		return count;
+	}
+
+	ret = copy_from_user(buf, buffer, count);
+	if (ret) {
+		TPD_INFO("%s: read proc input error.\n", __func__);
+		return count;
+	}
+
+	if (sscanf(buf, "%d,%d", &data[0], &data[1]) == 2) {
+		ts->corner_dead_zone_xp = data[0];
+		ts->corner_dead_zone_yp = data[1];
+	}
+	TPD_INFO("data[0] is %d, data[1] is %d\n", data[0], data[1]);
+
+	if (ts->is_suspended == 0) {
+		mutex_lock(&ts->mutex);
+		ts->ts_ops->mode_switch(ts->chip_data, MODE_LIMIT_SWITCH, ts->limit_switch);
+		mutex_unlock(&ts->mutex);
+	}
+	return count;
+}
+
+static ssize_t proc_corner_dead_zone_p_read(struct file *file, char __user *user_buf, size_t count, loff_t *ppos)
+{
+	int ret = 0;
+	char page[9] = {0};
+	struct touchpanel_data *ts = PDE_DATA(file_inode(file));
+
+	if (!ts) {
+		sprintf(page, "%d\n", -1);
+	} else {
+		sprintf(page, "%d,%d\n", ts->corner_dead_zone_xp, ts->corner_dead_zone_yp);
+	}
+	ret = simple_read_from_buffer(user_buf, count, ppos, page, strlen(page));
+	return ret;
+}
+
+static const struct file_operations proc_tp_corner_dead_zone_p_fops = {
+	.write = proc_corner_dead_zone_p_write,
+	.read = proc_corner_dead_zone_p_read,
+	.open  = simple_open,
+	.owner = THIS_MODULE,
+};
+
 static ssize_t proc_limit_control_read(struct file *file, char __user *user_buf, size_t count, loff_t *ppos)
 {
 	ssize_t ret = 0;
@@ -2921,6 +3145,15 @@ static ssize_t proc_dir_control_write(struct file *file, const char __user *buff
         TPD_INFO("limit_area = %d; left_y1 = %d; right_y1 = %d; left_y2 = %d; right_y2 = %d; left_y3 = %d; right_y3 = %d\n",
                  ts->edge_limit.limit_area, ts->edge_limit.left_y1, ts->edge_limit.right_y1, ts->edge_limit.left_y2, ts->edge_limit.right_y2, ts->edge_limit.left_y3, ts->edge_limit.right_y3);
     }
+
+	if (ts->oos_edge_limit_support) {
+		ts->limit_switch = temp;
+
+		TPD_INFO("%s: ts->limit_switch = %d\n", __func__, temp);
+		if (ts->is_suspended == 0) {
+			ts->ts_ops->mode_switch(ts->chip_data, MODE_LIMIT_SWITCH, ts->limit_switch);
+		}
+	}
 
 	mutex_unlock(&ts->mutex);
 
@@ -4718,6 +4951,38 @@ static int init_touchpanel_proc(struct touchpanel_data *ts)
 		}
 	}
 
+	if (ts->oos_edge_limit_support) {
+		prEntry_tmp = proc_create_data("tpedge_limit_enable", 0666, prEntry_tp, &proc_limit_switch_fops, ts);
+		if (prEntry_tmp == NULL) {
+			ret = -ENOMEM;
+			TPD_INFO("%s: Couldn't create proc entry, %d\n", __func__, __LINE__);
+		}
+
+		prEntry_tmp = proc_create_data("tp_switch_dead_zone", 0666, prEntry_tp, &proc_tp_dead_zone_fops, ts);
+		if (prEntry_tmp == NULL) {
+			ret = -ENOMEM;
+			TPD_INFO("%s: Couldn't create proc entry, %d\n", __func__, __LINE__);
+		}
+
+		prEntry_tmp = proc_create_data("tp_switch_corner_dead_l_zone", 0666, prEntry_tp, &proc_tp_corner_dead_zone_l_fops, ts);
+		if (prEntry_tmp == NULL) {
+			ret = -ENOMEM;
+			TPD_INFO("%s: Couldn't create proc entry, %d\n", __func__, __LINE__);
+		}
+
+		prEntry_tmp = proc_create_data("tp_switch_corner_dead_p_zone", 0666, prEntry_tp, &proc_tp_corner_dead_zone_p_fops, ts);
+		if (prEntry_tmp == NULL) {
+			ret = -ENOMEM;
+			TPD_INFO("%s: Couldn't create proc entry, %d\n", __func__, __LINE__);
+		}
+
+		prEntry_tmp = proc_create_data("oplus_tp_direction", 0666, prEntry_tp, &touch_dir_proc_fops, ts);
+		if (prEntry_tmp == NULL) {
+			ret = -ENOMEM;
+			TPD_INFO("%s: Couldn't create proc entry, %d\n", __func__, __LINE__);
+		}
+	}
+
     //proc files-step2-4:/proc/touchpanel/double_tap_enable (black gesture related interface)
     if (ts->black_gesture_support) {
         prEntry_tmp = proc_create_data("double_tap_enable", 0666, prEntry_tp, &proc_gesture_control_fops, ts);
@@ -6493,6 +6758,7 @@ static int init_parse_dts(struct device *dev, struct touchpanel_data *ts)
 	}
 	ts->register_is_16bit       = of_property_read_bool(np, "register-is-16bit");
 	ts->edge_limit_support      = of_property_read_bool(np, "edge_limit_support");
+	ts->oos_edge_limit_support  = of_property_read_bool(np, "oos_edge_limit_support");
 	ts->fw_edge_limit_support   = of_property_read_bool(np, "fw_edge_limit_support");
 	ts->drlimit_remove_support  = of_property_read_bool(np, "drlimit_remove_support");
 	ts->glove_mode_support      = of_property_read_bool(np, "glove_mode_support");
@@ -6536,6 +6802,7 @@ static int init_parse_dts(struct device *dev, struct touchpanel_data *ts)
 	ts->report_rate_white_list_support = of_property_read_bool(np, "report_rate_white_list_support");
 	ts->lcd_tp_refresh_support = of_property_read_bool(np, "lcd_tp_refresh_support");
 	ts->smooth_level_support = of_property_read_bool(np, "smooth_level_support");
+	ts->project_info            = of_property_read_bool(np, "project_info");
 	ts->pen_support             = of_property_read_bool(np, "pen_support");
 	ts->exception_upload_support = of_property_read_bool(np, "exception_upload_support");
 	/*set disable suspend irq handler parameter, for of_property_read_bool return 1 when success and return 0 when item is not exist*/
@@ -7696,6 +7963,21 @@ int register_common_touch_device(struct touchpanel_data *pdata)
 	} else {
 		ts->irq = ts->client->irq;
 	}
+	if (ts->project_info == 1) {
+		ts->dead_zone_l = 25;
+		ts->dead_zone_p = 25;
+	} else {
+		ts->dead_zone_l = 20;
+		ts->dead_zone_p = 20;
+	}
+	if (ts->int_mode == UNBANNABLE) {
+		ts->dead_zone_l = 10;
+		ts->dead_zone_p = 10;
+		ts->corner_dead_zone_xl = 0x88;
+		ts->corner_dead_zone_yl = 0x44;
+		ts->corner_dead_zone_xp = 0x24;
+		ts->corner_dead_zone_yp = 0xF5;
+	}	
 	tp_register_times++;
 	g_tp = ts;
 	complete(&ts->pm_complete);
