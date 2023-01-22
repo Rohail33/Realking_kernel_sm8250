@@ -332,6 +332,11 @@ static inline void free_p4d_range(struct mmu_gather *tlb, pgd_t *pgd,
 	p4d_free_tlb(tlb, p4d, start);
 }
 
+void tlb_remove_table_sync_one(void)
+{
+	smp_call_function(tlb_remove_table_smp_sync, NULL, 1);
+}
+
 /*
  * This function frees user-level page tables of a process.
  */
