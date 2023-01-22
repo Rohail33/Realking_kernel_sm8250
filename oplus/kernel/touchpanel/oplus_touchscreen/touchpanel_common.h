@@ -191,6 +191,7 @@ typedef enum {
 	MODE_FACE_DETECT,
 	MODE_HEADSET,
 	MODE_WIRELESS_CHARGE,
+	MODE_LIMIT_SWITCH,
 	MODE_PEN_SCAN,
 } work_mode;
 
@@ -1020,6 +1021,16 @@ struct touchpanel_data {
 	u64 irq_interval;/*Record the interruption time to calculate the reporting rate*/
 	u64 irq_handle_time;/*Record the interruption handle time*/
 	int high_frame_value;
+
+	u8 limit_switch;
+	int dead_zone_l;                /*landscape dead zone*/
+	int dead_zone_p;                /*portrait dead zone*/
+	int corner_dead_zone_xl;
+	int corner_dead_zone_yl;
+	int corner_dead_zone_xp;
+	int corner_dead_zone_yp;
+	bool project_info;              /*different project using different parameter*/
+	bool oos_edge_limit_support;    /*oos system edge_limit support feature*/
 };
 
 #ifdef CONFIG_OPLUS_TP_APK
