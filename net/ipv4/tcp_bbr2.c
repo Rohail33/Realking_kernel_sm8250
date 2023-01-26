@@ -861,7 +861,7 @@ static void bbr_set_cwnd(struct sock *sk, const struct rate_sample *rs,
 {
 	struct tcp_sock *tp = tcp_sk(sk);
 	struct bbr *bbr = inet_csk_ca(sk);
-	u32 target_cwnd = 0, prev_cwnd = tp->snd_cwnd, max_probe;
+	u32 target_cwnd = 0, max_probe;
 
 	if (!acked)
 		goto done;  /* no packet fully ACKed; just apply caps */
