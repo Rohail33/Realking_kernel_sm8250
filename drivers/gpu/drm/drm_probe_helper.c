@@ -460,8 +460,9 @@ retry:
 		 */
 		dev->mode_config.delayed_event = true;
 		if (dev->mode_config.poll_enabled)
-			queue_delayed_work(system_power_efficient_wq, 
-					   &dev->mode_config.output_poll_work, 0);
+			mod_delayed_work(system_power_efficient_wq,
+					 &dev->mode_config.output_poll_work,
+					 0);
 	}
 
 	/* Re-enable polling in case the global poll config changed. */
