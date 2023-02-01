@@ -108,3 +108,4 @@ obj-$(CONFIG_OEM_QMI)	+= oem_qmi_client.o
 obj-y                           += qrc/
 obj-$(CONFIG_KINECTICS_XR_NORDIC) += kxrctrl/
 obj-$(CONFIG_FORCE_FAST_CHARGE) += fastchg.o
+obj-$(CONFIG_KPROFILES) += kprofiles/
