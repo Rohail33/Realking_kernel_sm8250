@@ -495,10 +495,8 @@ static int pm8xxx_rtc_probe(struct platform_device *pdev)
 	spin_lock_init(&rtc_dd->ctrl_reg_lock);
 
 	rtc_dd->regmap = dev_get_regmap(pdev->dev.parent, NULL);
-	if (!rtc_dd->regmap) {
-		dev_err(&pdev->dev, "Parent regmap unavailable.\n");
+	if (!rtc_dd->regmap)
 		return -ENXIO;
-	}
 
 	rtc_dd->rtc_alarm_irq = platform_get_irq(pdev, 0);
 	if (rtc_dd->rtc_alarm_irq < 0)
@@ -531,10 +529,8 @@ static int pm8xxx_rtc_probe(struct platform_device *pdev)
 					  pm8xxx_alarm_trigger,
 					  IRQF_TRIGGER_RISING,
 					  "pm8xxx_rtc_alarm", rtc_dd);
-	if (rc < 0) {
-		dev_err(&pdev->dev, "Request IRQ failed (%d)\n", rc);
+	if (rc < 0)
 		return rc;
-	}
 
 	return rtc_register_device(rtc_dd->rtc);
 	if (of_property_read_bool(pdev->dev.of_node, "disable-alarm-wakeup"))
