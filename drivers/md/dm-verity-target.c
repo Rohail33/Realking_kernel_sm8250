@@ -961,7 +961,6 @@ int verity_ctr(struct dm_target *ti, unsigned argc, char **argv)
 	struct dm_verity *v;
 	struct dm_arg_set as;
 	unsigned int num;
-	unsigned int wq_flags;
 	unsigned long long num_ll;
 	int r;
 	int i;
@@ -1185,8 +1184,6 @@ int verity_ctr(struct dm_target *ti, unsigned argc, char **argv)
 		goto bad;
 	}
 
-	/* WQ_UNBOUND greatly improves performance when running on ramdisk */
-	wq_flags = WQ_MEM_RECLAIM | WQ_UNBOUND;
 	/*
 	 * Using WQ_HIGHPRI improves throughput and completion latency by
 	 * reducing wait times when reading from a dm-verity device.
@@ -1196,8 +1193,7 @@ int verity_ctr(struct dm_target *ti, unsigned argc, char **argv)
 	 * will fall-back to using it for error handling (or if the bufio cache
 	 * doesn't have required hashes).
 	 */
-	wq_flags |= WQ_HIGHPRI;
-	v->verify_wq = alloc_workqueue("kverityd", wq_flags, num_online_cpus());
+	v->verify_wq = alloc_workqueue("kverityd", WQ_MEM_RECLAIM | WQ_HIGHPRI, 0);
 	if (!v->verify_wq) {
 		ti->error = "Cannot allocate workqueue";
 		r = -ENOMEM;
