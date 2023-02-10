@@ -84,6 +84,7 @@ ktime_t oplus_backlight_time;
 u32 oplus_backlight_delta = 0;
 
 extern int oplus_dimlayer_hbm;
+extern int oplus_dimlayer_hbm_saved;
 extern int enable_global_hbm_flags;
 
 /*#ifdef OPLUS_BUG_STABILITY*/
@@ -1749,7 +1750,7 @@ static ssize_t oplus_display_set_dimlayer_enable(struct device *dev,
 static ssize_t oplus_display_get_dimlayer_hbm(struct device *dev,
                                 struct device_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%d\n", oplus_dimlayer_hbm);
+	return sprintf(buf, "%d\n", oplus_dimlayer_hbm_saved);
 }
 
 extern int oplus_dimlayer_hbm_vblank_count;
@@ -1765,24 +1766,28 @@ static ssize_t oplus_display_set_dimlayer_hbm(struct device *dev,
 
 	sscanf(buf, "%d", &value);
 	value = !!value;
-	if (oplus_dimlayer_hbm == value)
+	if (oplus_dimlayer_hbm_saved == value)
 		return count;
-	if (!dsi_connector || !dsi_connector->state || !dsi_connector->state->crtc) {
-		pr_err("[%s]: display not ready\n", __func__);
-	} else {
-		err = drm_crtc_vblank_get(dsi_connector->state->crtc);
-		if (err) {
-			pr_err("failed to get crtc vblank, error=%d\n", err);
+	if (get_oplus_display_power_status() == OPLUS_DISPLAY_POWER_ON) {
+		if (!dsi_connector || !dsi_connector->state || !dsi_connector->state->crtc) {
+			pr_err("[%s]: display not ready\n", __func__);
 		} else {
-			/* do vblank put after 5 frames */
-			oplus_dimlayer_hbm_vblank_count = 5;
-			atomic_inc(&oplus_dimlayer_hbm_vblank_ref);
+			err = drm_crtc_vblank_get(dsi_connector->state->crtc);
+			if (err) {
+				pr_err("failed to get crtc vblank, error=%d\n", err);
+			} else {
+				/* do vblank put after 5 frames */
+				oplus_dimlayer_hbm_vblank_count = 5;
+				atomic_inc(&oplus_dimlayer_hbm_vblank_ref);
+			}
 		}
+		oplus_dimlayer_hbm = value;
 	}
-	oplus_dimlayer_hbm = value;
+	oplus_dimlayer_hbm_saved = value;
 
 #ifdef OPLUS_BUG_STABILITY
-	pr_err("debug for oplus_display_set_dimlayer_hbm set oplus_dimlayer_hbm = %d\n",oplus_dimlayer_hbm);
+	pr_err("debug for oplus_display_set_dimlayer_hbm set oplus_dimlayer_hbm = %d, oplus_dimlayer_hbm_saved = %d\n",
+		oplus_dimlayer_hbm, oplus_dimlayer_hbm_saved);
 #endif
 
 	return count;
@@ -2376,6 +2381,8 @@ int dsi_display_oplus_set_power(struct drm_connector *connector,
 		switch(get_oplus_display_scene()) {
 		case OPLUS_DISPLAY_NORMAL_SCENE:
 		case OPLUS_DISPLAY_NORMAL_HBM_SCENE:
+			oplus_dimlayer_hbm = 0;
+			oplus_dimlayer_vblank(connector->state->crtc);
 			rc = dsi_panel_set_lp1(display->panel);
 			rc = dsi_panel_set_lp2(display->panel);
 			set_oplus_display_scene(OPLUS_DISPLAY_AOD_SCENE);
@@ -2439,6 +2446,13 @@ int dsi_display_oplus_set_power(struct drm_connector *connector,
 		/*  A tablet Pad, add for NT36523 resume touch here */
 		if(strcmp(display->panel->name, "nt36523 lcd vid mode dsi panel"))
 			msm_drm_notifier_call_chain(MSM_DRM_EVENT_BLANK, &notifier_data);
+
+		if (oplus_dimlayer_hbm != oplus_dimlayer_hbm_saved) {
+			oplus_dimlayer_hbm = oplus_dimlayer_hbm_saved;
+			oplus_dimlayer_vblank(connector->state->crtc);
+		}
+		msm_drm_notifier_call_chain(MSM_DRM_EVENT_BLANK,
+					    &notifier_data);
 		break;
 	case SDE_MODE_DPMS_OFF:
 	default:
