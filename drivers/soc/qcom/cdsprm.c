@@ -241,7 +241,7 @@ int cdsprm_cxlimit_npu_limit_deregister(void)
 }
 EXPORT_SYMBOL(cdsprm_cxlimit_npu_limit_deregister);
 
-int cdsprm_compute_core_set_priority(unsigned int priority_idx)
+static int cdsprm_compute_core_set_priority(unsigned int priority_idx)
 {
 	struct sysmon_msg_tx rpmsg_msg_tx;
 
@@ -262,7 +262,6 @@ int cdsprm_compute_core_set_priority(unsigned int priority_idx)
 
 	return 0;
 }
-EXPORT_SYMBOL(cdsprm_compute_core_set_priority);
 
 int cdsprm_cxlimit_npu_activity_notify(unsigned int b_enabled)
 {
