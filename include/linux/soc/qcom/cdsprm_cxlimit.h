@@ -30,8 +30,6 @@ enum cdsprm_compute_priority {
 	CDSPRM_COMPUTE_BALANCED = 5,
 };
 
-int cdsprm_compute_core_set_priority(enum cdsprm_compute_priority);
-
 /* For NPU driver */
 
 /**
