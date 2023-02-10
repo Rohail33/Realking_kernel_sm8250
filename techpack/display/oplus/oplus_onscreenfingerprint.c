@@ -750,7 +750,7 @@ bool is_skip_pcc(struct drm_crtc *crtc)
 {
 	if (OPLUS_DISPLAY_POWER_DOZE_SUSPEND == get_oplus_display_power_status() ||
 	    OPLUS_DISPLAY_POWER_DOZE == get_oplus_display_power_status() ||
-	    sde_crtc_get_fingerprint_mode(crtc->state))
+	    sde_crtc_get_fingerprint_pressed(crtc->state))
 		return true;
 
 	return false;
