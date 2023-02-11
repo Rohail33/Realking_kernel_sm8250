@@ -301,6 +301,7 @@ __printf(1, 2)
 void panic(const char *fmt, ...) __noreturn __cold;
 void long_press(void);
 void nmi_panic(struct pt_regs *regs, const char *msg);
+void check_panic_on_warn(const char *origin);
 extern void oops_enter(void);
 extern void oops_exit(void);
 void print_oops_end_marker(void);
