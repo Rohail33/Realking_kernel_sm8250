@@ -150,27 +150,27 @@ static inline int kp_notifier_callback(struct notifier_block *self,
 				       unsigned long event, void *data)
 {
 	struct kprofiles_events *evdata = data;
-	int *blank;
+	unsigned int blank;
 
-	if (event != KP_EVENT_BLANK
-#ifdef CONFIG_AUTO_KPROFILES_MSM_DRM
-	    || !evdata || !evdata->data || evdata->id != MSM_DRM_PRIMARY_DISPLAY
-#endif
-	)
-		return NOTIFY_OK;
+	if (event != KP_EVENT_BLANK)
+		return 0;
 
-	blank = evdata->data;
-	switch (*blank) {
-	case KP_BLANK_POWERDOWN:
-		if (!screen_on)
+	if (evdata && evdata->data && event == KP_EVENT_BLANK) {
+		blank = *(int *)(evdata->data);
+		switch (blank) {
+		case KP_BLANK_POWERDOWN:
+			if (!screen_on)
+				break;
+			screen_on = false;
 			break;
-		screen_on = false;
-		break;
-	case KP_BLANK_UNBLANK:
-		if (screen_on)
+		case KP_BLANK_UNBLANK:
+			if (screen_on)
+				break;
+			screen_on = true;
 			break;
-		screen_on = true;
-		break;
+		default:
+			break;
+		}
 	}
 
 	return NOTIFY_OK;
