@@ -155,7 +155,7 @@ static inline int kp_notifier_callback(struct notifier_block *self,
 	if (event != KP_EVENT_BLANK)
 		return 0;
 
-	if (evdata && evdata->data && event == KP_EVENT_BLANK) {
+	if (evdata && evdata->data) {
 		blank = *(int *)(evdata->data);
 		switch (blank) {
 		case KP_BLANK_POWERDOWN:
