@@ -4727,7 +4727,7 @@ static int bpf_ipv4_fib_lookup(struct net *net, struct bpf_fib_lookup *params,
 	 * rcu_read_lock_bh is not needed here
 	 */
 	neigh = __ipv4_neigh_lookup_noref(dev, (__force u32)params->ipv4_dst);
-	if (!neigh)
+	if (!neigh || !(neigh->nud_state & NUD_VALID))
 		return BPF_FIB_LKUP_RET_NO_NEIGH;
 
 	return bpf_fib_set_fwd_params(params, neigh, dev);
@@ -4844,7 +4844,7 @@ static int bpf_ipv6_fib_lookup(struct net *net, struct bpf_fib_lookup *params,
 	 */
 	neigh = ___neigh_lookup_noref(ipv6_stub->nd_tbl, neigh_key_eq128,
 				      ndisc_hashfn, dst, dev);
-	if (!neigh)
+	if (!neigh || !(neigh->nud_state & NUD_VALID))
 		return BPF_FIB_LKUP_RET_NO_NEIGH;
 
 	return bpf_fib_set_fwd_params(params, neigh, dev);
