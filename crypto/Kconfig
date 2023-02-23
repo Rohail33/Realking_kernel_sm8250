@@ -1857,6 +1857,7 @@ config CRYPTO_ZSTD
 	select CRYPTO_ACOMP2
 	select ZSTD_COMPRESS
 	select ZSTD_DECOMPRESS
+	select ZSTD_COMMON
 	help
 	  This is the zstd algorithm.
 
