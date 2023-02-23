@@ -35,6 +35,7 @@ extern int oplus_underbrightness_alpha;
 extern int oplus_dimlayer_dither_threshold;
 extern int oplus_panel_alpha;
 extern int hbm_mode;
+extern int oplus_skip_pcc_override;
 extern bool oplus_ffl_trigger_finish;
 extern int dynamic_osc_clock;
 extern ktime_t oplus_onscreenfp_pressed_time;
@@ -749,7 +750,8 @@ int sde_crtc_config_fingerprint_dim_layer(struct drm_crtc_state *crtc_state, int
 
 bool is_skip_pcc(struct drm_crtc *crtc)
 {
-	if (sde_crtc_get_fingerprint_pressed(crtc->state))
+	if (sde_crtc_get_fingerprint_pressed(crtc->state)
+		&& oplus_skip_pcc_override == 0)
 		return true;
 
 	return false;
