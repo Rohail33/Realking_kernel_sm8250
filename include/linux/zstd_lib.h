@@ -2938,5 +2938,7 @@ ZSTD_registerSequenceProducer(
   ZSTD_sequenceProducer_F* sequenceProducer
 );
 
+ZSTDLIB_API size_t ZSTD_startingInputLength(ZSTD_format_e format);
+
 #endif   /* ZSTD_H_ZSTD_STATIC_LINKING_ONLY */
 
