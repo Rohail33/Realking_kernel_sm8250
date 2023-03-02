@@ -282,7 +282,7 @@ uint32_t get_hw_version_major(void);
 uint32_t get_hw_version_minor(void);
 uint32_t get_hw_version_build(void);
 const char *product_name_get(void);
-enum defective_part_type {
+enum subset_part_type {
 	PART_UNKNOWN      = 0,
 	PART_GPU          = 1,
 	PART_VIDEO        = 2,
@@ -301,7 +301,7 @@ enum defective_part_type {
 	NUM_PARTS_MAX,
 };
 
-enum defective_cluster_type {
+enum subset_cluster_type {
 	CLUSTER_CPUSS      = 0,
 	NUM_CLUSTERS_MAX,
 };
@@ -316,8 +316,8 @@ uint32_t socinfo_get_platform_type(void);
 uint32_t socinfo_get_platform_subtype(void);
 uint32_t socinfo_get_platform_version(void);
 uint32_t socinfo_get_serial_number(void);
-uint32_t socinfo_get_cluster_info(enum defective_cluster_type cluster);
-bool socinfo_get_part_info(enum defective_part_type part);
+uint32_t socinfo_get_cluster_info(enum subset_cluster_type cluster);
+bool socinfo_get_part_info(enum subset_part_type part);
 enum pmic_model socinfo_get_pmic_model(void);
 uint32_t socinfo_get_pmic_die_revision(void);
 int __init socinfo_init(void) __must_check;
