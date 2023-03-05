@@ -740,7 +740,7 @@ static struct sk_buff *qrtr_get_backup(size_t len)
 		skb = skb_dequeue(&qrtr_backup_hi);
 
 	if (skb)
-		queue_work(system_unbound_wq, &qrtr_backup_work);
+		queue_work(system_power_efficient_wq, &qrtr_backup_work);
 
 	return skb;
 }
@@ -750,7 +750,7 @@ static void qrtr_backup_init(void)
 	skb_queue_head_init(&qrtr_backup_lo);
 	skb_queue_head_init(&qrtr_backup_hi);
 	INIT_WORK(&qrtr_backup_work, qrtr_alloc_backup);
-	queue_work(system_unbound_wq, &qrtr_backup_work);
+	queue_work(system_power_efficient_wq, &qrtr_backup_work);
 }
 
 static void qrtr_backup_deinit(void)
