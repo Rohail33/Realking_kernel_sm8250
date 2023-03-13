@@ -158,3 +158,8 @@ drivers/input/touchscreen/focaltech_touch/include/pramboot
 
 # Kernel SU
 KernelSU
+
+# Trash
+out/
+*.zip
+*.log
