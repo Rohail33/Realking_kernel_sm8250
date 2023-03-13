@@ -138,3 +138,8 @@ kernel/configs/android-*.cfg
 
 # Tech package directories
 #techpack/
+
+# Trash
+out/
+*.zip
+*.log
