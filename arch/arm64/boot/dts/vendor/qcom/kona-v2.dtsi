@@ -40,11 +40,7 @@
 	qcom,spss-prod-firmware-name = "spss2p";	/* 8 chars max */
 };
 
-#ifdef CONFIG_BOARD_APOLLO
-#include "kona-v2-gpu-apollo.dtsi"
-#else
 #include "kona-v2-gpu.dtsi"
-#endif
 
 &cpu0_cpu_l3_latmon {
 	qcom,core-dev-table =

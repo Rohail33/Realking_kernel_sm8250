@@ -22,6 +22,7 @@
 *.elf
 *.gcno
 *.gz
+*.i
 *.ko
 *.lex.c
 *.ll
@@ -143,21 +144,6 @@ kernel/configs/android-*.cfg
 scripts/build_dtbo
 scripts/build_kernel
 scripts/update_defconfig
-
-# Out folder
-out
-
-#GPU
-arch/arm64/boot/dts/vendor/qcom/kona-v2-gpu.dtsi
-
-# FTS firmwares
-drivers/input/touchscreen/focaltech_3658u/include/firmware
-drivers/input/touchscreen/focaltech_spi/include/firmware
-drivers/input/touchscreen/focaltech_touch/include/firmware
-drivers/input/touchscreen/focaltech_touch/include/pramboot
-
-# Kernel SU
-KernelSU
 
 # Trash
 out/
