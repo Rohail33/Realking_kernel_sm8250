@@ -34,7 +34,7 @@ contains() {
 
 # file_getprop <file> <property>
 file_getprop() {
-  grep "^$2=" "$1" | cut -d= -f2-;
+  grep "^$2=" "$1" | tail -n1 | cut -d= -f2-;
 }
 ###
 
@@ -92,8 +92,8 @@ split_boot() {
     fi;
     $bin/unpackelf -i $bootimg;
     [ $? != 0 ] && dumpfail=1;
-    mv -f boot.img-zImage kernel.gz;
-    mv -f boot.img-ramdisk.cpio.gz ramdisk.cpio.gz;
+    mv -f boot.img-kernel kernel.gz;
+    mv -f boot.img-ramdisk ramdisk.cpio.gz;
     mv -f boot.img-cmdline cmdline.txt 2>/dev/null;
     if [ -f boot.img-dt -a ! -f "$bin/elftool" ]; then
       case $(od -ta -An -N4 boot.img-dt | sed -e 's/ del//' -e 's/   //g') in
@@ -160,7 +160,7 @@ unpack_ramdisk() {
   if [ "$comp" ]; then
     mv -f ramdisk.cpio ramdisk.cpio.$comp;
     $bin/magiskboot decompress ramdisk.cpio.$comp ramdisk.cpio;
-    if [ $? != 0 ]; then
+    if [ $? != 0 ] && $comp --help 2>/dev/null; then
       echo "Attempting ramdisk unpack with busybox $comp..." >&2;
       $comp -dc ramdisk.cpio.$comp > ramdisk.cpio;
     fi;
@@ -216,7 +216,7 @@ repack_ramdisk() {
   [ $((magisk_patched & 3)) -eq 1 ] && $bin/magiskboot cpio ramdisk-new.cpio "extract .backup/.magisk $split_img/.magisk";
   if [ "$comp" ]; then
     $bin/magiskboot compress=$comp ramdisk-new.cpio;
-    if [ $? != 0 ]; then
+    if [ $? != 0 ] && $comp --help 2>/dev/null; then
       echo "Attempting ramdisk repack with busybox $comp..." >&2;
       $comp -9c ramdisk-new.cpio > ramdisk-new.cpio.$comp;
       [ $? != 0 ] && packfail=1;
@@ -304,7 +304,7 @@ flash_boot() {
     $bin/rkcrc -k $ramdisk $home/boot-new.img;
   elif [ -f "$bin/mkbootimg" -a -f "$bin/unpackelf" -a -f boot.img-base ]; then
     [ "$dt" ] && dt="--dt $dt";
-    $bin/mkbootimg --kernel $kernel --ramdisk $ramdisk --cmdline "$cmdline" --base $home --pagesize $pagesize --kernel_offset $kernel_offset --ramdisk_offset $ramdisk_offset --tags_offset "$tags_offset" $dt --output $home/boot-new.img;
+    $bin/mkbootimg --kernel $kernel --ramdisk $ramdisk --cmdline "$cmdline" --base $base --pagesize $pagesize --kernel_offset $kernel_offset --ramdisk_offset $ramdisk_offset --tags_offset "$tags_offset" $dt --output $home/boot-new.img;
   else
     [ "$kernel" ] && cp -f $kernel kernel;
     [ "$ramdisk" ] && cp -f $ramdisk ramdisk.cpio;
@@ -320,19 +320,19 @@ flash_boot() {
         fi;
         if [ $((magisk_patched & 3)) -eq 1 ]; then
           ui_print " " "Magisk detected! Patching kernel so reflashing Magisk is not necessary...";
-          comp=$($bin/magiskboot decompress kernel 2>&1 | grep -v 'raw' | sed -n 's;.*\[\(.*\)\];\1;p');
+          comp=$($bin/magiskboot decompress kernel 2>&1 | grep -vE 'raw|zimage' | sed -n 's;.*\[\(.*\)\];\1;p');
           ($bin/magiskboot split $kernel || $bin/magiskboot decompress $kernel kernel) 2>/dev/null;
-          if [ $? != 0 -a "$comp" ]; then
+          if [ $? != 0 -a "$comp" ] && $comp --help 2>/dev/null; then
             echo "Attempting kernel unpack with busybox $comp..." >&2;
             $comp -dc $kernel > kernel;
           fi;
           $bin/magiskboot hexpatch kernel 736B69705F696E697472616D667300 77616E745F696E697472616D667300;
           if [ "$(file_getprop $home/anykernel.sh do.systemless)" == 1 ]; then
-            strings kernel | grep -E 'Linux version.*#' > $home/vertmp;
+            strings kernel | grep -E -m1 'Linux version.*#' > $home/vertmp;
           fi;
           if [ "$comp" ]; then
             $bin/magiskboot compress=$comp kernel kernel.$comp;
-            if [ $? != 0 ]; then
+            if [ $? != 0 ] && $comp --help 2>/dev/null; then
               echo "Attempting kernel repack with busybox $comp..." >&2;
               $comp -9c kernel > kernel.$comp;
             fi;
@@ -349,17 +349,24 @@ flash_boot() {
             *-dtb) rm -f kernel_dtb;;
           esac;
         fi;
-        unset magisk_patched KEEPFORCEENCRYPT KEEPVERITY SHA1 TWOSTAGEINIT;
+        unset magisk_patched KEEPFORCEENCRYPT KEEPVERITY SHA1 TWOSTAGEINIT; # leave PATCHVBMETAFLAG set for repack
       ;;
     esac;
     case $ramdisk_compression in
       none|cpio) nocompflag="-n";;
     esac;
+    case $patch_vbmeta_flag in
+      auto|"") [ "$PATCHVBMETAFLAG" ] || export PATCHVBMETAFLAG=false;;
+      1) export PATCHVBMETAFLAG=true;;
+      *) export PATCHVBMETAFLAG=false;;
+    esac;
     $bin/magiskboot repack $nocompflag $bootimg $home/boot-new.img;
+    unset PATCHVBMETAFLAG;
   fi;
   if [ $? != 0 ]; then
     abort "Repacking image failed. Aborting...";
   fi;
+  [ -f .magisk ] && touch $home/magisk_patched;
 
   cd $home;
   if [ -f "$bin/futility" -a -d "$bin/chromeos" ]; then
@@ -389,7 +396,7 @@ flash_boot() {
   if [ ! -f boot-new.img ]; then
     abort "No repacked image found to flash. Aborting...";
   elif [ "$(wc -c < boot-new.img)" -gt "$(wc -c < boot.img)" ]; then
-    abort "New image larger than boot partition. Aborting...";
+    abort "New image larger than target partition. Aborting...";
   fi;
   blockdev --setrw $block 2>/dev/null;
   if [ -f "$bin/flash_erase" -a -f "$bin/nandwrite" ]; then
@@ -406,43 +413,68 @@ flash_boot() {
   fi;
 }
 
-# flash_dtbo (flash dtbo only)
-flash_dtbo() {
-  local i dtbo dtboblock;
+# flash_generic <name>
+flash_generic() {
+  local file img imgblock isro path;
 
   cd $home;
-  for i in dtbo dtbo.img; do
-    if [ -f $i ]; then
-      dtbo=$i;
+  for file in $1 $1.img; do
+    if [ -f $file ]; then
+      img=$file;
       break;
     fi;
   done;
 
-  if [ "$dtbo" ]; then
-    dtboblock=/dev/block/bootdevice/by-name/dtbo$slot;
-    if [ ! -e "$dtboblock" ]; then
-      abort "dtbo partition could not be found. Aborting...";
+  if [ "$img" -a ! -f ${1}_flashed ]; then
+    for path in /dev/block/bootdevice/by-name /dev/block/mapper; do
+      for file in $1 $1$slot; do
+        if [ -e $path/$file ]; then
+          imgblock=$path/$file;
+          break 2;
+        fi;
+      done;
+    done;
+    if [ ! "$imgblock" ]; then
+      abort "$1 partition could not be found. Aborting...";
     fi;
-    blockdev --setrw $dtboblock 2>/dev/null;
+    # TODO: add dynamic partition resizing using lptools_static instead of aborting
+    if [ "$(wc -c < $img)" -gt "$(wc -c < $imgblock)" ]; then
+      abort "New $1 image larger than $1 partition. Aborting...";
+    fi;
+    isro=$(blockdev --getro $imgblock 2>/dev/null);
+    blockdev --setrw $imgblock 2>/dev/null;
+    if [ ! "$no_block_display" ]; then
+      ui_print " " "$imgblock";
+    fi;
     if [ -f "$bin/flash_erase" -a -f "$bin/nandwrite" ]; then
-      $bin/flash_erase $dtboblock 0 0;
-      $bin/nandwrite -p $dtboblock $dtbo;
+      $bin/flash_erase $imgblock 0 0;
+      $bin/nandwrite -p $imgblock $img;
     elif [ "$customdd" ]; then
-      dd if=/dev/zero of=$dtboblock 2>/dev/null;
-      dd if=$dtbo of=$dtboblock;
+      dd if=/dev/zero of=$imgblock 2>/dev/null;
+      dd if=$img of=$imgblock;
     else
-      cat $dtbo /dev/zero > $dtboblock 2>/dev/null || true;
+      cat $img /dev/zero > $imgblock 2>/dev/null || true;
     fi;
     if [ $? != 0 ]; then
-      abort "Flashing dtbo failed. Aborting...";
+      abort "Flashing $1 failed. Aborting...";
     fi;
+    if [ "$isro" != 0 ]; then
+      blockdev --setro $imgblock 2>/dev/null;
+    fi;
+    touch ${1}_flashed;
   fi;
 }
-### write_boot (repack ramdisk then build, sign and write image and dtbo)
+
+# flash_dtbo (backwards compatibility for flash_generic)
+flash_dtbo() { flash_generic dtbo; }
+
+### write_boot (repack ramdisk then build, sign and write image, vendor_dlkm and dtbo)
 write_boot() {
+  flash_generic vendor_dlkm; # TODO: move below boot once resizing is supported
   repack_ramdisk;
   flash_boot;
-  flash_dtbo;
+  flash_generic vendor_boot; # temporary until hdr v4 can be unpacked/repacked fully by magiskboot
+  flash_generic dtbo;
 }
 ###
 
@@ -464,7 +496,7 @@ replace_string() {
 # replace_section <file> <begin search string> <end search string> <replacement string>
 replace_section() {
   local begin endstr last end;
-  begin=$(grep -n "$2" $1 | head -n1 | cut -d: -f1);
+  begin=$(grep -n -m1 "$2" $1 | cut -d: -f1);
   if [ "$begin" ]; then
     if [ "$3" == " " -o ! "$3" ]; then
       endstr='^[[:space:]]*$';
@@ -486,7 +518,7 @@ replace_section() {
 # remove_section <file> <begin search string> <end search string>
 remove_section() {
   local begin endstr last end;
-  begin=$(grep -n "$2" $1 | head -n1 | cut -d: -f1);
+  begin=$(grep -n -m1 "$2" $1 | cut -d: -f1);
   if [ "$begin" ]; then
     if [ "$3" == " " -o ! "$3" ]; then
       endstr='^[[:space:]]*$';
@@ -511,7 +543,7 @@ insert_line() {
       before) offset=0;;
       after) offset=1;;
     esac;
-    line=$((`grep -n "$4" $1 | head -n1 | cut -d: -f1` + offset));
+    line=$((`grep -n -m1 "$4" $1 | cut -d: -f1` + offset));
     if [ -f $1 -a "$line" ] && [ "$(wc -l $1 | cut -d\  -f1)" -lt "$line" ]; then
       echo "$5" >> $1;
     else
@@ -559,7 +591,7 @@ insert_file() {
       before) offset=0;;
       after) offset=1;;
     esac;
-    line=$((`grep -n "$4" $1 | head -n1 | cut -d: -f1` + offset));
+    line=$((`grep -n -m1 "$4" $1 | cut -d: -f1` + offset));
     sed -i "${line}s;^;\n;" $1;
     sed -i "$((line - 1))r $patch/$5" $1;
   fi;
@@ -583,7 +615,7 @@ replace_file() {
 # patch_fstab <fstab file> <mount match name> <fs match type> block|mount|fstype|options|flags <original string> <replacement string>
 patch_fstab() {
   local entry part newpart newentry;
-  entry=$(grep "$2" $1 | grep "$3");
+  entry=$(grep "$2[[:space:]]" $1 | grep "$3");
   if [ ! "$(echo "$entry" | grep "$6")" -o "$6" == " " -o ! "$6" ]; then
     case $4 in
       block) part=$(echo "$entry" | awk '{ print $1 }');;
@@ -626,7 +658,7 @@ patch_prop() {
   if ! grep -q "^$2=" $1; then
     echo -ne "\n$2=$3\n" >> $1;
   else
-    local line=$(grep -n "^$2=" $1 | head -n1 | cut -d: -f1);
+    local line=$(grep -n -m1 "^$2=" $1 | cut -d: -f1);
     sed -i "${line}s;.*;${2}=${3};" $1;
   fi;
 }
@@ -638,7 +670,7 @@ patch_ueventd() {
   shift 4;
   group="$@";
   newentry=$(printf "%-23s   %-4s   %-8s   %s\n" "$dev" "$perm" "$user" "$group");
-  line=$(grep -n "$dev" $file | head -n1 | cut -d: -f1);
+  line=$(grep -n -m1 "$dev" $file | cut -d: -f1);
   if [ "$line" ]; then
     sed -i "${line}s;.*;${newentry};" $file;
   else
@@ -654,9 +686,11 @@ reset_ak() {
 
   current=$(dirname $home/*-files/current);
   if [ -d "$current" ]; then
-    rm -rf $current/ramdisk;
-    for i in $bootimg boot-new.img; do
+    for i in $bootimg $home/boot-new.img; do
       [ -e $i ] && cp -af $i $current;
+    done;
+    for i in $current/*; do
+      [ -f $i ] && rm -f $home/$(basename $i);
     done;
   fi;
   [ -d $split_img ] && rm -rf $ramdisk;
@@ -667,23 +701,15 @@ reset_ak() {
   else
     rm -rf $patch $home/rdtmp;
   fi;
+  if [ ! "$no_block_display" ]; then
+    ui_print " ";
+  fi;
   setup_ak;
 }
 
 # setup_ak
 setup_ak() {
   local blockfiles parttype name part mtdmount mtdpart mtdname target;
-
-  # allow multi-partition ramdisk modifying configurations (using reset_ak)
-  if [ "$block" ] && [ ! -d "$ramdisk" -a ! -d "$patch" ]; then
-    blockfiles=$home/$(basename $block)-files;
-    if [ "$(ls $blockfiles 2>/dev/null)" ]; then
-      cp -af $blockfiles/* $home;
-    else
-      mkdir -p $blockfiles;
-    fi;
-    touch $blockfiles/current;
-  fi;
 
   # slot detection enabled by is_slot_device=1 or auto (from anykernel.sh)
   case $is_slot_device in
@@ -709,20 +735,45 @@ setup_ak() {
         esac;
       fi;
       if [ ! "$slot" -a "$is_slot_device" == 1 ]; then
-        abort "Unable to determine active boot slot. Aborting...";
+        abort "Unable to determine active slot. Aborting...";
       fi;
     ;;
   esac;
+
+  # automate simple multi-partition setup for boot_img_hdr_v3 + vendor_boot
+  cd $home;
+  if [ -e "/dev/block/bootdevice/by-name/vendor_boot$slot" -a ! -f vendor_setup ] && [ -f dtb -o -d vendor_ramdisk -o -d vendor_patch ]; then
+    echo "Setting up for simple automatic vendor_boot flashing..." >&2;
+    (mkdir boot-files;
+    mv -f Image* ramdisk patch boot-files;
+    mkdir vendor_boot-files;
+    mv -f dtb vendor_boot-files;
+    mv -f vendor_ramdisk vendor_boot-files/ramdisk;
+    mv -f vendor_patch vendor_boot-files/patch) 2>/dev/null;
+    touch vendor_setup;
+  fi;
+
+  # allow multi-partition ramdisk modifying configurations (using reset_ak)
+  if [ "$block" ] && [ ! -d "$ramdisk" -a ! -d "$patch" ]; then
+    blockfiles=$home/$(basename $block)-files;
+    if [ "$(ls $blockfiles 2>/dev/null)" ]; then
+      cp -af $blockfiles/* $home;
+    else
+      mkdir $blockfiles;
+    fi;
+    touch $blockfiles/current;
+  fi;
 
   # target block partition detection enabled by block=boot recovery or auto (from anykernel.sh)
   case $block in
      auto|"") block=boot;;
   esac;
   case $block in
-    boot|recovery)
+    boot|recovery|vendor_boot)
       case $block in
-        boot) parttype="ramdisk boot BOOT LNX android_boot bootimg KERN-A kernel KERNEL";;
+        boot) parttype="ramdisk init_boot boot BOOT LNX android_boot bootimg KERN-A kernel KERNEL";;
         recovery) parttype="ramdisk_recovery recovery RECOVERY SOS android_recovery";;
+        vendor_boot) parttype="vendor_boot";;
       esac;
       for name in $parttype; do
         for part in $name$slot $name; do
