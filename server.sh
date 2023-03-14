@@ -41,6 +41,13 @@ make -j$(nproc --all) O=out \
                       LD_LIBRARY_PATH=lib \
                       CROSS_COMPILE=aarch64-linux-gnu- \
                       CROSS_COMPILE_COMPAT=arm-linux-gnueabi- \
+                      LD=ld.${LINKER} \
+                      AR=llvm-ar \
+                      NM=llvm-nm \
+                      OBJCOPY=llvm-objcopy \
+                      OBJDUMP=llvm-objdump \
+                      STRIP=llvm-strip \
+                      ld-name=${LINKER} \
 
 TIME="$(date "+%Y%m%d-%H%M%S")"
 mkdir -p tmp
