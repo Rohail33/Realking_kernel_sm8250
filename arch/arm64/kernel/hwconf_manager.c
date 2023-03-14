@@ -211,7 +211,7 @@ static char *hw_item_print(hw_item *item, int ident, int *offset)
 	return print_buf;
 }
 
-static char *hw_item_dump()
+static char *hw_item_dump(void)
 {
 	int offset = 0;
 	memset(print_buf, 0, PAGE_SIZE);
