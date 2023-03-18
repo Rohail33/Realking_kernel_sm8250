@@ -345,6 +345,8 @@
 };
 
 &dsi_k11a_38_08_0a_dsc_cmd {
+	qcom,ulps-enabled;
+	qcom,suspend-ulps-enabled;
 	mi,mdss-dsi-bl-dcs-big-endian-type;
 	mi,feature-enabled;
 	mi,mdss-dsi-panel-hbm-51-ctrl-flag;
