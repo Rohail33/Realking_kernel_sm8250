@@ -40,7 +40,9 @@ static void gsi_ctrl_pkt_free(struct gsi_ctrl_pkt *pkt);
 static inline bool usb_gsi_remote_wakeup_allowed(struct usb_function *f)
 {
 	bool remote_wakeup_allowed;
+#ifdef CONFIG_IPC_LOGGING
 	struct f_gsi *gsi = func_to_gsi(f);
+#endif
 
 	if (f->config->cdev->gadget->speed >= USB_SPEED_SUPER)
 		remote_wakeup_allowed = f->func_wakeup_allowed;
@@ -55,7 +57,9 @@ static inline bool usb_gsi_remote_wakeup_allowed(struct usb_function *f)
 static void post_event(struct gsi_data_port *port, u8 event)
 {
 	unsigned long flags;
+#ifdef CONFIG_IPC_LOGGING
 	struct f_gsi *gsi = d_port_to_gsi(port);
+#endif
 
 	spin_lock_irqsave(&port->evt_q.q_lock, flags);
 
@@ -85,7 +89,9 @@ static u8 read_event(struct gsi_data_port *port)
 {
 	u8 event;
 	unsigned long flags;
+#ifdef CONFIG_IPC_LOGGING
 	struct f_gsi *gsi = d_port_to_gsi(port);
+#endif
 
 	spin_lock_irqsave(&port->evt_q.q_lock, flags);
 	if (port->evt_q.head == port->evt_q.tail) {
@@ -109,7 +115,9 @@ static u8 peek_event(struct gsi_data_port *port)
 	u8 event;
 	unsigned long flags;
 	u8 peek_index = 0;
+#ifdef CONFIG_IPC_LOGGING
 	struct f_gsi *gsi = d_port_to_gsi(port);
+#endif
 
 	spin_lock_irqsave(&port->evt_q.q_lock, flags);
 	if (port->evt_q.head == port->evt_q.tail) {
@@ -1820,7 +1828,9 @@ static void gsi_rndis_open(struct f_gsi *gsi)
 static void gsi_rndis_ipa_reset_trigger(struct gsi_data_port *d_port)
 {
 	unsigned long flags;
+#ifdef CONFIG_IPC_LOGGING
 	struct f_gsi *gsi = d_port_to_gsi(d_port);
+#endif
 
 	log_event_dbg("%s: setting net_ready_trigger\n", __func__);
 	spin_lock_irqsave(&d_port->lock, flags);
@@ -2566,7 +2576,9 @@ static int gsi_get_status(struct usb_function *f)
 static int gsi_func_suspend(struct usb_function *f, u8 options)
 {
 	bool func_wakeup_allowed;
+#ifdef CONFIG_IPC_LOGGING
 	struct f_gsi *gsi = func_to_gsi(f);
+#endif
 
 	log_event_dbg("func susp %u cmd for %s",
 		options, f->name ? f->name : "");
@@ -3543,8 +3555,9 @@ static int gsi_set_inst_name(struct usb_function_instance *fi,
 	if (IS_ERR(gsi))
 		return PTR_ERR(gsi);
 
-#ifdef CONFIG_IPC_LOGGING
 	opts->gsi = gsi;
+
+#ifdef CONFIG_IPC_LOGGING
 	/*
 	 * create instance name with prefixing "gsi." to differentiate
 	 * ipc log debugfs entry
@@ -3588,7 +3601,9 @@ static void gsi_free_inst(struct usb_function_instance *f)
 		return;
 	}
 
+#ifdef CONFIG_IPC_LOGGING
 	ipc_log_context_destroy(opts->gsi->ipc_log_ctxt);
+#endif
 	/* Clear instance status */
 	gsi_inst_clean(opts);
 	inst_status[prot_id].inst_exist = false;
