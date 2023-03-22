@@ -79,6 +79,7 @@
 #define	EVT_RESUMED			10
 
 #define NUM_LOG_PAGES 10
+#ifdef CONFIG_IPC_LOGGING
 #define log_event_err(x, ...) do { \
 	if (gsi) { \
 		ipc_log_string(gsi->ipc_log_ctxt, x, ##__VA_ARGS__); \
@@ -99,6 +100,12 @@
 		pr_info(x, ##__VA_ARGS__); \
 	} \
 } while (0)
+
+#else
+#define log_event_err(x, ...) pr_err(x, ##__VA_ARGS__)
+#define log_event_dbg(x, ...) pr_debug(x, ##__VA_ARGS__)
+#define log_event_info(x, ...) pr_info(x, ##__VA_ARGS__)
+#endif
 
 enum connection_state {
 	STATE_UNINITIALIZED,
@@ -273,7 +280,9 @@ struct f_gsi {
 
 	struct gsi_data_port d_port;
 	struct gsi_ctrl_port c_port;
+#ifdef CONFIG_IPC_LOGGING
 	void *ipc_log_ctxt;
+#endif
 	bool rmnet_dtr_status;
 
 	/* To test remote wakeup using debugfs */
