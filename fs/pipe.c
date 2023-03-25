@@ -220,7 +220,7 @@ EXPORT_SYMBOL(generic_pipe_buf_get);
  *	pages that are always good when inserted into the pipe.
  */
 int generic_pipe_buf_confirm(struct pipe_inode_info *info,
-			     struct pipe_buffer *buf)
+			     struct pipe_buffer *buf, bool nonblock)
 {
 	return 0;
 }
@@ -299,7 +299,7 @@ pipe_read(struct kiocb *iocb, struct iov_iter *to)
 			if (chars > total_len)
 				chars = total_len;
 
-			error = pipe_buf_confirm(pipe, buf);
+			error = pipe_buf_confirm(pipe, buf, false);
 			if (error) {
 				if (!ret)
 					ret = error;
@@ -409,7 +409,7 @@ pipe_write(struct kiocb *iocb, struct iov_iter *from)
 		int offset = buf->offset + buf->len;
 
 		if (buf->ops->can_merge && offset + chars <= PAGE_SIZE) {
-			ret = pipe_buf_confirm(pipe, buf);
+			ret = pipe_buf_confirm(pipe, buf, false);
 			if (ret)
 				goto out;
 
