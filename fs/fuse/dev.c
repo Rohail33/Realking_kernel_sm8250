@@ -683,7 +683,7 @@ static int fuse_copy_fill(struct fuse_copy_state *cs)
 		struct pipe_buffer *buf = cs->pipebufs;
 
 		if (!cs->write) {
-			err = pipe_buf_confirm(cs->pipe, buf);
+			err = pipe_buf_confirm(cs->pipe, buf, false);
 			if (err)
 				return err;
 
@@ -785,7 +785,7 @@ static int fuse_try_move_page(struct fuse_copy_state *cs, struct page **pagep)
 
 	fuse_copy_finish(cs);
 
-	err = pipe_buf_confirm(cs->pipe, buf);
+	err = pipe_buf_confirm(cs->pipe, buf, false);
 	if (err)
 		goto out_put_old;
 
