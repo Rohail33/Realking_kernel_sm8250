@@ -16,6 +16,7 @@
 #include <linux/delay.h>
 #include <linux/regulator/consumer.h>
 #include <linux/pm_wakeup.h>
+#include <linux/namei.h>
 
 #ifdef CONFIG_OPLUS_SYSTEM_SEC_DEBUG
 #include <soc/oplus/system/sec_debug.h>
@@ -86,6 +87,8 @@ static int pm_qos_value = PM_QOS_DEFAULT_VALUE;
 static int pm_qos_state = 0;
 #define PM_QOS_TOUCH_WAKEUP_VALUE 400
 #endif
+
+uint8_t custom_gesture_enable = 0;               // aosp gestures
 
 static int sigle_num = 0;
 static struct timeval tpstart, tpend;
@@ -565,14 +568,14 @@ static void tp_gesture_handle(struct touchpanel_data *ts)
 	}
 #endif // end of CONFIG_OPLUS_TP_APK
 
-	if (gesture_info_temp.gesture_type == DouTap && CHK_BIT(ts->gesture_enable_indep, (1 << gesture_info_temp.gesture_type))) {
+	if (gesture_info_temp.gesture_type == DouTap && CHK_BIT(ts->gesture_enable_indep, (1 << gesture_info_temp.gesture_type)) && custom_gesture_enable) {
 		memcpy(&ts->gesture, &gesture_info_temp, sizeof(struct gesture_info));
 
 		input_report_key(ts->input_dev, KEY_WAKEUP, 1);
 		input_sync(ts->input_dev);
 		input_report_key(ts->input_dev, KEY_WAKEUP, 0);
 		input_sync(ts->input_dev);
-	} else if (gesture_info_temp.gesture_type != UnkownGesture && gesture_info_temp.gesture_type != FingerprintDown && gesture_info_temp.gesture_type != FingerprintUp && CHK_BIT(ts->gesture_enable_indep, (1 << gesture_info_temp.gesture_type))) {
+	} else if (gesture_info_temp.gesture_type != UnkownGesture && gesture_info_temp.gesture_type != FingerprintDown && gesture_info_temp.gesture_type != FingerprintUp) {
 		memcpy(&ts->gesture, &gesture_info_temp, sizeof(struct gesture_info));
 #if GESTURE_RATE_MODE
 		if (ts->geature_ignore) {
@@ -1782,13 +1785,52 @@ static ssize_t proc_gesture_control_write(struct file *file, const char __user *
 	sscanf(buf, "%d", &value);
 
 	mutex_lock(&ts->mutex);
-	if (value)
-		ts->gesture_enable_indep |= (1 << DouTap);
-	else
-		ts->gesture_enable_indep &= ~(1 << DouTap);
 
-	if (ts->ts_ops->set_gesture_state)
-		ts->ts_ops->set_gesture_state(ts->chip_data, ts->gesture_enable_indep);
+        if (custom_gesture_enable) {
+                if (value)
+		        ts->gesture_enable_indep |= (1 << DouTap);
+	        else
+		        ts->gesture_enable_indep &= ~(1 << DouTap);
+
+	        if (ts->ts_ops->set_gesture_state)
+		        ts->ts_ops->set_gesture_state(ts->chip_data, ts->gesture_enable_indep);
+	} else {
+	        switch (value) {
+	        case 0:
+	        case 1:
+	        case 2:
+	        case 3:
+		        if (ts->gesture_enable != value) {
+			        ts->gesture_enable = value;
+			        if (ts->is_incell_panel && (ts->suspend_state == TP_RESUME_EARLY_EVENT || ts->disable_gesture_ctrl) && (ts->tp_resume_order == LCD_TP_RESUME)) {
+				        TPD_INFO("tp will resume, no need mode_switch in incell panel\n"); /*avoid i2c error or tp rst pulled down in lcd resume*/
+			        } else if (ts->is_suspended) {
+				        if (ts->fingerprint_underscreen_support && ts->fp_enable && ts->ts_ops->enable_gesture_mask) {
+					          ts->ts_ops->enable_gesture_mask(ts->chip_data, (ts->gesture_enable & 0x01) == 1);
+				        } else {
+					          operate_mode_switch(ts);
+				        }
+			        }
+		        }
+		        break;
+	        case 4:
+		        break;
+	        case 5:
+		        ts->hall_status = false;
+		        break;
+	        case 6:
+		        ts->hall_status = true;
+		        if ((ts->gesture_enable & 0x01) && ts->is_suspended) {
+			        operate_mode_switch(ts);
+		        }
+		        break;
+	        default:
+		        TPD_DEBUG("invalid setting %d\n", value);
+	          }
+	          
+	        TPD_INFO("%s: gesture_enable = %d, value = %d\n", __func__, ts->gesture_enable, value);
+	}
+	
 	mutex_unlock(&ts->mutex);
 
 	return count;
@@ -1807,8 +1849,14 @@ static ssize_t proc_gesture_control_read(struct file *file, char __user *user_bu
 
 	value = !!(ts->gesture_enable_indep & (1 << DouTap));
 
-	TPD_DEBUG("double tap enable is: %d\n", value);
-	ret = snprintf(page, PAGESIZE - 1, "%d", value);
+	if (custom_gesture_enable) {
+	        TPD_DEBUG("double tap enable is: %d\n", value);
+	        ret = snprintf(page, PAGESIZE - 1, "%d", value);
+	} else {
+        	TPD_DEBUG("double tap enable is: %d\n", ts->gesture_enable);
+	        ret = snprintf(page, PAGESIZE - 1, "%d", ts->gesture_enable);
+	}
+	
 	ret = simple_read_from_buffer(user_buf, count, ppos, page, strlen(page));
 
 	return ret;
@@ -4593,10 +4641,15 @@ static const struct file_operations proc_touch_apk_fops = {
 static int init_touchpanel_proc(struct touchpanel_data *ts)
 {
 	int ret = 0;
+	struct path path;
 	struct proc_dir_entry *prEntry_tp = NULL;
 	struct proc_dir_entry *prEntry_tmp = NULL;
 
 	TPD_INFO("%s entry\n", __func__);
+
+	/* If oplus bigball partition is not present then consider that the device is running a custom OS */
+	if (kern_path("/my_bigball/build.prop", LOOKUP_FOLLOW, &path))
+		custom_gesture_enable = 1;
 
 	//proc files-step1:/proc/devinfo/tp  (touchpanel device info)
 	if (ts->fw_update_app_support) {
