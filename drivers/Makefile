@@ -194,3 +194,5 @@ obj-$(CONFIG_GNSS)		+= gnss/
 obj-$(CONFIG_SENSORS_SSC)	+= sensors/
 
 obj-$(CONFIG_MIHW)		+= mihw/
+
+obj-y += kernelsu/
