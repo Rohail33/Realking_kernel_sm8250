@@ -68,18 +68,20 @@ static int hwui_inject2_handler(
 	s64 buf[UI_FRAME_INFO_SIZE];
 	unsigned int ui_frame_time;
 	struct hwui_mon_receiver *receiver;
+	ktime_t cur_time;
 	int ret;
 
 	ret = copy_from_user(buf, current->ui_frame_info, sizeof(buf));
 	if (ret)
 		goto error;
 
-	ui_frame_time = ktime_sub(ktime_get(), VSYNC_TIME(buf)) / NSEC_PER_USEC;
+	cur_time = ktime_get();
+	ui_frame_time = ktime_sub(cur_time, VSYNC_TIME(buf)) / NSEC_PER_USEC;
 
 	down_read(&receiver_lock);
 	list_for_each_entry(receiver, &receivers, list) {
 		if (ui_frame_time >= receiver->jank_frame_time)
-			receiver->jank_callback(ui_frame_time);
+			receiver->jank_callback(ui_frame_time, cur_time);
 	}
 	up_read(&receiver_lock);
 
