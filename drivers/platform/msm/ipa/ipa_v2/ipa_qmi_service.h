@@ -23,6 +23,7 @@
 #define DEV_NAME "ipa-wan"
 #define SUBSYS_MODEM "modem"
 
+#ifdef CONFIG_IPC_LOGGING
 #define IPAWANDBG(fmt, args...) \
 	do { \
 		pr_debug(DEV_NAME " %s:%d " fmt, __func__, __LINE__, ## args); \
@@ -67,6 +68,13 @@
 			DEV_NAME " %s:%d " fmt, ## args); \
 	} while (0)
 
+#else
+#define IPAWANDBG(fmt, args...) pr_debug(DEV_NAME " %s:%d " fmt, __func__, __LINE__, ## args)
+#define IPAWANDBG_LOW(fmt, args...) pr_debug(DEV_NAME " %s:%d " fmt, __func__, __LINE__, ## args)
+#define IPAWANERR(fmt, args...) pr_err(DEV_NAME " %s:%d " fmt, __func__, __LINE__, ## args)
+#define IPAWANERR_RL(fmt, args...) pr_err_ratelimited_ipa(DEV_NAME " %s:%d " fmt, __func__, __LINE__, ## args)
+#define IPAWANINFO(fmt, args...) pr_info(DEV_NAME " %s:%d " fmt, __func__, __LINE__, ## args)
+#endif
 
 extern struct ipa_qmi_context *ipa_qmi_ctx;
 extern struct mutex ipa_qmi_lock;
