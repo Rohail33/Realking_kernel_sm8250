@@ -375,7 +375,6 @@ static void cpuboost_input_event(struct input_handle *handle,
 	last_input_time = ktime_to_us(ktime_get());
 }
 
-#ifdef CONFIG_MIHW
 void touch_irq_boost(void)
 {
 	u64 now;
@@ -394,13 +393,6 @@ void touch_irq_boost(void)
 	last_input_time = ktime_to_us(ktime_get());
 }
 EXPORT_SYMBOL(touch_irq_boost);
-#else
-void touch_irq_boost(void)
-{
-	return;
-}
-EXPORT_SYMBOL(touch_irq_boost);
-#endif
 
 static int cpuboost_input_connect(struct input_handler *handler,
 		struct input_dev *dev, const struct input_device_id *id)
