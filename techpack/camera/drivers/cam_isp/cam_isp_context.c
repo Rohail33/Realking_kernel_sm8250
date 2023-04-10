@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <linux/debugfs.h>
@@ -3852,9 +3852,15 @@ static int __cam_isp_ctx_rdi_only_reg_upd_in_applied_state(
 	uint64_t  request_id  = 0;
 
 	if (list_empty(&ctx->wait_req_list)) {
-		CAM_ERR(CAM_ISP, "Reg upd ack with no waiting request");
+		CAM_ERR_RATE_LIMIT(CAM_ISP,
+			"Reg upd ack with no waiting req ctx %u active cnt %d",
+			ctx->ctx_id, ctx_isp->active_req_cnt);
+
+		/*  move the sub state machine to SOF sub state */
+		ctx_isp->substate_activated = CAM_ISP_CTX_ACTIVATED_SOF;
 		goto end;
 	}
+
 	ctx_isp->substate_activated = CAM_ISP_CTX_ACTIVATED_EPOCH;
 
 	req = list_first_entry(&ctx->wait_req_list,
@@ -3877,21 +3883,26 @@ static int __cam_isp_ctx_rdi_only_reg_upd_in_applied_state(
 		/* no io config, so the request is completed. */
 		list_add_tail(&req->list, &ctx->free_req_list);
 		CAM_DBG(CAM_ISP,
-			"move active request %lld to free list(cnt = %d), ctx %u",
+			"move active req %lld to free list(cnt = %d), ctx %u",
 			req->request_id, ctx_isp->active_req_cnt, ctx->ctx_id);
 	}
 
-	CAM_DBG(CAM_ISP, "next Substate[%s]",
-		__cam_isp_ctx_substate_val_to_type(
-		ctx_isp->substate_activated));
+	if (request_id) {
+		ctx_isp->reported_req_id = request_id;
+		__cam_isp_ctx_send_sof_timestamp(ctx_isp, request_id,
+			CAM_REQ_MGR_SOF_EVENT_SUCCESS);
+	}
+
+	CAM_DBG(CAM_ISP, "next Substate[%s] ctx %u",
+		__cam_isp_ctx_substate_val_to_type(ctx_isp->substate_activated),
+		ctx->ctx_id);
+
+	__cam_isp_ctx_update_event_record(ctx_isp, CAM_ISP_CTX_EVENT_RUP, req);
 
 	return 0;
 end:
-	/*
-	 * There is no request in the pending list, move the sub state machine
-	 * to SOF sub state
-	 */
-	ctx_isp->substate_activated = CAM_ISP_CTX_ACTIVATED_SOF;
+	__cam_isp_ctx_update_event_record(ctx_isp, CAM_ISP_CTX_EVENT_RUP, NULL);
+
 	return 0;
 }
 
