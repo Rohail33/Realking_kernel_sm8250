@@ -5004,19 +5004,6 @@ static int tfa98xx_i2c_probe(struct i2c_client *i2c,
 	if (no_start == 0)
 		tfa98xx_debug_init(tfa98xx, i2c);
 
-	#ifdef OPLUS_ARCH_EXTENDS
-	#ifdef CONFIG_DEBUG_FS
-	tfa98xx_debugfs = debugfs_create_file(TFA98XX_DEBUG_FS_NAME,
-			S_IFREG | S_IRUGO | S_IWUSR, NULL, (void *)TFA98XX_DEBUG_FS_NAME, &tfa98xx_debug_ops);
-	#else
-	proc_create_data(TFA98XX_DEBUG_FS_NAME,
-				S_IFREG | S_IRUGO | S_IWUSR, NULL, &tfa98xx_debug_ops, (void *)TFA98XX_DEBUG_FS_NAME);
-	#endif /*CONFIG_DEBUG_FS*/
-
-	tfa_ftm_mode = get_boot_mode();
-	pr_info("tfa_ftm_mode=%d\n", tfa_ftm_mode);
-	#endif /* OPLUS_ARCH_EXTENDS */
-
 	/* Register the sysfs files for climax backdoor access */
 	ret = device_create_bin_file(&i2c->dev, &dev_attr_rw);
 	if (ret)
@@ -5139,6 +5126,19 @@ static int __init tfa98xx_i2c_init(void)
 		pr_err("tfa98xx can't create memory pool\n");
 		ret = -ENOMEM;
 	}
+
+#ifdef OPLUS_ARCH_EXTENDS
+#ifdef CONFIG_DEBUG_FS
+	tfa98xx_debugfs = debugfs_create_file(TFA98XX_DEBUG_FS_NAME,
+			S_IFREG | S_IRUGO | S_IWUSR, NULL, (void *)TFA98XX_DEBUG_FS_NAME, &tfa98xx_debug_ops);
+#else
+	proc_create_data(TFA98XX_DEBUG_FS_NAME,
+				S_IFREG | S_IRUGO | S_IWUSR, NULL, &tfa98xx_debug_ops, (void *)TFA98XX_DEBUG_FS_NAME);
+#endif /*CONFIG_DEBUG_FS*/
+
+	tfa_ftm_mode = get_boot_mode();
+	pr_info("tfa_ftm_mode=%d\n", tfa_ftm_mode);
+#endif /* OPLUS_ARCH_EXTENDS */
 
 	ret = i2c_add_driver(&tfa98xx_i2c_driver);
 
