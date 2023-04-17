@@ -433,8 +433,8 @@ static int dsi_panel_gpio_request(struct dsi_panel *panel)
 		rc = gpio_request(r_config->panel_te_esd_gpio, "panel_te_esd_gpio");
 		if (rc)
 			DSI_ERR("request for  panel_te_esd_gpio failed, rc=%d", rc);
+		gpio_direction_input(r_config->panel_te_esd_gpio);
 	}
-	gpio_direction_input(r_config->panel_te_esd_gpio);
 #endif
 
 #ifdef OPLUS_FEATURE_ADFR
