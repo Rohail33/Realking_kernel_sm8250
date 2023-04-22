@@ -407,7 +407,7 @@ static int32_t cam_sensor_i2c_modes_util(
 				"CCI HW is restting: Reapplying request settings");
 			usleep_range(2000, 2010);
 			rc = camera_io_dev_write(io_master_info,
-				&(i2c_list->i2c_settings));
+				&(i2c_list->i2c_settings), force_low_priority);
 		}
 		if (rc < 0) {
 			CAM_ERR(CAM_SENSOR,
@@ -1230,7 +1230,7 @@ int32_t cam_sensor_driver_cmd(struct cam_sensor_ctrl_t *s_ctrl,
 				i2c_reg_setting[i].reg_addr, i2c_reg_setting[i].reg_data);
 		}
 
-		rc = camera_io_dev_write(&s_ctrl->io_master_info, &user_reg_setting);
+		rc = camera_io_dev_write(&s_ctrl->io_master_info, &user_reg_setting, false);
 		if (rc < 0)
 			CAM_ERR(CAM_SENSOR, "Write setting failed, rc = %d\n", rc);
 
