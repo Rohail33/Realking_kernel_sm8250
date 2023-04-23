@@ -239,7 +239,7 @@ config RCU_NOCB_CPU
 config RCU_NOCB_CPU_DEFAULT_ALL
 	bool "Offload RCU callback processing from all CPUs by default"
 	depends on RCU_NOCB_CPU
-	default n
+	default y
 	help
 	  Use this option to offload callback processing from all CPUs
 	  by default, in the absence of the rcu_nocbs or nohz_full boot
