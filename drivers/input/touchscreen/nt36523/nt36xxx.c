@@ -223,7 +223,7 @@ Description:
 return:
 	n.a.
 *******************************************************/
-static void nvt_irq_enable(bool enable)
+static void __always_inline nvt_irq_enable(bool enable)
 {
 	struct irq_desc *desc;
 
@@ -3477,7 +3477,7 @@ Description:
 return:
 	Executive outcomes. 0---succeed.
 *******************************************************/
-static int32_t nvt_ts_suspend(struct device *dev)
+static int32_t __always_inline nvt_ts_suspend(struct device *dev)
 {
 	uint8_t ret = 0;
 	uint8_t buf[4] = {0};
@@ -3574,7 +3574,7 @@ Description:
 return:
 	Executive outcomes. 0---succeed.
 *******************************************************/
-static int32_t nvt_ts_resume(struct device *dev)
+static int32_t __always_inline nvt_ts_resume(struct device *dev)
 {
 	int ret = 0;
 	if (bTouchIsAwake) {
@@ -3666,7 +3666,7 @@ static int32_t nvt_ts_resume(struct device *dev)
 
 #if defined(CONFIG_FB)
 #ifdef CONFIG_DRM
-static int nvt_drm_notifier_callback(struct notifier_block *self, unsigned long event, void *data)
+static int __always_inline nvt_drm_notifier_callback(struct notifier_block *self, unsigned long event, void *data)
 {
 	struct mi_drm_notifier *evdata = data;
 	int *blank;
