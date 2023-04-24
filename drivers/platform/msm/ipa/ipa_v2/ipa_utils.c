@@ -849,7 +849,7 @@ int ipa2_get_ep_mapping(enum ipa_client_type client)
 		return INVALID_EP_MAPPING_INDEX;
 	}
 
-	if (client >= IPA_CLIENT_MAX || client < 0) {
+	if (unlikely(client >= IPA_CLIENT_MAX || client < 0)) {
 		IPAERR_RL("Bad client number! client =%d\n", client);
 		return INVALID_EP_MAPPING_INDEX;
 	}
@@ -867,7 +867,7 @@ int ipa2_get_ep_mapping(enum ipa_client_type client)
 		break;
 	}
 
-	if (!ep_mapping[hw_type_index][client].valid)
+	if (unlikely(!ep_mapping[hw_type_index][client].valid))
 		return INVALID_EP_MAPPING_INDEX;
 
 	return ep_mapping[hw_type_index][client].pipe_num;
