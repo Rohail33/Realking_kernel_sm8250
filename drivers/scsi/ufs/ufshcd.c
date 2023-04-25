@@ -4079,7 +4079,7 @@ send_orig_cmd:
 	wmb();
 
 	/* issue command to the controller */
-	spin_lock_irqsave(hba->host->host_lock, flags);
+	ufs_spin_lock_irqsave(hba->host->host_lock, flags);
 #if defined(CONFIG_UFSFEATURE) && defined(CONFIG_UFSHPB)
 	if (!pre_req_err) {
 		ufshcd_vops_setup_xfer_req(hba, add_tag, (add_lrbp->cmd ? true : false));
@@ -7285,8 +7285,11 @@ static bool ufshcd_wb_sup(struct ufs_hba *hba)
 	return false;
 #endif
 #endif
-return !!(hba->dev_info.d_ext_ufs_feature_sup &
-    UFS_DEV_WRITE_BOOSTER_SUP);
+
+	return ((hba->dev_info.d_ext_ufs_feature_sup &
+		   UFS_DEV_WRITE_BOOSTER_SUP) &&
+		  (hba->dev_info.b_wb_buffer_type
+		   || hba->dev_info.wb_config_lun));
 }
 
 static int ufshcd_wb_ctrl(struct ufs_hba *hba, bool enable)
