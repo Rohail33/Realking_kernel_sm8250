@@ -104,6 +104,21 @@
 /* variable. */
 #define SNR_HACK_BMPS                         (127)
 
+#ifdef OPLUS_FEATURE_WIFI_DUALSTA_AP_BLACKLIST
+//Add for: hotspot management
+#ifndef MAC_ADDRESS_STR
+#define MAC_ADDRESS_STR "%02x:%02x:%02x:%02x:%02x:%02x"
+#endif /* MAC_ADDRESS_STR */
+#ifndef MAC_ADDR_ARRAY
+#define MAC_ADDR_ARRAY(a) (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5]
+#endif /* MAC_ADDR_ARRAY */
+
+#define MAC_MASK(addr) addr[0], \
+    addr[1], \
+    addr[4], \
+    addr[5]
+#endif
+
 /*
  * ROAMING_OFFLOAD_TIMER_START - Indicates the action to start the timer
  * ROAMING_OFFLOAD_TIMER_STOP - Indicates the action to stop the timer
@@ -124,6 +139,11 @@
  * received from firmware
  */
 #define ROAM_REASON_MASK 0x0F
+#ifdef OPLUS_FEATURE_WIFI_DUALSTA_AP_BLACKLIST
+extern int is1x1IOTRouter;
+extern char routerBssid[32];
+#endif /*OPLUS_FEATURE_WIFI_DUALSTA_AP_BLACKLIST*/
+
 /**
  * csr_get_ielen_from_bss_description() - to get IE length
  *             from struct bss_description structure
@@ -16218,6 +16238,16 @@ QDF_STATUS csr_send_join_req_msg(struct mac_context *mac, uint32_t sessionId,
 				sme_debug("1x1 with 1 Chain AP");
 		}
 
+        #ifdef OPLUS_FEATURE_WIFI_DUALSTA_AP_BLACKLIST
+        if (is_vendor_ap_present) {
+            is1x1IOTRouter = 1;
+        } else {
+            is1x1IOTRouter = 0;
+        }
+         sprintf(routerBssid, MAC_ADDRESS_STR, MAC_ADDR_ARRAY(pBssDescription->bssId));
+         sme_debug("csr 1x1IOTRouter=%d, %02x:%02x:***:***:%02x:%02x\n",is1x1IOTRouter,MAC_MASK(routerBssid));
+        #endif
+
 		if (is_vendor_ap_present &&
 		    !policy_mgr_is_hw_dbs_2x2_capable(mac->psoc) &&
 		    ((mac->roam.configParam.is_force_1x1 ==
@@ -16260,7 +16290,9 @@ QDF_STATUS csr_send_join_req_msg(struct mac_context *mac, uint32_t sessionId,
 					       &vendor_ap_search_attr,
 					       ACTION_OUI_SWITCH_TO_11N_MODE);
 		if (mac->roam.configParam.is_force_1x1 &&
+		    #ifndef OPLUS_FEATURE_WIFI_DUALSTA
 		    mac->lteCoexAntShare &&
+		    #endif
 		    is_vendor_ap_present &&
 		    (dot11mode == MLME_DOT11_MODE_ALL ||
 		     dot11mode == MLME_DOT11_MODE_11AC ||
