@@ -378,41 +378,36 @@ static bool buffer_migrate_lock_buffers(struct buffer_head *head,
 							enum migrate_mode mode)
 {
 	struct buffer_head *bh = head;
-
-	/* Simple case, sync compaction */
-	if (mode != MIGRATE_ASYNC) {
-		do {
-			get_bh(bh);
-			lock_buffer(bh);
-			bh = bh->b_this_page;
-
-		} while (bh != head);
-
-		return true;
-	}
+	struct buffer_head *failed_bh;
 
 	/* async case, we cannot block on lock_buffer so use trylock_buffer */
 	do {
 		get_bh(bh);
 		if (!trylock_buffer(bh)) {
-			/*
-			 * We failed to lock the buffer and cannot stall in
-			 * async migration. Release the taken locks
-			 */
-			struct buffer_head *failed_bh = bh;
-			put_bh(failed_bh);
-			bh = head;
-			while (bh != failed_bh) {
-				unlock_buffer(bh);
-				put_bh(bh);
-				bh = bh->b_this_page;
-			}
-			return false;
+			if (mode == MIGRATE_ASYNC)
+				goto unlock;
+			if (mode == MIGRATE_SYNC_LIGHT && !buffer_uptodate(bh))
+				goto unlock;
+			lock_buffer(bh);
 		}
 
 		bh = bh->b_this_page;
 	} while (bh != head);
+
 	return true;
+
+
+unlock:
+	/* We failed to lock the buffer and cannot stall. */
+	failed_bh = bh;
+	bh = head;
+	while (bh != failed_bh) {
+		unlock_buffer(bh);
+		put_bh(bh);
+		bh = bh->b_this_page;
+	}
+
+	return false;
 }
 #else
 static inline bool buffer_migrate_lock_buffers(struct buffer_head *head,
