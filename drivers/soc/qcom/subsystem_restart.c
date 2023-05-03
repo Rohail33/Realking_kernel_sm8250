@@ -1647,8 +1647,7 @@ static int subsys_parse_devicetree(struct subsys_desc *desc)
 			desc->generic_irq = ret;
 	}
 
-	desc->ignore_ssr_failure = of_property_read_bool(pdev->dev.of_node,
-						"qcom,ignore-ssr-failure");
+	desc->ignore_ssr_failure = true;
 
 	order = ssr_parse_restart_orders(desc);
 	if (IS_ERR(order)) {
