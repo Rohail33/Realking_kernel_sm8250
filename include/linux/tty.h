@@ -14,7 +14,7 @@
 #include <uapi/linux/tty.h>
 #include <linux/rwsem.h>
 #include <linux/llist.h>
-#include <linux/kthread.h>
+
 
 /*
  * Lock subclasses for tty locks
@@ -84,7 +84,7 @@ static inline char *flag_buf_ptr(struct tty_buffer *b, int ofs)
 
 struct tty_bufhead {
 	struct tty_buffer *head;	/* Queue head */
-	struct kthread_work work;
+	struct work_struct work;
 	struct mutex	   lock;
 	atomic_t	   priority;
 	struct tty_buffer sentinel;
@@ -251,8 +251,6 @@ struct tty_port {
 						   based drain is needed else
 						   set to size of fifo */
 	struct kref		kref;		/* Ref counter */
-	struct kthread_worker   worker;		/* worker thread */
-	struct task_struct      *worker_thread;	/* worker thread */
 	void 			*client_data;
 };
 
@@ -716,8 +714,6 @@ static inline int tty_port_users(struct tty_port *port)
 {
 	return port->count + port->blocked_open;
 }
-extern int tty_port_set_policy(struct tty_port *port, int policy,
-			       int sched_priority);
 
 extern int tty_register_ldisc(int disc, struct tty_ldisc_ops *new_ldisc);
 extern int tty_unregister_ldisc(int disc);
