@@ -786,17 +786,15 @@ static ssize_t irq_enable_set(struct device *dev,
 	int rc = 0;
 	struct fpc1020_data *fpc1020 = dev_get_drvdata(dev);
 
+	mutex_lock(&fpc1020->lock);
 	if (!strncmp(buf, "1", strlen("1"))) {
-		mutex_lock(&fpc1020->lock);
 		enable_irq(gpio_to_irq(fpc1020->irq_gpio));
-		mutex_unlock(&fpc1020->lock);
 		pr_debug("fpc enable irq\n");
 	} else if (!strncmp(buf, "0", strlen("0"))) {
-		mutex_lock(&fpc1020->lock);
 		disable_irq(gpio_to_irq(fpc1020->irq_gpio));
-		mutex_unlock(&fpc1020->lock);
 		pr_debug("fpc disable irq\n");
 	}
+	mutex_unlock(&fpc1020->lock);
 
 	return rc ? rc : count;
 }
