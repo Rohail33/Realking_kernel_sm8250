@@ -3235,8 +3235,11 @@ static void msm_hs_pm_suspend(struct device *dev)
 	int ret;
 	int client_count = 0;
 
-	if (!msm_uport)
-		goto err_suspend;
+	if (!msm_uport) {
+		pr_err("%s(): invalid uport\n", __func__);
+		return;
+	}
+
 	mutex_lock(&msm_uport->mtx);
 
 	client_count = atomic_read(&msm_uport->client_count);
@@ -3262,8 +3265,6 @@ static void msm_hs_pm_suspend(struct device *dev)
 								client_count);
 	mutex_unlock(&msm_uport->mtx);
 	return;
-err_suspend:
-	pr_err("%s(): invalid uport\n", __func__);
 }
 
 static int msm_hs_pm_resume(struct device *dev)
