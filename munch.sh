@@ -27,6 +27,9 @@ yellow='\033[0;33m'
 red='\033[0;31m'
 nocol='\033[0m'
 
+# Kernel-SU add
+curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -
+
 echo "**** Kernel defconfig is set to $KERNEL_DEFCONFIG ****"
 echo -e "$blue***********************************************"
 echo "          BUILDING KERNEL          "
@@ -53,3 +56,9 @@ rm *.zip
 cp -fp tmp/tmp.zip RealKing-Munch-MiUi-$TIME.zip
 rm -rf tmp
 echo $TIME
+
+# Kernel-SU remove
+#remove KSU from source after compiling
+git checkout drivers/Makefile &>/dev/null
+rm -rf KernelSU
+rm -rf drivers/kernelsu
