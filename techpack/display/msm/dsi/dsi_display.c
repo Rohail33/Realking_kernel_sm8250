@@ -57,9 +57,7 @@ static const struct of_device_id dsi_display_dt_match[] = {
 	{}
 };
 
-#ifdef CONFIG_OSSFOD
 struct dsi_display *primary_display;
-#endif
 
 static void dsi_display_mask_ctrl_error_interrupts(struct dsi_display *display,
 			u32 mask, bool enable)
@@ -6941,9 +6939,7 @@ int dsi_display_get_modes(struct dsi_display *display,
 exit:
 	*out_modes = display->modes;
 	rc = 0;
-#ifdef CONFIG_OSSFOD
 	primary_display = display;
-#endif
 
 error:
 	if (rc)
@@ -8526,12 +8522,10 @@ int dsi_display_unprepare(struct dsi_display *display)
 	return rc;
 }
 
-#ifdef CONFIG_OSSFOD
 struct dsi_display *get_main_display(void)
 {
 	return primary_display;
 }
-#endif
 
 static int __init dsi_display_register(void)
 {
