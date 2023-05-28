@@ -16,14 +16,11 @@
 #include <linux/sched/cpufreq.h>
 #include <trace/events/power.h>
 #include <linux/sched/sysctl.h>
-#include <drm/drm_notifier_mi.h>
 
 struct sugov_tunables {
 	struct gov_attr_set	attr_set;
 	unsigned int		up_rate_limit_us;
-	unsigned int		up_rate_limit_us_screen_off;
 	unsigned int		down_rate_limit_us;
-	unsigned int		down_rate_limit_us_screen_off;
 };
 
 struct sugov_policy {
@@ -51,9 +48,6 @@ struct sugov_policy {
 
 	bool			limits_changed;
 	bool			need_freq_update;
-
-	struct notifier_block   mi_drm_notifier;
-	bool                    screen_off;
 };
 
 struct sugov_cpu {
@@ -558,51 +552,6 @@ static void sugov_irq_work(struct irq_work *irq_work)
 	kthread_queue_work(&sg_policy->worker, &sg_policy->work);
 }
 
-static DEFINE_MUTEX(rate_limit_lock);
-
-static void update_rate_limit_ns(struct sugov_policy *sg_policy)
-{
-	mutex_lock(&rate_limit_lock);
-
-	if (sg_policy->screen_off) {
-		sg_policy->up_rate_delay_ns =
-			sg_policy->tunables->up_rate_limit_us_screen_off * NSEC_PER_USEC;
-		sg_policy->down_rate_delay_ns =
-			sg_policy->tunables->down_rate_limit_us_screen_off * NSEC_PER_USEC;
-	} else {
-		sg_policy->up_rate_delay_ns =
-			sg_policy->tunables->up_rate_limit_us * NSEC_PER_USEC;
-		sg_policy->down_rate_delay_ns =
-			sg_policy->tunables->down_rate_limit_us * NSEC_PER_USEC;
-	}
-
-	sg_policy->min_rate_limit_ns = min(sg_policy->up_rate_delay_ns,
-					   sg_policy->down_rate_delay_ns);
-
-	mutex_unlock(&rate_limit_lock);
-}
-
-static int mi_drm_notifier_callback(struct notifier_block *nb,
-	  			   unsigned long action, void *data)
-{
-	struct sugov_policy *sg_policy = container_of(nb, struct sugov_policy,
-						     mi_drm_notifier);
-	struct mi_drm_notifier *evdata = data;
-	int *blank = evdata->data;
-
-	if (action != MI_DRM_EARLY_EVENT_BLANK)
-		return NOTIFY_OK;
-
-	if (*blank == MI_DRM_BLANK_POWERDOWN)
-		sg_policy->screen_off = true;
-	else
-		sg_policy->screen_off = false;
-
-	update_rate_limit_ns(sg_policy);
-
-	return NOTIFY_OK;
-}
-
 /************************** sysfs interface ************************/
 
 static struct sugov_tunables *global_tunables;
@@ -613,6 +562,16 @@ static inline struct sugov_tunables *to_sugov_tunables(struct gov_attr_set *attr
 	return container_of(attr_set, struct sugov_tunables, attr_set);
 }
 
+static DEFINE_MUTEX(min_rate_lock);
+
+static void update_min_rate_limit_ns(struct sugov_policy *sg_policy)
+{
+	mutex_lock(&min_rate_lock);
+	sg_policy->min_rate_limit_ns = min(sg_policy->up_rate_delay_ns,
+					   sg_policy->down_rate_delay_ns);
+	mutex_unlock(&min_rate_lock);
+}
+
 static ssize_t up_rate_limit_us_show(struct gov_attr_set *attr_set, char *buf)
 {
 	struct sugov_tunables *tunables = to_sugov_tunables(attr_set);
@@ -620,29 +579,11 @@ static ssize_t up_rate_limit_us_show(struct gov_attr_set *attr_set, char *buf)
 	return scnprintf(buf, PAGE_SIZE, "%u\n", tunables->up_rate_limit_us);
 }
 
-static ssize_t up_rate_limit_us_screen_off_show(struct gov_attr_set *attr_set,
-					char *buf)
-{
-	struct sugov_tunables *tunables = to_sugov_tunables(attr_set);
-
-	return scnprintf(buf, PAGE_SIZE, "%u\n",
-			tunables->up_rate_limit_us_screen_off);
-}
-
 static ssize_t down_rate_limit_us_show(struct gov_attr_set *attr_set, char *buf)
 {
 	struct sugov_tunables *tunables = to_sugov_tunables(attr_set);
 
 	return scnprintf(buf, PAGE_SIZE, "%u\n", tunables->down_rate_limit_us);
-}
-
-static ssize_t down_rate_limit_us_screen_off_show(struct gov_attr_set *attr_set,
-					char *buf)
-{
-	struct sugov_tunables *tunables = to_sugov_tunables(attr_set);
-
-	return scnprintf(buf, PAGE_SIZE, "%u\n",
-			tunables->down_rate_limit_us_screen_off);
 }
 
 static ssize_t up_rate_limit_us_store(struct gov_attr_set *attr_set,
@@ -658,26 +599,8 @@ static ssize_t up_rate_limit_us_store(struct gov_attr_set *attr_set,
 	tunables->up_rate_limit_us = rate_limit_us;
 
 	list_for_each_entry(sg_policy, &attr_set->policy_list, tunables_hook) {
-		update_rate_limit_ns(sg_policy);
-	}
-
-	return count;
-}
-
-static ssize_t up_rate_limit_us_screen_off_store(struct gov_attr_set *attr_set,
-				      const char *buf, size_t count)
-{
-	struct sugov_tunables *tunables = to_sugov_tunables(attr_set);
-	struct sugov_policy *sg_policy;
-	unsigned int rate_limit_us;
-
-	if (kstrtouint(buf, 10, &rate_limit_us))
-		return -EINVAL;
-
-	tunables->up_rate_limit_us_screen_off = rate_limit_us;
-
-	list_for_each_entry(sg_policy, &attr_set->policy_list, tunables_hook) {
-		update_rate_limit_ns(sg_policy);
+		sg_policy->up_rate_delay_ns = rate_limit_us * NSEC_PER_USEC;
+		update_min_rate_limit_ns(sg_policy);
 	}
 
 	return count;
@@ -696,43 +619,19 @@ static ssize_t down_rate_limit_us_store(struct gov_attr_set *attr_set,
 	tunables->down_rate_limit_us = rate_limit_us;
 
 	list_for_each_entry(sg_policy, &attr_set->policy_list, tunables_hook) {
-		update_rate_limit_ns(sg_policy);
-	}
-
-	return count;
-}
-
-static ssize_t down_rate_limit_us_screen_off_store(struct gov_attr_set *attr_set,
-					const char *buf, size_t count)
-{
-	struct sugov_tunables *tunables = to_sugov_tunables(attr_set);
-	struct sugov_policy *sg_policy;
-	unsigned int rate_limit_us;
-
-	if (kstrtouint(buf, 10, &rate_limit_us))
-		return -EINVAL;
-
-	tunables->down_rate_limit_us_screen_off = rate_limit_us;
-
-	list_for_each_entry(sg_policy, &attr_set->policy_list, tunables_hook) {
-		update_rate_limit_ns(sg_policy);
+		sg_policy->down_rate_delay_ns = rate_limit_us * NSEC_PER_USEC;
+		update_min_rate_limit_ns(sg_policy);
 	}
 
 	return count;
 }
 
 static struct governor_attr up_rate_limit_us = __ATTR_RW(up_rate_limit_us);
-static struct governor_attr up_rate_limit_us_screen_off =
-		__ATTR_RW(up_rate_limit_us_screen_off);
 static struct governor_attr down_rate_limit_us = __ATTR_RW(down_rate_limit_us);
-static struct governor_attr down_rate_limit_us_screen_off =
-		__ATTR_RW(down_rate_limit_us_screen_off);
 
 static struct attribute *sugov_attributes[] = {
 	&up_rate_limit_us.attr,
-	&up_rate_limit_us_screen_off.attr,
 	&down_rate_limit_us.attr,
-	&down_rate_limit_us_screen_off.attr,
 	NULL
 };
 
@@ -852,10 +751,7 @@ static void sugov_tunables_save(struct cpufreq_policy *policy,
 	}
 
 	cached->up_rate_limit_us = tunables->up_rate_limit_us;
-	cached->up_rate_limit_us_screen_off = tunables->up_rate_limit_us_screen_off;
 	cached->down_rate_limit_us = tunables->down_rate_limit_us;
-	cached->down_rate_limit_us_screen_off =
-			tunables->down_rate_limit_us_screen_off;
 }
 
 static void sugov_clear_global_tunables(void)
@@ -875,9 +771,6 @@ static void sugov_tunables_restore(struct cpufreq_policy *policy)
 
 	tunables->up_rate_limit_us = cached->up_rate_limit_us;
 	tunables->down_rate_limit_us = cached->down_rate_limit_us;
-	tunables->up_rate_limit_us_screen_off = cached->up_rate_limit_us_screen_off;
-	tunables->down_rate_limit_us_screen_off =
-			cached->down_rate_limit_us_screen_off;
 }
 
 static int sugov_init(struct cpufreq_policy *policy)
@@ -923,11 +816,7 @@ static int sugov_init(struct cpufreq_policy *policy)
 	}
 
 	tunables->up_rate_limit_us = cpufreq_policy_transition_delay_us(policy);
-	tunables->up_rate_limit_us_screen_off =
-			cpufreq_policy_transition_delay_us(policy);
 	tunables->down_rate_limit_us = cpufreq_policy_transition_delay_us(policy);
-	tunables->down_rate_limit_us_screen_off =
-			cpufreq_policy_transition_delay_us(policy);
 
 	policy->governor_data = sg_policy;
 	sg_policy->tunables = tunables;
@@ -991,9 +880,12 @@ static int sugov_start(struct cpufreq_policy *policy)
 {
 	struct sugov_policy *sg_policy = policy->governor_data;
 	unsigned int cpu;
-	int rc;
 
-	update_rate_limit_ns(sg_policy);
+	sg_policy->up_rate_delay_ns =
+		sg_policy->tunables->up_rate_limit_us * NSEC_PER_USEC;
+	sg_policy->down_rate_delay_ns =
+		sg_policy->tunables->down_rate_limit_us * NSEC_PER_USEC;
+	update_min_rate_limit_ns(sg_policy);
 	sg_policy->last_freq_update_time	= 0;
 	sg_policy->next_freq			= 0;
 	sg_policy->work_in_progress		= false;
@@ -1021,12 +913,6 @@ static int sugov_start(struct cpufreq_policy *policy)
 							sugov_update_shared :
 							sugov_update_single);
 	}
-
-	sg_policy->mi_drm_notifier.notifier_call = mi_drm_notifier_callback;
-	rc = mi_drm_register_client(&sg_policy->mi_drm_notifier);
-	if (rc < 0)
-		pr_err("%s: failed to register mi_drm notifier", __func__);
-
 	return 0;
 }
 
@@ -1044,8 +930,6 @@ static void sugov_stop(struct cpufreq_policy *policy)
 		irq_work_sync(&sg_policy->irq_work);
 		kthread_cancel_work_sync(&sg_policy->work);
 	}
-
-	mi_drm_unregister_client(&sg_policy->mi_drm_notifier);
 }
 
 static void sugov_limits(struct cpufreq_policy *policy)
