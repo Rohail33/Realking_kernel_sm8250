@@ -16,7 +16,6 @@
 #include <linux/migt_energy.h>
 #endif
 #include <asm/cacheflush.h>
-#include <drm/drm_refresh_rate.h>
 #include <soc/qcom/scm.h>
 #include <soc/qcom/qtee_shmbridge.h>
 #include <linux/of_platform.h>
@@ -463,7 +462,6 @@ static int tz_get_target_freq(struct devfreq *devfreq, unsigned long *freq)
 			priv->bin.busy_time > CEILING) {
 		val = -1 * level;
 	} else {
-		unsigned int refresh_rate = dsi_panel_get_refresh_rate();
 
 		scm_data[0] = level;
 		scm_data[1] = priv->bin.total_time;
