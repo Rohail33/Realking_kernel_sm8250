@@ -10,6 +10,16 @@ struct ssg_blkcg {
 	int max_available_ratio;
 };
 
+static struct cgroup_subsys_state *blkcg_css(void)
+{
+	struct cgroup_subsys_state *css;
+
+	css = kthread_blkcg();
+	if (css)
+		return css;
+	return task_css(current, io_cgrp_id);
+}
+
 struct ssg_blkg {
 	struct blkg_policy_data pd; /* must be the first member */
 
