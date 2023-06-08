@@ -53,7 +53,7 @@ static const struct of_device_id dsi_display_dt_match[] = {
 	{}
 };
 
-#if defined(CONFIG_OSSFOD) || defined(CONFIG_EXPOSURE_ADJUSTMENT)
+#ifdef CONFIG_OSSFOD
 struct dsi_display *primary_display;
 #endif
 
@@ -6797,7 +6797,7 @@ int dsi_display_get_modes(struct dsi_display *display,
 exit:
 	*out_modes = display->modes;
 	rc = 0;
-#if defined(CONFIG_OSSFOD) || defined(CONFIG_EXPOSURE_ADJUSTMENT)
+#ifdef CONFIG_OSSFOD
 	primary_display = display;
 #endif
 
@@ -8382,7 +8382,7 @@ int dsi_display_unprepare(struct dsi_display *display)
 	return rc;
 }
 
-#if defined(CONFIG_OSSFOD) || defined(CONFIG_EXPOSURE_ADJUSTMENT)
+#ifdef CONFIG_OSSFOD
 struct dsi_display *get_main_display(void)
 {
 	return primary_display;
