@@ -384,7 +384,7 @@ static struct pid_entry *find_or_register_pid(u64 hash_code,
 	if (!pid_entry)
 		return NULL;
 
-	strcpy(pid_entry->package, package);
+	memcpy(pid_entry->package, package, MAX_TASK_COMM_LEN);
 	pid_entry->hash_code = hash_string(pid_entry->package);
 	pid_entry->pid = pid;
 	hash_add(app_hash_table, &pid_entry->hash, hash_code);
