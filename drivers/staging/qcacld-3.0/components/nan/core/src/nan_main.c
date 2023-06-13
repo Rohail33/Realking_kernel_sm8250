@@ -1277,13 +1277,13 @@ static QDF_STATUS nan_discovery_generic_req(struct nan_generic_req *req)
 	return tx_ops->nan_discovery_req_tx(req, NAN_GENERIC_REQ);
 }
 
-QDF_STATUS nan_discovery_flush_callback(struct scheduler_msg *msg)
+void nan_discovery_flush_callback(struct scheduler_msg *msg)
 {
 	struct wlan_objmgr_psoc *psoc;
 
 	if (!msg || !msg->bodyptr) {
 		nan_err("Null pointer for NAN Discovery message");
-		return QDF_STATUS_E_INVAL;
+		return;
 	}
 
 	switch (msg->type) {
@@ -1299,13 +1299,11 @@ QDF_STATUS nan_discovery_flush_callback(struct scheduler_msg *msg)
 	default:
 		nan_err("Unsupported request type: %d", msg->type);
 		qdf_mem_free(msg->bodyptr);
-		return QDF_STATUS_E_INVAL;
+		return;
 	}
 
 	wlan_objmgr_psoc_release_ref(psoc, WLAN_NAN_ID);
 	qdf_mem_free(msg->bodyptr);
-
-	return QDF_STATUS_SUCCESS;
 }
 
 QDF_STATUS nan_discovery_scheduled_handler(struct scheduler_msg *msg)
