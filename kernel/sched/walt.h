@@ -23,6 +23,10 @@
 /* Default window size (in ns) = 20ms */
 #define DEFAULT_SCHED_RAVG_WINDOW 20000000
 #endif
+#define WALT_CPUFREQ_CONTINUE		(1U << 1)
+#define WALT_CPUFREQ_IC_MIGRATION	(1U << 2)
+#define WALT_CPUFREQ_PL			(1U << 3)
+#define WALT_CPUFREQ_BOOST_UPDATE	(1U << 5)
 
 /* Max window size (in ns) = 1s */
 #define MAX_SCHED_RAVG_WINDOW 1000000000
@@ -45,6 +49,8 @@
 
 #define NEW_TASK_ACTIVE_TIME 100000000
 
+
+
 extern unsigned int sched_ravg_window;
 extern unsigned int new_sched_ravg_window;
 extern unsigned int max_possible_efficiency;
@@ -64,6 +70,11 @@ extern void update_task_ravg(struct task_struct *p, struct rq *rq, int event,
 						u64 wallclock, u64 irqtime);
 
 extern unsigned int walt_big_tasks(int cpu);
+
+struct waltgov_callback {
+	void (*func)(struct waltgov_callback *cb, u64 time, unsigned int flags);
+};
+
 
 static inline void
 inc_nr_big_task(struct walt_sched_stats *stats, struct task_struct *p)
@@ -185,6 +196,10 @@ static inline u64 sched_irqload(int cpu)
 	else
 		return 0;
 }
+
+
+
+
 
 static inline int sched_cpu_high_irqload(int cpu)
 {
