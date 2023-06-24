@@ -451,6 +451,12 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -Werror-implicit-function-declaration \
 		   -Werror=return-type -Wno-format-security \
 		   -std=gnu89
+
+# Optimize Clang build for sm8250
+KBUILD_CFLAGS	+= -mcpu=kryo -mtune=kryo
+KBUILD_AFLAGS   += -mcpu=kryo -mtune=kryo
+KBUILD_LDFLAGS  += -mllvm -mcpu=kryo -mtune=kryo
+
 KBUILD_CPPFLAGS := -D__KERNEL__
 KBUILD_AFLAGS_KERNEL :=
 KBUILD_CFLAGS_KERNEL :=
