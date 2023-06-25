@@ -1030,13 +1030,8 @@ static int __cam_req_mgr_check_sync_for_mslave(
 			}
 		}
 	} else {
-		if (link->initial_skip) {
-			CAM_DBG(CAM_CRM,
-				"Initial skip Req: %lld on link: %x",
-				req_id, link->link_hdl);
+		if (link->initial_skip)
 			link->initial_skip = false;
-			return -EAGAIN;
-		}
 
 		rc = __cam_req_mgr_inject_delay(link->req.l_tbl, slot->idx);
 		if (rc) {

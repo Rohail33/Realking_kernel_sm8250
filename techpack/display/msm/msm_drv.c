@@ -569,8 +569,7 @@ static int msm_drm_display_thread_create(struct sched_param param,
 		kthread_init_worker(&priv->disp_thread[i].worker);
 		priv->disp_thread[i].dev = ddev;
 		priv->disp_thread[i].thread =
-			kthread_run_perf_critical(cpu_prime_mask,
-				kthread_worker_fn,
+			kthread_run(kthread_worker_fn,
 				&priv->disp_thread[i].worker,
 				"crtc_commit:%d", priv->disp_thread[i].crtc_id);
 		ret = sched_setscheduler(priv->disp_thread[i].thread,
@@ -589,8 +588,7 @@ static int msm_drm_display_thread_create(struct sched_param param,
 		kthread_init_worker(&priv->event_thread[i].worker);
 		priv->event_thread[i].dev = ddev;
 		priv->event_thread[i].thread =
-			kthread_run_perf_critical(cpu_prime_mask,
-				kthread_worker_fn,
+			kthread_run(kthread_worker_fn,
 				&priv->event_thread[i].worker,
 				"crtc_event:%d", priv->event_thread[i].crtc_id);
 		/**
@@ -637,8 +635,8 @@ static int msm_drm_display_thread_create(struct sched_param param,
 	 * other important events.
 	 */
 	kthread_init_worker(&priv->pp_event_worker);
-	priv->pp_event_thread = kthread_run_perf_critical(cpu_prime_mask,
-			kthread_worker_fn, &priv->pp_event_worker, "pp_event");
+	priv->pp_event_thread = kthread_run(kthread_worker_fn,
+			&priv->pp_event_worker, "pp_event");
 
 	ret = sched_setscheduler(priv->pp_event_thread,
 						SCHED_FIFO, &param);
@@ -863,16 +861,6 @@ static void msm_idle_init(struct drm_device *ddev)
 	spin_lock_init(&idle->lock);
 }
 
-static void msm_drm_pm_unreq(struct work_struct *work)
-{
-	struct msm_drm_private *priv = container_of(to_delayed_work(work),
-						    typeof(*priv),
-						    pm_unreq_dwork);
-
-	pm_qos_update_request(&priv->pm_irq_req, PM_QOS_DEFAULT_VALUE);
-	atomic_set_release(&priv->pm_req_set, 0);
-}
-
 static int msm_drm_init(struct device *dev, struct drm_driver *drv)
 {
 	struct platform_device *pdev = to_platform_device(dev);
@@ -910,9 +898,6 @@ static int msm_drm_init(struct device *dev, struct drm_driver *drv)
 
 	INIT_LIST_HEAD(&priv->client_event_list);
 	INIT_LIST_HEAD(&priv->inactive_list);
-
-	priv->pm_req_set = (atomic_t)ATOMIC_INIT(0);
-	INIT_DELAYED_WORK(&priv->pm_unreq_dwork, msm_drm_pm_unreq);
 
 	ret = sde_power_resource_init(pdev, &priv->phandle);
 	if (ret) {
@@ -971,12 +956,12 @@ static int msm_drm_init(struct device *dev, struct drm_driver *drv)
 		}
 	}
 
-	drm_mode_config_reset(ddev);
-
 	ret = drm_dev_register(ddev, 0);
 	if (ret)
 		goto fail;
 	priv->registered = true;
+
+	drm_mode_config_reset(ddev);
 
 	if (kms && kms->funcs && kms->funcs->cont_splash_config) {
 		ret = kms->funcs->cont_splash_config(kms);
@@ -1259,13 +1244,8 @@ static void msm_irq_preinstall(struct drm_device *dev)
 {
 	struct msm_drm_private *priv = dev->dev_private;
 	struct msm_kms *kms = priv->kms;
-	struct sde_kms *sde_kms = to_sde_kms(kms);
 	BUG_ON(!kms);
 	kms->funcs->irq_preinstall(kms);
-	priv->pm_irq_req.type = PM_QOS_REQ_AFFINE_IRQ;
-	priv->pm_irq_req.irq = sde_kms->irq_num;
-	pm_qos_add_request(&priv->pm_irq_req, PM_QOS_CPU_DMA_LATENCY,
-			   PM_QOS_DEFAULT_VALUE);
 }
 
 static int msm_irq_postinstall(struct drm_device *dev)
@@ -1282,8 +1262,6 @@ static void msm_irq_uninstall(struct drm_device *dev)
 	struct msm_kms *kms = priv->kms;
 	BUG_ON(!kms);
 	kms->funcs->irq_uninstall(kms);
-	flush_delayed_work(&priv->pm_unreq_dwork);
-	pm_qos_remove_request(&priv->pm_irq_req);
 }
 
 static int msm_enable_vblank(struct drm_device *dev, unsigned int pipe)

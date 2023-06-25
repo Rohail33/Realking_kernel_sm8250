@@ -26,7 +26,6 @@
 #include <linux/component.h>
 #include <linux/platform_device.h>
 #include <linux/pm.h>
-#include <linux/pm_qos.h>
 #include <linux/pm_runtime.h>
 #include <linux/slab.h>
 #include <linux/list.h>
@@ -113,9 +112,7 @@ enum msm_mdp_plane_property {
 
 	/* range properties */
 	PLANE_PROP_ZPOS = PLANE_PROP_BLOBCOUNT,
-#ifdef CONFIG_OSSFOD
 	PLANE_PROP_FOD,
-#endif
 	PLANE_PROP_ALPHA,
 	PLANE_PROP_COLOR_FILL,
 	PLANE_PROP_H_DECIMATE,
@@ -727,9 +724,6 @@ struct msm_drm_private {
 	ktime_t  complete_commit_time;
 
 	struct msm_idle idle;
-	struct pm_qos_request pm_irq_req;
-	struct delayed_work pm_unreq_dwork;
-	atomic_t pm_req_set;
 };
 
 /* get struct msm_kms * from drm_device * */

@@ -5279,66 +5279,6 @@ static ssize_t sysfs_dynamic_dsi_clk_write(struct device *dev,
 
 }
 
-static ssize_t sysfs_hbm_read(struct device *dev,
-		struct device_attribute *attr, char *buf)
-{
-	struct dsi_display *display = dev_get_drvdata(dev);
-	if (!display->panel)
-		return 0;
-
-	return scnprintf(buf, PAGE_SIZE, "%d\n", display->panel->hbm_mode);
-}
-
-static ssize_t sysfs_hbm_write(struct device *dev,
-	    struct device_attribute *attr, const char *buf, size_t count)
-{
-	struct dsi_display *display = dev_get_drvdata(dev);
-	int ret, hbm_mode;
-
-	if (!display->panel)
-		return -EINVAL;
-
-	ret = kstrtoint(buf, 10, &hbm_mode);
-	if (ret) {
-		pr_err("kstrtoint failed. ret=%d\n", ret);
-		return ret;
-	}
-
-	mutex_lock(&display->display_lock);
-
-	display->panel->hbm_mode = hbm_mode;
-	if (!dsi_panel_initialized(display->panel))
-		goto error;
-
-	ret = dsi_display_clk_ctrl(display->dsi_clk_handle,
-			DSI_CORE_CLK, DSI_CLK_ON);
-	if (ret) {
-		pr_err("[%s] failed to enable DSI core clocks, rc=%d\n",
-		       display->name, ret);
-		goto error;
-	}
-
-	ret = dsi_panel_apply_hbm_mode(display->panel);
-	if (ret)
-		pr_err("unable to set hbm mode\n");
-
-	ret = dsi_display_clk_ctrl(display->dsi_clk_handle,
-			DSI_CORE_CLK, DSI_CLK_OFF);
-	if (ret) {
-		pr_err("[%s] failed to disable DSI core clocks, rc=%d\n",
-		       display->name, ret);
-		goto error;
-	}
-error:
-	mutex_unlock(&display->display_lock);
-	return ret == 0 ? count : ret;
-}
-
-static DEVICE_ATTR(hbm, 0644,
-			sysfs_hbm_read,
-			sysfs_hbm_write);
-
-
 static DEVICE_ATTR(dynamic_dsi_clock, 0644,
 			sysfs_dynamic_dsi_clk_read,
 			sysfs_dynamic_dsi_clk_write);
@@ -5351,7 +5291,6 @@ static struct attribute_group dynamic_dsi_clock_fs_attrs_group = {
 	.attrs = dynamic_dsi_clock_fs_attrs,
 };
 
-#ifdef CONFIG_OSSFOD
 static ssize_t sysfs_fod_ui_read(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
@@ -5372,20 +5311,6 @@ static ssize_t sysfs_fod_ui_read(struct device *dev,
 static DEVICE_ATTR(fod_ui, 0444,
 			sysfs_fod_ui_read,
 			NULL);
-
-static struct attribute *display_fs_attrs[] = {
-	&dev_attr_fod_ui.attr,
-	&dev_attr_hbm.attr,
-#ifdef CONFIG_DRM_SDE_EXPO
-	&dev_attr_dimlayer_exposure.attr,
-#endif
-	NULL,
-};
-
-static struct attribute_group display_fs_attrs_group = {
-	.attrs = display_fs_attrs,
-};
-#else
 
 #ifdef CONFIG_DRM_SDE_EXPO
 static ssize_t sysfs_dimlayer_exposure_read(struct device *dev,
@@ -5447,18 +5372,17 @@ static DEVICE_ATTR(dimlayer_exposure, 0644,
 #endif
 
 static struct attribute *display_fs_attrs[] = {
-        &dev_attr_hbm.attr,
+	&dev_attr_fod_ui.attr,
 #ifdef CONFIG_DRM_SDE_EXPO
 	&dev_attr_dimlayer_exposure.attr,
 #endif
-        NULL,
+	NULL,
 };
 
 static struct attribute_group display_fs_attrs_group = {
-        .attrs = display_fs_attrs,
+	.attrs = display_fs_attrs,
 };
 
-#endif
 static int dsi_display_sysfs_init(struct dsi_display *display)
 {
 	int rc = 0;
@@ -5484,23 +5408,19 @@ static int dsi_display_sysfs_deinit(struct dsi_display *display)
 		sysfs_remove_group(&dev->kobj,
 			&dynamic_dsi_clock_fs_attrs_group);
 
-#ifdef CONFIG_OSSFOD
 	sysfs_remove_group(&dev->kobj,
 		&display_fs_attrs_group);
-#endif
 
 	return 0;
 
 }
 
-#ifdef CONFIG_OSSFOD
 void dsi_display_set_fod_ui(struct dsi_display *display, bool status)
 {
 	struct device *dev = &display->pdev->dev;
 	atomic_set(&display->fod_ui, status);
 	sysfs_notify(&dev->kobj, NULL, "fod_ui");
 }
-#endif
 
 /**
  * dsi_display_bind - bind dsi device with controlling device
@@ -5564,7 +5484,11 @@ static int dsi_display_bind(struct device *dev,
 		goto error;
 	}
 
-	dsi_display_debugfs_init(display);
+	rc = dsi_display_debugfs_init(display);
+	if (rc) {
+		DSI_ERR("[%s] debugfs init failed, rc=%d\n", display->name, rc);
+		goto error;
+	}
 
 	atomic_set(&display->clkrate_change_pending, 0);
 	display->cached_clk_rate = 0;
@@ -5575,9 +5499,7 @@ static int dsi_display_bind(struct device *dev,
 		goto error;
 	}
 
-#ifdef CONFIG_OSSFOD
 	atomic_set(&display->fod_ui, false);
-#endif
 
 	memset(&info, 0x0, sizeof(info));
 
@@ -8192,7 +8114,7 @@ int dsi_display_enable(struct dsi_display *display)
 	mode = display->panel->cur_mode;
 
 	if (mode->dsi_mode_flags & DSI_MODE_FLAG_DMS) {
-		rc = dsi_panel_switch(display->panel);
+		rc = dsi_panel_post_switch(display->panel);
 		if (rc) {
 			DSI_ERR("[%s] failed to switch DSI panel mode, rc=%d\n",
 				   display->name, rc);
@@ -8221,7 +8143,7 @@ int dsi_display_enable(struct dsi_display *display)
 	}
 
 	if (mode->dsi_mode_flags & DSI_MODE_FLAG_DMS) {
-		rc = dsi_panel_post_switch(display->panel);
+		rc = dsi_panel_switch(display->panel);
 		if (rc) {
 			DSI_ERR("[%s] failed to switch DSI panel mode, rc=%d\n",
 				   display->name, rc);
@@ -8522,8 +8444,7 @@ int dsi_display_unprepare(struct dsi_display *display)
 	return rc;
 }
 
-struct dsi_display *get_main_display(void)
-{
+struct dsi_display *get_main_display(void) {
 	return primary_display;
 }
 
