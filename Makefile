@@ -453,9 +453,9 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -std=gnu89
 
 # Optimize Clang build for sm8250
-KBUILD_CFLAGS	+= -mcpu=kryo -mtune=kryo
-KBUILD_AFLAGS   += -mcpu=kryo -mtune=kryo
-KBUILD_LDFLAGS  += -mllvm -mcpu=kryo -mtune=kryo
+KBUILD_CFLAGS	+= -mcpu=cortex-a77 -mtune=cortex-a77
+KBUILD_AFLAGS   += -mcpu=cortex-a77 -mtune=cortex-a77
+KBUILD_LDFLAGS  += -mllvm -mcpu=cortex-a77 -mtune=cortex-a77
 
 KBUILD_CPPFLAGS := -D__KERNEL__
 KBUILD_AFLAGS_KERNEL :=
