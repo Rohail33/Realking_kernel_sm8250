@@ -919,7 +919,7 @@ static inline void notification_work(struct work_struct *work)
 }
 #endif
 
-static inline irqreturn_t fpc1020_irq_handler(int irq, void *handle)
+static __always_inline irqreturn_t fpc1020_irq_handler(int irq, void *handle)
 {
 	struct fpc1020_data *fpc1020 = handle;
 
@@ -980,7 +980,7 @@ static void set_fingerprintd_nice(int nice)
 }
 
 #ifdef FPC_DRM_INTERFACE
-static inline int fpc_fb_notif_callback(struct notifier_block *nb,
+static __always_inline int fpc_fb_notif_callback(struct notifier_block *nb,
 				 unsigned long val, void *data)
 {
 	struct fpc1020_data *fpc1020 = container_of(nb, struct fpc1020_data,
