@@ -1196,4 +1196,8 @@ static struct cpufreq_governor walt_gov = {
 	.owner			= THIS_MODULE,
 };
 
-cpufreq_governor_init(walt_gov);
+static int __init walt_register(void)
+{
+	return cpufreq_register_governor(&walt_gov);
+}
+fs_initcall(walt_register);
