@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2010-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <linux/msm-bus.h>
@@ -750,19 +749,16 @@ static ssize_t thermal_pwrlevel_store(struct device *dev,
 	if (ret)
 		return ret;
 
+	mutex_lock(&device->mutex);
+
 	if (level > pwr->num_pwrlevels - 2)
 		level = pwr->num_pwrlevels - 2;
 
-	if (kgsl_pwr_limits_set_freq(pwr->sysfs_pwr_limit,
-			pwr->pwrlevels[level].gpu_freq)) {
-		dev_err(device->dev,
-				"Failed to set sysfs thermal limit via limits fw\n");
-		mutex_lock(&device->mutex);
-		pwr->thermal_pwrlevel = level;
-		/* Update the current level using the new limit */
-		kgsl_pwrctrl_pwrlevel_change(device, pwr->active_pwrlevel);
-		mutex_unlock(&device->mutex);
-	}
+	pwr->thermal_pwrlevel = level;
+
+	/* Update the current level using the new limit */
+	kgsl_pwrctrl_pwrlevel_change(device, pwr->active_pwrlevel);
+	mutex_unlock(&device->mutex);
 
 	return count;
 }
@@ -1008,17 +1004,9 @@ static ssize_t gpuclk_show(struct device *dev,
 				    char *buf)
 {
 	struct kgsl_device *device = dev_get_drvdata(dev);
-	unsigned long freq;
-	struct kgsl_pwrctrl *pwr;
-	
-	pwr = &device->pwrctrl;
-	
-	if (device->state == KGSL_STATE_SLUMBER)
-		freq = pwr->pwrlevels[pwr->num_pwrlevels - 1].gpu_freq;
-	else
-		freq = kgsl_pwrctrl_active_freq(pwr);
 
-	return scnprintf(buf, PAGE_SIZE, "%ld\n", freq);
+	return scnprintf(buf, PAGE_SIZE, "%ld\n",
+		kgsl_pwrctrl_active_freq(&device->pwrctrl));
 }
 
 static ssize_t __timer_store(struct device *dev, struct device_attribute *attr,
@@ -1464,17 +1452,9 @@ static ssize_t clock_mhz_show(struct device *dev,
 				struct device_attribute *attr, char *buf)
 {
 	struct kgsl_device *device = dev_get_drvdata(dev);
-	unsigned long freq;
-	struct kgsl_pwrctrl *pwr;
-	
-	pwr = &device->pwrctrl;
-	
-	if (device->state == KGSL_STATE_SLUMBER)
-		freq = pwr->pwrlevels[pwr->num_pwrlevels - 1].gpu_freq;
-	else
-		freq = kgsl_pwrctrl_active_freq(pwr);
 
-	return scnprintf(buf, PAGE_SIZE, "%ld\n", freq / 1000000);
+	return scnprintf(buf, PAGE_SIZE, "%ld\n",
+			kgsl_pwrctrl_active_freq(&device->pwrctrl) / 1000000);
 }
 
 static ssize_t freq_table_mhz_show(struct device *dev,
@@ -2386,14 +2366,6 @@ int kgsl_pwrctrl_init(struct kgsl_device *device)
 	if (result)
 		goto error_cleanup_bus_ib;
 
-	pwr->cooling_pwr_limit = kgsl_pwr_limits_add(KGSL_DEVICE_3D0);
-	if (IS_ERR_OR_NULL(pwr->cooling_pwr_limit)) {
-		dev_err(device->dev, "Failed to add cooling power limit\n");
-		result = -EINVAL;
-		pwr->cooling_pwr_limit = NULL;
-		goto error_cleanup_bus_ib;
-	}
-
 	INIT_WORK(&pwr->thermal_cycle_ws, kgsl_thermal_cycle);
 	timer_setup(&pwr->thermal_timer, kgsl_thermal_timer, 0);
 
@@ -2443,10 +2415,6 @@ void kgsl_pwrctrl_close(struct kgsl_device *device)
 		kfree(pwr->sysfs_pwr_limit);
 		pwr->sysfs_pwr_limit = NULL;
 	}
-
-	kgsl_pwr_limits_del(pwr->cooling_pwr_limit);
-	pwr->cooling_pwr_limit = NULL;
-
 	kfree(pwr->bus_ib);
 
 	_close_pcl(pwr);
