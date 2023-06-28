@@ -444,7 +444,7 @@ static struct request *ssg_dispatch_request(struct blk_mq_hw_ctx *hctx)
 	return rq;
 }
 
-static void ssg_completed_request(struct request *rq)
+static void ssg_completed_request(struct request *rq, u64 now)
 {
 	struct ssg_data *ssg = rq->q->elevator->elevator_data;
 	struct ssg_request_info *rqi;
