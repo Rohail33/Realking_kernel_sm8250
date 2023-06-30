@@ -67,7 +67,7 @@ struct waltgov_policy {
 };
 
 struct waltgov_cpu {
-	struct waltgov_callback	cb;
+	struct update_util_data	cb;
 	struct waltgov_policy	*wg_policy;
 	unsigned int		cpu;
 	struct sched_walt_cpu_load	walt_load;
@@ -92,6 +92,9 @@ static bool waltgov_should_update_freq(struct waltgov_policy *wg_policy, u64 tim
 {
 	s64 delta_ns;
 
+	if (!cpufreq_this_cpu_can_update(wg_policy->policy))
+		return false;
+
 	if (unlikely(wg_policy->limits_changed)) {
 		wg_policy->limits_changed = false;
 		wg_policy->need_freq_update = true;
@@ -108,31 +111,7 @@ static bool waltgov_should_update_freq(struct waltgov_policy *wg_policy, u64 tim
 	delta_ns = time - wg_policy->last_freq_update_time;
 	return delta_ns >= wg_policy->min_rate_limit_ns;
 }
-static inline void waltgov_remove_callback(int cpu)
-{
-        rcu_assign_pointer(per_cpu(waltgov_cb_data, cpu), NULL);
-}
 
-static inline void waltgov_add_callback(int cpu, struct waltgov_callback *cb,
-                        void (*func)(struct waltgov_callback *cb, u64 time,
-                        unsigned int flags))
-{
-        if (WARN_ON(!cb || !func))
-                return;
-
-        if (WARN_ON(per_cpu(waltgov_cb_data, cpu)))
-                return;
-
-        cb->func = func;
-        rcu_assign_pointer(per_cpu(waltgov_cb_data, cpu), cb);
-}
-
-static inline void waltgov_run_callback(struct rq *rq, unsigned int flags) //walt.h walt调频函数
-{
-    struct waltgov_callback *cb = rcu_dereference_sched(*per_cpu_ptr(&waltgov_cb_data, cpu_of(rq)));
-    if (cb)
-        cb->func(cb, ktime_get_ns(), flags);
-}
 
 
 static bool waltgov_up_down_rate_limit(struct waltgov_policy *wg_policy, u64 time,
@@ -234,6 +213,7 @@ static void waltgov_fast_switch(struct waltgov_policy *wg_policy, u64 time,
 static void waltgov_deferred_update(struct waltgov_policy *wg_policy, u64 time,
 				  unsigned int next_freq)
 {
+	
 	irq_work_queue(&wg_policy->irq_work);
 }
 
@@ -294,10 +274,11 @@ static unsigned int get_next_freq(struct waltgov_policy *wg_policy,
 static unsigned long waltgov_get_util(struct waltgov_cpu *wg_cpu)
 {
 	struct rq *rq = cpu_rq(wg_cpu->cpu);
-	unsigned long max = arch_scale_cpu_capacity(NULL,wg_cpu->cpu);
+	unsigned long max = arch_scale_cpu_capacity(NULL, wg_cpu->cpu);
 	unsigned long util;
 
 	wg_cpu->max = max;
+
 	util = cpu_util_freq_walt(wg_cpu->cpu, &wg_cpu->walt_load);
 	return uclamp_rq_util_with(rq, util, NULL);
 }
@@ -334,7 +315,7 @@ static void waltgov_walt_adjust(struct waltgov_cpu *wg_cpu, unsigned long cpu_ut
 				unsigned long *max)
 {
 	struct waltgov_policy *wg_policy = wg_cpu->wg_policy;
-	bool is_migration = wg_cpu->flags & WALT_CPUFREQ_IC_MIGRATION;
+	bool is_migration = wg_cpu->flags & SCHED_CPUFREQ_INTERCLUSTER_MIG;
 	bool is_rtg_boost = wg_cpu->walt_load.rtgb_active;
 	bool is_hiload;
 	unsigned long pl = wg_cpu->walt_load.pl;
@@ -419,15 +400,15 @@ static unsigned int waltgov_next_freq_shared(struct waltgov_cpu *wg_cpu, u64 tim
 	return get_next_freq(wg_policy, util, max, wg_cpu, time);
 }
 
-static void waltgov_update_freq(struct waltgov_callback *cb, u64 time,
+static void waltgov_update_freq(struct update_util_data *hook, u64 time,
 				unsigned int flags)
 {
-	struct waltgov_cpu *wg_cpu = container_of(cb, struct waltgov_cpu, cb);
+	struct waltgov_cpu *wg_cpu = container_of(hook, struct waltgov_cpu, cb);
 	struct waltgov_policy *wg_policy = wg_cpu->wg_policy;
 	unsigned long hs_util, rtg_boost_util;
 	unsigned int next_f;
 
-	if (!wg_policy->tunables->pl && flags & WALT_CPUFREQ_PL)
+	if (!wg_policy->tunables->pl && flags & SCHED_CPUFREQ_PL)
 		return;
 
 	wg_cpu->util = waltgov_get_util(wg_cpu);
@@ -454,7 +435,7 @@ static void waltgov_update_freq(struct waltgov_callback *cb, u64 time,
 				wg_cpu->walt_load.rtgb_active, flags);
 
 	if (waltgov_should_update_freq(wg_policy, time) &&
-	    !(flags & WALT_CPUFREQ_CONTINUE)) {
+	    !(flags & SCHED_CPUFREQ_CONTINUE)) {
 		next_f = waltgov_next_freq_shared(wg_cpu, time);
 
 		if (!next_f)
@@ -800,11 +781,9 @@ static ssize_t boost_store(struct gov_attr_set *attr_set, const char *buf,
 	struct waltgov_tunables *tunables = to_waltgov_tunables(attr_set);
 	struct waltgov_policy *wg_policy;
 	int val;
+	unsigned long hs_util;
 
 	if (kstrtoint(buf, 10, &val))
-		return -EINVAL;
-
-	if (val < -100 || val > 1000)
 		return -EINVAL;
 
 	tunables->boost = val;
@@ -813,7 +792,9 @@ static ssize_t boost_store(struct gov_attr_set *attr_set, const char *buf,
 		unsigned long flags;
 
 		raw_spin_lock_irqsave(&rq->lock, flags);
-		waltgov_run_callback(rq, WALT_CPUFREQ_BOOST_UPDATE);
+		hs_util = target_util(wg_policy,
+					wg_policy->tunables->hispeed_freq);
+		wg_policy->hispeed_util = hs_util;
 		raw_spin_unlock_irqrestore(&rq->lock, flags);
 	}
 	return count;
@@ -1127,8 +1108,8 @@ static int waltgov_start(struct cpufreq_policy *policy)
 
 	for_each_cpu(cpu, policy->cpus) {
 		struct waltgov_cpu *wg_cpu = &per_cpu(waltgov_cpu, cpu);
-
-		waltgov_add_callback(cpu, &wg_cpu->cb, waltgov_update_freq);
+		cpufreq_add_update_util_hook(cpu, &wg_cpu->cb,waltgov_update_freq);
+		
 	}
 
 	return 0;
@@ -1140,7 +1121,7 @@ static void waltgov_stop(struct cpufreq_policy *policy)
 	unsigned int cpu;
 
 	for_each_cpu(cpu, policy->cpus)
-		waltgov_remove_callback(cpu);
+		cpufreq_remove_update_util_hook(cpu);
 
 	synchronize_rcu();
 
