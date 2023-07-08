@@ -1,4 +1,4 @@
-CONFIG_LOCALVERSION="~Realking//v12.8-Extreme"
+CONFIG_LOCALVERSION="~Realking//v13.0-Revolution"
 # CONFIG_AUDIT is not set
 CONFIG_NO_HZ=y
 CONFIG_HIGH_RES_TIMERS=y
