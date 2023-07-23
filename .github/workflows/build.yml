@@ -1,0 +1,156 @@
+name: Build Kernel
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  push:
+    branches: 
+      - base
+  workflow_dispatch:
+
+jobs:
+  build_aosp:
+    name: Build AOSP Kernel
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup build kernel environment
+        run: |
+          echo "BUILD_TIME=$(TZ=Asia/Shanghai date "+%Y%m%d%H%M")" >> $GITHUB_ENV
+          sudo apt-get update
+          sudo apt-get install jq git ccache automake flex lzop bison gperf build-essential zip curl zlib1g-dev g++-multilib libxml2-utils bzip2 libbz2-dev libbz2-1.0 libghc-bzlib-dev squashfs-tools pngcrush schedtool dpkg-dev liblz4-tool make optipng maven libssl-dev pwgen libswitch-perl policycoreutils minicom libxml-sax-base-perl libxml-simple-perl bc libc6-dev-i386 lib32ncurses5-dev libx11-dev lib32z-dev libgl1-mesa-dev xsltproc unzip device-tree-compiler python2 python3
+          mkdir -p $GITHUB_WORKSPACE/clang
+
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: build-kernel-aosp
+          max-size: 2G
+
+      - name: Download clang
+        run: |
+          cd $GITHUB_WORKSPACE/clang
+          curl https://api.github.com/repos/ZyCromerZ/Clang/releases/latest | jq -r ".assets[0].browser_download_url" | wget -O clang.tar.gz -i -
+          tar zxvf clang.tar.gz
+
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        with:
+          ref: aosp
+          path: kernel
+
+      - name: patch build script to enable ccache
+        run: |
+          cd $GITHUB_WORKSPACE/kernel
+          sed -i "s/CC=clang/CC=\"ccache clang\"/g" server.sh
+          sed -i "s/CC=clang/CC=\"ccache clang\"/g" apollo.sh
+          sed -i "s/CC=clang/CC=\"ccache clang\"/g" munch.sh
+
+      - name: Build for alioth
+        run: |
+          cd $GITHUB_WORKSPACE/kernel
+          bash ./server.sh
+          echo "ALIOTH_AOSP_PATH=$(ls RealKing-Alioth*)" >> $GITHUB_ENV
+
+      - name: Upload alioth kernel
+        uses: actions/upload-artifact@v3
+        with:
+          name: alioth-${{ env.BUILD_TIME }}
+          path: kernel/${{ env.ALIOTH_AOSP_PATH }}
+
+      - name: Build for apollo
+        run: |
+          cd $GITHUB_WORKSPACE/kernel
+          bash ./apollo.sh
+          echo "APOLLO_AOSP_PATH=$(ls RealKing-Apollo*)" >> $GITHUB_ENV
+
+      - name: Upload apollo kernel
+        uses: actions/upload-artifact@v3
+        with:
+          name: apollo-${{ env.BUILD_TIME }}
+          path: kernel/${{ env.APOLLO_AOSP_PATH }}
+
+      - name: Build for munch
+        run: |
+          cd $GITHUB_WORKSPACE/kernel
+          bash ./munch.sh
+          echo "MUNCH_AOSP_PATH=$(ls RealKing-Munch*)" >> $GITHUB_ENV
+
+      - name: Upload munch kernel
+        uses: actions/upload-artifact@v3
+        with:
+          name: munch-${{ env.BUILD_TIME }}
+          path: kernel/${{ env.MUNCH_AOSP_PATH }}
+
+  build_miui:
+    name: Build MIUI Kernel
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup build kernel environment
+        run: |
+          echo "BUILD_TIME=$(TZ=Asia/Shanghai date "+%Y%m%d%H%M")" >> $GITHUB_ENV
+          sudo apt-get update
+          sudo apt-get install jq git ccache automake flex lzop bison gperf build-essential zip curl zlib1g-dev g++-multilib libxml2-utils bzip2 libbz2-dev libbz2-1.0 libghc-bzlib-dev squashfs-tools pngcrush schedtool dpkg-dev liblz4-tool make optipng maven libssl-dev pwgen libswitch-perl policycoreutils minicom libxml-sax-base-perl libxml-simple-perl bc libc6-dev-i386 lib32ncurses5-dev libx11-dev lib32z-dev libgl1-mesa-dev xsltproc unzip device-tree-compiler python2 python3
+          mkdir -p $GITHUB_WORKSPACE/clang
+
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: build-kernel-miui
+          max-size: 2G
+
+      - name: Download clang
+        run: |
+          cd $GITHUB_WORKSPACE/clang
+          curl https://api.github.com/repos/ZyCromerZ/Clang/releases/latest | jq -r ".assets[0].browser_download_url" | wget -O clang.tar.gz -i -
+          tar zxvf clang.tar.gz
+
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        with:
+          ref: base
+          path: kernel
+
+      - name: patch build script to enable ccache
+        run: |
+          cd $GITHUB_WORKSPACE/kernel
+          sed -i "s/CC=clang/CC=\"ccache clang\"/g" server.sh
+          sed -i "s/CC=clang/CC=\"ccache clang\"/g" apollo.sh
+          sed -i "s/CC=clang/CC=\"ccache clang\"/g" munch.sh
+
+      - name: Build for alioth
+        run: |
+          cd $GITHUB_WORKSPACE/kernel
+          bash ./server.sh
+          echo "ALIOTH_MIUI_PATH=$(ls RealKing-Alioth*)" >> $GITHUB_ENV
+
+      - name: Upload alioth kernel
+        uses: actions/upload-artifact@v3
+        with:
+          name: alioth-${{ env.BUILD_TIME }}
+          path: kernel/${{ env.ALIOTH_MIUI_PATH }}
+
+      - name: Build for apollo
+        run: |
+          cd $GITHUB_WORKSPACE/kernel
+          bash ./apollo.sh
+          echo "APOLLO_MIUI_PATH=$(ls RealKing-Apollo*)" >> $GITHUB_ENV
+
+      - name: Upload apollo kernel
+        uses: actions/upload-artifact@v3
+        with:
+          name: apollo-${{ env.BUILD_TIME }}
+          path: kernel/${{ env.APOLLO_MIUI_PATH }}
+
+      - name: Build for munch
+        run: |
+          cd $GITHUB_WORKSPACE/kernel
+          bash ./munch.sh
+          echo "MUNCH_MIUI_PATH=$(ls RealKing-Munch*)" >> $GITHUB_ENV
+
+      - name: Upload munch kernel
+        uses: actions/upload-artifact@v3
+        with:
+          name: munch-${{ env.BUILD_TIME }}
+          path: kernel/${{ env.MUNCH_MIUI_PATH }}
