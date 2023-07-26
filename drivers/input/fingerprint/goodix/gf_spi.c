@@ -13,7 +13,6 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
-#define DEBUG
 #define pr_fmt(fmt)     KBUILD_MODNAME ": " fmt
 
 #if IS_ENABLED(CONFIG_MI_DRM_OPT)
@@ -84,7 +83,7 @@ static int SPIDEV_MAJOR;
 static DECLARE_BITMAP(minors, N_SPI_MINORS);
 static LIST_HEAD(device_list);
 static DEFINE_MUTEX(device_list_lock);
-static struct wakeup_source *fp_wakelock;
+static struct wakeup_source *fp_wakelock = NULL;
 static struct gf_dev gf;
 
 struct gf_key_map maps[] = {
@@ -343,9 +342,7 @@ static void gf_kernel_key_input(struct gf_dev *gf_dev, struct gf_key *gf_key)
 {
 	uint32_t key_input = 0;
 
-	if (GF_KEY_HOME == gf_key->key) {
-		key_input = GF_KEY_INPUT_HOME;
-	} else if (GF_KEY_POWER == gf_key->key) {
+	if (GF_KEY_POWER == gf_key->key) {
 		key_input = GF_KEY_INPUT_POWER;
 	} else if (GF_KEY_CAMERA == gf_key->key) {
 		key_input = GF_KEY_INPUT_CAMERA;
@@ -364,26 +361,6 @@ static void gf_kernel_key_input(struct gf_dev *gf_dev, struct gf_key *gf_key)
 		input_report_key(gf_dev->input, key_input, 0);
 		input_sync(gf_dev->input);
 	}
-
-	if (GF_KEY_HOME == gf_key->key) {
-		pr_debug("%s GF_KEY_HOME_enter\n", __func__);
-		if ((gf_dev->key_flag == 1) && (gf_key->value == 1)) {
-			pr_debug("%s add up\n", __func__);
-			input_report_key(gf_dev->input, key_input, 0);
-			input_sync(gf_dev->input);
-			input_report_key(gf_dev->input, key_input, gf_key->value);
-			input_sync(gf_dev->input);
-		} else {
-			input_report_key(gf_dev->input, key_input, gf_key->value);
-			input_sync(gf_dev->input);
-		}
-
-		if (gf_key->value == 1)
-			gf_dev->key_flag = 1;
-		else if (gf_key->value == 0)
-			gf_dev->key_flag = 0;
-        }
-
 }
 
 static long gf_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
@@ -949,8 +926,14 @@ static int gf_probe(struct platform_device *pdev)
 #endif
 	gf_dev->irq = gf_irq_num(gf_dev);
 	fp_wakelock = wakeup_source_register(&gf_dev->spi->dev, "fp_wakelock");
+	if(fp_wakelock==NULL)
+		goto error_wakelock;
 	pr_debug("version V%d.%d.%02d\n", VER_MAJOR, VER_MINOR, PATCH_LEVEL);
 	return status;
+
+error_wakelock:
+	pr_debug("create fp wakelock failed.\n");
+
 #ifdef AP_CONTROL_CLK
 gfspi_probe_clk_enable_failed:
 	gfspi_ioctl_clk_uninit(gf_dev);
@@ -988,6 +971,7 @@ static int gf_remove(struct platform_device *pdev)
 {
 	struct gf_dev *gf_dev = &gf;
 	wakeup_source_unregister(fp_wakelock);
+	fp_wakelock= NULL;
 
 	/* make sure ops on existing fds can abort cleanly */
 	if (gf_dev->irq) {
