@@ -54,7 +54,6 @@ typedef enum gf_nav_event {
 
 typedef enum gf_key_event {
 	GF_KEY_NONE = 0,
-	GF_KEY_HOME,
 	GF_KEY_POWER,
 	GF_KEY_MENU,
 	GF_KEY_BACK,
