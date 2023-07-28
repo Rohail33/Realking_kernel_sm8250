@@ -1099,7 +1099,7 @@ void nvt_ts_wakeup_gesture_report(uint8_t gesture_id, uint8_t *data)
 
 #endif
 
-static void release_pen_event() {
+static void release_pen_event(void) {
 	if (ts && ts->pen_input_dev) {
 		input_report_abs(ts->pen_input_dev, ABS_X, 0);
 		input_report_abs(ts->pen_input_dev, ABS_Y, 0);
