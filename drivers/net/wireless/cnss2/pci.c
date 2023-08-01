@@ -667,8 +667,6 @@ static int cnss_set_pci_link_status(struct cnss_pci_data *pci_priv,
 {
 	u16 link_speed, link_width;
 
-	cnss_pr_vdbg("Set PCI link status to: %u\n", status);
-
 	switch (status) {
 	case PCI_GEN1:
 		link_speed = PCI_EXP_LNKSTA_CLS_2_5GB;
@@ -702,13 +700,10 @@ static int cnss_set_pci_link(struct cnss_pci_data *pci_priv, bool link_up)
 	enum msm_pcie_pm_opt pm_ops;
 	int retry = 0;
 
-	cnss_pr_vdbg("%s PCI link\n", link_up ? "Resuming" : "Suspending");
-
 	if (link_up) {
 		pm_ops = MSM_PCIE_RESUME;
 	} else {
 		if (pci_priv->drv_connected_last) {
-			cnss_pr_vdbg("Use PCIe DRV suspend\n");
 			pm_ops = MSM_PCIE_DRV_SUSPEND;
 			if (pci_priv->device_id != QCA6390_DEVICE_ID)
 				cnss_set_pci_link_status(pci_priv, PCI_GEN1);
@@ -776,7 +771,6 @@ int cnss_suspend_pci_link(struct cnss_pci_data *pci_priv)
 		return -ENODEV;
 
 	if (pci_priv->pci_link_state == PCI_LINK_DOWN) {
-		cnss_pr_info("PCI link is already suspended\n");
 		goto out;
 	}
 
@@ -815,7 +809,6 @@ int cnss_resume_pci_link(struct cnss_pci_data *pci_priv)
 		return -ENODEV;
 
 	if (pci_priv->pci_link_state == PCI_LINK_UP) {
-		cnss_pr_info("PCI link is already resumed\n");
 		goto out;
 	}
 
@@ -1217,9 +1210,6 @@ static int cnss_pci_set_mhi_state(struct cnss_pci_data *pci_priv,
 	ret = cnss_pci_check_mhi_state_bit(pci_priv, mhi_state);
 	if (ret)
 		goto out;
-
-	cnss_pr_vdbg("Setting MHI state: %s(%d)\n",
-		     cnss_mhi_state_to_str(mhi_state), mhi_state);
 
 	switch (mhi_state) {
 	case CNSS_MHI_INIT:
@@ -2593,9 +2583,6 @@ static bool cnss_pci_is_drv_supported(struct cnss_pci_data *pci_priv)
 	if (root_of_node->parent)
 		drv_supported = of_property_read_bool(root_of_node->parent,
 						      "qcom,drv-supported");
-
-	cnss_pr_dbg("PCIe DRV is %s\n",
-		    drv_supported ? "supported" : "not supported");
 
 	if (drv_supported)
 		plat_priv->cap.cap_flag |= CNSS_HAS_DRV_SUPPORT;
