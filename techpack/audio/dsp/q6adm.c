@@ -2404,8 +2404,6 @@ static void send_adm_cal_type(int cal_index, int path, int port_id,
 	struct cal_block_data		*cal_block = NULL;
 	int ret;
 
-	pr_debug("%s: cal index %d\n", __func__, cal_index);
-
 	if (this_adm.cal_data[cal_index] == NULL) {
 		pr_debug("%s: cal_index %d not allocated!\n",
 			__func__, cal_index);
