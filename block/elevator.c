@@ -967,8 +967,8 @@ int elevator_init_mq(struct request_queue *q)
 
 	if (unlikely(q->elevator))
 		goto out;
-	if (IS_ENABLED(CONFIG_IOSCHED_BFQ)) {
-		e = elevator_get(q, "bfq", false);
+	if (IS_ENABLED(CONFIG_MQ_IOSCHED_SSG)) {
+		e = elevator_get(q, "ssg", false);
 		if (!e)
 			goto out;
 	} else {
