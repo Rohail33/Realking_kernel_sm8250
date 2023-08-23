@@ -6009,7 +6009,9 @@ int ipa3_controller_static_bind(struct ipa3_controller *ctrl,
 	ctrl->ipa_init_rt6 = _ipa_init_rt6_v3;
 	ctrl->ipa_init_flt4 = _ipa_init_flt4_v3;
 	ctrl->ipa_init_flt6 = _ipa_init_flt6_v3;
+#ifdef CONFIG_DEBUG_FS
 	ctrl->ipa3_read_ep_reg = _ipa_read_ep_reg_v3_0;
+#endif
 	ctrl->ipa3_commit_flt = __ipa_commit_flt_v3;
 	ctrl->ipa3_commit_rt = __ipa_commit_rt_v3;
 	ctrl->ipa3_commit_hdr = __ipa_commit_hdr_v3_0;
@@ -6027,8 +6029,10 @@ int ipa3_controller_static_bind(struct ipa3_controller *ctrl,
 	ctrl->ipa_init_hdr = _ipa_init_hdr_v3_0;
 	ctrl->max_holb_tmr_val = IPA_MAX_HOLB_TMR_VAL;
 
+#ifdef CONFIG_DEBUG_FS
 	if (ipa3_ctx->ipa_hw_type >= IPA_HW_v4_0)
 		ctrl->ipa3_read_ep_reg = _ipa_read_ep_reg_v4_0;
+#endif
 
 	return 0;
 }
