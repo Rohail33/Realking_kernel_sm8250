@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <linux/module.h>
@@ -1233,6 +1233,7 @@ static int cam_ois_pkt_parse(struct cam_ois_ctrl_t *o_ctrl, void *arg)
 			}
 			break;
 			}
+			cam_mem_put_cpu_buf(cmd_desc[i].mem_handle);
 		}
 
 		if (o_ctrl->cam_ois_state != CAM_OIS_CONFIG) {
@@ -1452,6 +1453,7 @@ static int cam_ois_pkt_parse(struct cam_ois_ctrl_t *o_ctrl, void *arg)
 			(csl_packet->header.op_code & 0xFFFFFF));
 		return -EINVAL;
 	}
+	cam_mem_put_cpu_buf(dev_config.packet_handle);
 
 	if (!rc)
 		return rc;
