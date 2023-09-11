@@ -4,5 +4,5 @@
  */
 
 #ifndef KPROFILES_VERSION
-#define KPROFILES_VERSION "5.0.3"
+#define KPROFILES_VERSION "6.0.0"
 #endif
