@@ -1,0 +1,6 @@
+obj-$(CONFIG_OPLUS_FINGERPRINT_COMMON) += oplus_fp_common/
+
+obj-m += goodix_optical_fp/
+
+### FEATURE MACRO
+ccflags-$(CONFIG_OPLUS_FINGERPRINT_NAVIGATION_ENABLE) += -DFP_NAVIGATION_ENABLE

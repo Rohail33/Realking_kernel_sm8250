@@ -1,0 +1,9 @@
+#
+# Generic thermal sysfs drivers configuration
+#
+
+config HORAE_THERMAL_SHELL
+	  tristate "Horae shell temp driver"
+	  default y
+	  help
+	    Provide three thermal zones(front, frame and back) to get real shell temp.

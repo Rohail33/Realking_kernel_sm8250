@@ -1,0 +1,12 @@
+
+#ifdef OPLUS_FEATURE_TP_BASIC
+
+
+#config TOUCHPANEL_OPLUS
+#	default y
+#	bool "TP Synaptics "
+#	---help---
+#	say Y to enable driver for Touchpanel useing Synaptics_IC
+
+#endif
+

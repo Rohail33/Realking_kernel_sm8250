@@ -1,3 +1,34 @@
 source "drivers/power/avs/Kconfig"
 source "drivers/power/reset/Kconfig"
 source "drivers/power/supply/Kconfig"
+
+#ifdef OPLUS_FEATURE_CHG_BASIC
+config OPLUS_SM8250_CHARGER
+	tristate "OPLUS SM8150 charger driver"
+	depends on MFD_SPMI_PMIC
+	help
+	  Enables support for the oplus charging framework
+
+config OPLUS_SM7250R_CHARGER
+	tristate "OPLUS SM7250R charger driver"
+	depends on MFD_SPMI_PMIC
+	help
+	  Enables support for the oplus charging framework
+
+config OPLUS_CALL_MODE_SUPPORT
+	bool "OPLUS call mode support"
+	help
+	  Say Y to include support
+
+config OPLUS_SMART_CHARGER_SUPPORT
+	bool "OPLUS smart charger support"
+	help
+	  Say Y to include support
+
+config OPLUS_CHARGER_WIRELESS_PEN
+	bool "OPLUS charger wireless pen"
+	help
+	  Say Y to include support
+
+source "drivers/power/oplus/Kconfig"
+#endif

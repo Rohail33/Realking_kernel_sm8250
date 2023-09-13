@@ -13,6 +13,13 @@
 #include <linux/slab.h>
 #include <linux/spinlock.h>
 
+#ifdef OPLUS_FEATURE_CHG_BASIC
+#ifdef dev_dbg
+#undef dev_dbg
+#endif
+#define dev_dbg dev_err
+#endif
+
 /* RTC Register offsets from RTC CTRL REG */
 #define PM8XXX_ALARM_CTRL_OFFSET	0x01
 #define PM8XXX_RTC_WRITE_OFFSET		0x02

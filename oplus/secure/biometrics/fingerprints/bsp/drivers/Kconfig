@@ -1,0 +1,71 @@
+menuconfig OPLUS_FINGERPRINT
+	bool "OPLUS fingerprint"
+	depends on SPI_MASTER
+	help
+	  Say Y here to enable OPLUS fingerprint support
+
+config OPLUS_FINGERPRINT_GKI_DISABLE
+       default n
+       tristate "Fingerprint enable gki"
+
+if OPLUS_FINGERPRINT
+### platform config
+config OPLUS_FINGERPRINT_QCOM
+       default n
+       tristate "Fingerprint base on QCOM"
+
+config OPLUS_FINGERPRINT_MTK
+       default n
+       tristate "Fingerprint base on MTK"
+
+### fingerprint sensor config
+config OPLUS_FINGERPRINT_FPC
+       default n
+       tristate "Fingerprint base on fpc capacitive chip"
+config OPLUS_FINGERPRINT_GOODIX
+       default n
+       tristate "Fingerprint base on goodix capacitive chip"
+config OPLUS_FINGERPRINT_GOODIX_OPTICAL
+       default n
+       tristate "Fingerprint base on goodix optical chip"
+config OPLUS_FINGERPRINT_SILEAD_OPTICAL
+       default n
+       tristate "Fingerprint base on silead optical chip"
+config OPLUS_FINGERPRINT_EGIS_OPTICAL
+       default n
+       tristate "Fingerprint base on egis optical chip"
+config OPLUS_FINGERPRINT_EGIS
+       default n
+       tristate "Fingerprint base on egis chip"
+config OPLUS_FINGERPRINT_SILEAD
+       default n
+       tristate "Fingerprint base on silead chip"
+config OPLUS_FINGERPRINT_JIIOV_OPTICAL
+       default n
+       tristate "Fingerprint base on jiiov optical chip"
+
+config OPLUS_FINGERPRINT_JIIOV_CAPACITIVE
+       default n
+       tristate "Fingerprint base on jiiov capacitive chip"
+
+config OPLUS_FINGERPRINT_CHIPONE
+       default n
+       tristate "Fingerprint base on chipone chip"
+
+config OPLUS_FINGERPRINT_FOCALTECH
+       default n
+       tristate "Fingerprint base on focaltech chip"
+
+config OPLUS_FINGERPRINT_CDFPS
+       default n
+       tristate "Fingerprint base on cdfinger chip"
+
+### fingerprint feature config
+config OPLUS_FINGERPRINT_NAVIGATION_ENABLE
+       default n
+       tristate "Fingerprint navigation function"
+
+config OPLUS_FINGERPRINT_ENABLE_TEE_BINDERCORE
+       default n
+       tristate "Fingerprint mtk bind big core"
+endif #OPLUS_FINGERPRINT

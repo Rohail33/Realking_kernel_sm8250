@@ -58,6 +58,30 @@
 #include "braille.h"
 #include "internal.h"
 
+#ifdef OPLUS_BUG_STABILITY
+/* Add for uart control via cmdline*/
+#include <soc/oplus/system/boot_mode.h>
+
+#include <linux/rtc.h>
+#include <linux/time.h>
+
+static bool __read_mostly printk_disable_uart = true; /*set true avoid early console output*/
+static int __init printk_uart_disabled(char *str)
+{
+        if (str[0] == '1')
+                printk_disable_uart = true;
+        else
+                printk_disable_uart = false;
+        return 0;
+}
+early_param("printk.disable_uart", printk_uart_disabled);
+
+bool oem_disable_uart(void)
+{
+        return printk_disable_uart;
+}
+#endif /* OPLUS_BUG_STABILITY */
+
 int console_printk[4] = {
 	CONSOLE_LOGLEVEL_DEFAULT,	/* console_loglevel */
 	MESSAGE_LOGLEVEL_DEFAULT,	/* default_message_loglevel */

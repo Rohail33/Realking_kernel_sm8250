@@ -1,0 +1,95 @@
+{
+    "type": "top_cfg",
+    "enum_list": [
+        {
+            "name": "oplus_chg_ic_type",
+            "list": [
+                "OPLUS_CHG_IC_BUCK",
+                "OPLUS_CHG_IC_BOOST",
+                "OPLUS_CHG_IC_BUCK_BOOST",
+                "OPLUS_CHG_IC_CP_DIV2",
+                "OPLUS_CHG_IC_CP_MUL2",
+                "OPLUS_CHG_IC_CP_TW2",
+                "OPLUS_CHG_IC_RX",
+                "OPLUS_CHG_IC_VIRTUAL_RX",
+                "OPLUS_CHG_IC_VIRTUAL_BUCK",
+                "OPLUS_CHG_IC_VIRTUAL_CP",
+                "OPLUS_CHG_IC_VIRTUAL_USB",
+                "OPLUS_CHG_IC_TYPEC",
+                "OPLUS_CHG_IC_GAUGE",
+                "OPLUS_CHG_IC_VIRTUAL_GAUGE",
+                "OPLUS_CHG_IC_ASIC",
+                "OPLUS_CHG_IC_VIRTUAL_ASIC",
+		"OPLUS_CHG_IC_VPHY",
+		"OPLUS_CHG_IC_VIRTUAL_VPHY"
+            ]
+        },
+        {
+            "name": "oplus_chg_ic_connect_type",
+            "list": [
+                "OPLUS_CHG_IC_CONNECT_PARALLEL",
+                "OPLUS_CHG_IC_CONNECT_SERIAL"
+            ]
+        },
+        {
+            "name": "oplus_chg_ic_virq_id",
+            "list": [
+                "OPLUS_IC_VIRQ_ERR",
+                "OPLUS_IC_VIRQ_CC_DETECT",
+                "OPLUS_IC_VIRQ_PLUGIN",
+                "OPLUS_IC_VIRQ_CC_CHANGED",
+                "OPLUS_IC_VIRQ_VOOC_DATA",
+                "OPLUS_IC_VIRQ_SUSPEND_CHECK",
+                "OPLUS_IC_VIRQ_CHG_TYPE_CHANGE",
+                "OPLUS_IC_VIRQ_OFFLINE",
+                "OPLUS_IC_VIRQ_RESUME",
+                "OPLUS_IC_VIRQ_SVID",
+                "OPLUS_IC_VIRQ_OTG_ENABLE",
+                "OPLUS_IC_VIRQ_VOLTAGE_CHANGED",
+                "OPLUS_IC_VIRQ_CURRENT_CHANGED",
+                "OPLUS_IC_VIRQ_BC12_COMPLETED",
+                "OPLUS_IC_VIRQ_DATA_ROLE_CHANGED",
+                "OPLUS_IC_VIRQ_ONLINE",
+                "OPLUS_IC_VIRQ_TYPEC_STATE"
+            ]
+        },
+        {
+            "name": "oplus_chg_ic_err",
+            "list": [
+                "OPLUS_IC_ERR_UNKNOWN",
+                "OPLUS_IC_ERR_I2C",
+                "OPLUS_IC_ERR_GPIO",
+                "OPLUS_IC_ERR_PLAT_PMIC",
+                "OPLUS_IC_ERR_BUCK_BOOST",
+                "OPLUS_IC_ERR_GAUGE",
+                "OPLUS_IC_ERR_WLS_RX",
+                "OPLUS_IC_ERR_CP",
+                "OPLUS_IC_ERR_CC_LOGIC"
+            ]
+        },
+        {
+            "name": "oplus_chg_ic_plat_pmic_err",
+            "list": [
+                "PLAT_PMIC_ERR_UNKNOWN",
+                "PLAT_PMIC_ERR_VCONN_OVP",
+                "PLAT_PMIC_ERR_VCONN_UVP",
+                "PLAT_PMIC_ERR_VCONN_RVP",
+                "PLAT_PMIC_ERR_VCONN_OCP",
+                "PLAT_PMIC_ERR_VCONN_OPEN",
+                "PLAT_PMIC_ERR_VCONN_CLOSE",
+                "PLAT_PMIC_ERR_VBUS_ABNORMAL"
+            ]
+        }
+    ],
+
+    "oplus_chg_ic_list": [
+        "ic/common.json",
+        "ic/wireless_rx.json",
+        "ic/buck_boost.json",
+        "ic/charge_pump.json",
+        "ic/gauge.json",
+        "ic/misc.json",
+        "ic/voocphy.json",
+        "ic/vooc.json"
+    ]
+}

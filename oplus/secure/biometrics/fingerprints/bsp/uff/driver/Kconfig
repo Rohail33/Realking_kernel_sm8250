@@ -1,0 +1,31 @@
+menuconfig UFF_FINGERPRINT
+       tristate "UFF fingerprint"
+       depends on SPI_MASTER
+       help
+       Say Y here to enable UFF fingerprint support
+
+config OPLUS_FINGERPRINT_GKI_ENABLE
+       default n
+       bool "Fingerprint enable gki"
+
+### platform config
+config UFF_FINGERPRINT_QCOM
+       default n
+       bool "Fingerprint base on QCOM"
+
+config UFF_FINGERPRINT_MTK
+       default n
+       bool "Fingerprint base on MTK"
+
+### fingerprint feature config
+config UFF_FINGERPRINT_ENABLE_TEE_BINDERCORE
+       default n
+       bool "Fingerprint mtk bind big core"
+
+config UFF_FINGERPRINT_REE_SPI
+       default n
+       tristate "Fingerprint ree spi"
+
+config FP_SUPPLY_MODE_LDO
+       default n
+       bool "Fingerprint supply base on pmic's ldo"

@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# Copyright (C) 2018-2020 Oplus. All rights reserved.
+
+#ifdef OPLUS_FEATURE_ESIM
+source "drivers/soc/oplus/misc/oplus_gpio/Kconfig"
+#endif /* OPLUS_FEATURE_ESIM */
+
+#ifdef OPLUS_FEATURE_SIM_DETECT
+config SIM_DETECT
+	tristate "SIM_DETECT system"
+	default n
+	help
+	  Say Y here to enable sim detect system support
+#endif /* OPLUS_FEATURE_SIM_DETECT */

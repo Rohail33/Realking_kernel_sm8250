@@ -1,0 +1,23 @@
+{
+    "type": "ic_cfg",
+    "name": "charge_pump",
+    "max": 100,
+    "list": [
+        {
+            "lable": "OPLUS_IC_FUNC_CP_START",
+            "desc": {
+                "zh": "开启电荷泵"
+            },
+            "auto_debug_code": true,
+            "parameter_list": [],
+            "parameter_desc": [],
+            "vict": {
+                "read": false,
+                "write": false,
+                "overwrite": false
+            }
+        }
+    ],
+
+    "version": "V1.0:1:546cc369629be8e061b677cbd348cc3841cbf653e964867a6253de63fc9d251a"
+}

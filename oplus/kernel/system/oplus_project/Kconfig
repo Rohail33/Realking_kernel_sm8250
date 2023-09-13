@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# Copyright (C) 2018-2020 Oplus. All rights reserved.
+config OPLUS_FEATURE_OPROJECT
+  tristate "config oplus project info for kernel"
+  default n
+  help
+    define this config to define oplus project

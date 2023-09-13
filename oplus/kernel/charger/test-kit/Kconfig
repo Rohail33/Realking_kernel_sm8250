@@ -1,0 +1,5 @@
+config OPLUS_CHG_TEST_KIT
+	tristate "Charger Test Kit"
+	default n
+	help
+	  Say Y or M to enable tesk kit

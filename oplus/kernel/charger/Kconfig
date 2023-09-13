@@ -1,0 +1,79 @@
+menuconfig OPLUS_CHARGER
+	bool "OPLUS charging system"
+	depends on I2C
+	select REGMAP_I2C
+	help
+	  Say Y here to enable OPLUS charging system support
+
+if OPLUS_CHARGER
+config OPLUS_CHARGER_MTK
+	bool "OPLUS charger on MTK"
+	help
+	  Say Y here to declare charging system is on MTK
+
+config OPLUS_CALL_MODE_SUPPORT
+	bool "OPLUS call mode support"
+	help
+	  Say Y to include support
+
+config OPLUS_SMART_CHARGER_SUPPORT
+	bool "OPLUS smart charger support"
+	help
+	  Say Y to include support
+
+config OPLUS_RTC_DET_SUPPORT
+	bool "OPLUS RTC DET SUPPORT"
+	default n
+	help
+	  Say Y to include support
+
+config OPLUS_CHECK_CHARGERID_VOLT
+	bool "OPLUS CHECK CHARGERID VOLT"
+	default n
+	help
+	  Say Y to include support
+
+config OPLUS_SHIP_MODE_SUPPORT
+	bool "OPLUS_SHIP_MODE_SUPPORT"
+	default n
+	help
+	  Say Y to include support
+
+config OPLUS_CHG_DYNAMIC_CONFIG
+	bool "OPLUS_CHG_DYNAMIC_CONFIG"
+	default n
+	help
+	  Say Y to include support
+
+menuconfig OPLUS_CHG
+	tristate "OPLUS CHARGER KO module"
+	default n
+depends on I2C
+	select REGMAP_I2C
+	help
+	  Enables support for the oplus charging v1 framework
+
+source "drivers/power/oplus/v1/Kconfig"
+
+menuconfig OPLUS_CHG_V2
+	tristate "OPLUS charging V2 system"
+	default n
+	depends on I2C
+	select REGMAP_I2C
+	help
+	  Enables support for the oplus charging v2 framework
+
+if OPLUS_CHG_V2
+source "drivers/power/oplus/v2/Kconfig"
+endif
+
+source "drivers/power/oplus/test-kit/Kconfig"
+
+endif #OPLUS_CHARGER
+
+config OPLUS_CHARGER_WIRELESS_RA9530
+	bool "OPLUS charger wireless pen 9530 ic"
+	help
+	  Say Y to include support
+
+source "drivers/power/oplus/config/Kconfig"

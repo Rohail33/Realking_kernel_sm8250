@@ -1,0 +1,8 @@
+config COLOR_CTRL_V2
+	bool "oplus color ctrl device"
+	default n
+	help
+	  Say Y here if you have a color ctrl connected
+	  to your system.
+
+	  If unsure, say N.

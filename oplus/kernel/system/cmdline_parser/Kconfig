@@ -1,0 +1,44 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# Copyright (C) 2018-2020 Oplus. All rights reserved.
+config OPLUS_FEATURE_CMDLINE
+  tristate "Oplus command line"
+  default n
+  help
+        define this config to get command line.
+
+config OPLUS_FEATURE_ANDROIDBOOT
+  tristate "Oplus android boot"
+  default n
+  help
+    define this config to get android boot cmdline.
+
+config OPLUS_FEATURE_FTMMODE
+  tristate "Oplus ftm mode"
+  default n
+  help
+      define this config to get ftm mode cmdline.
+
+config OPLUS_FEATURE_CHARGERPRESENT
+  tristate "Oplus charger present"
+  default n
+  help
+      define this config to get charger present cmdline.
+
+config OPLUS_FEATURE_BUILDVARIANT
+  tristate "Oplus buildvariant"
+  default n
+  help 
+      define this config to get buildvariant cmdline.
+
+config OPLUS_FEATURE_SIMCARDNUM
+  tristate "Oplus simcardnum"
+  default n
+  help
+      define this config to get simcardnum cmdline.
+
+config OPLUS_FEATURE_CDT
+  tristate "Oplus cdt"
+  default n
+  help
+      define this config to get cdt_integrity cmdline.
+

@@ -1,0 +1,16 @@
+menuconfig OPLUS_DYNAMIC_CONFIG
+	tristate "OPLUS_DYNAMIC_CONFIG"
+	default n
+	help
+	  Say Y or m to include support
+
+if OPLUS_DYNAMIC_CONFIG
+
+config OPLUS_DYNAMIC_CONFIG_CHARGER
+	bool "OPLUS_DYNAMIC_CONFIG_CHARGER"
+	default n
+	depends on OPLUS_DYNAMIC_CONFIG
+	help
+	  Say Y to include support
+
+endif #OPLUS_DYNAMIC_CONFIG

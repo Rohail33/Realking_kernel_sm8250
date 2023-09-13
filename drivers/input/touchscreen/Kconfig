@@ -1324,6 +1324,10 @@ config TOUCHSCREEN_ST
 
 source "drivers/input/touchscreen/st/Kconfig"
 
+#ifdef OPLUS_FEATURE_TP_BASIC
+source "drivers/input/touchscreen/oplus_touchscreen/Kconfig"
+#endif
+
 config TOUCHSCREEN_SYNAPTICS_DSX
 	bool "Synaptics DSX Touchscreen Driver"
 	depends on I2C

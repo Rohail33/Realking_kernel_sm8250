@@ -7,6 +7,14 @@ mainmenu "Linux/$(ARCH) $(KERNELVERSION) Kernel Configuration"
 
 comment "Compiler: $(CC_VERSION_TEXT)"
 
+#ifdef CONFIG_OPLUS_SYSTEM_KERNEL
+config OPLUS_SYSTEM_KERNEL_QCOM
+  bool "config oplus system feature "
+  default y
+  help
+	Define this config to distinguish between QCOM and MTK platform
+#endif /* CONFIG_OPLUS_SYSTEM_KERNEL */
+
 source "scripts/Kconfig.include"
 
 source "init/Kconfig"

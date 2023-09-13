@@ -1,0 +1,31 @@
+{
+    "type": "ic_cfg",
+    "name": "wireless_rx",
+    "max": 100,
+    "list": [
+        {
+            "lable": "OPLUS_IC_FUNC_RX_IS_CONNECTED",
+            "desc": {
+                "zh": "判断无线充电是否连接"
+            },
+            "auto_debug_code": true,
+            "parameter_list": ["bool *"],
+            "parameter_desc": [
+                {
+                    "range": "0-1",
+                    "type": "out",
+                    "desc": {
+                        "zh": "1: 已连接, 0: 未连接"
+                    }
+                }
+            ],
+            "vict": {
+                "read": false,
+                "write": false,
+                "overwrite": false
+            }
+        }
+    ],
+
+    "version": "V1.0:1:9efbd6aa979af42ba5f5f8137545707244d11c0a3176b349b103dc439a9beac1"
+}

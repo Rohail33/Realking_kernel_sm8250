@@ -24,6 +24,8 @@
 #include <soc/qcom/boot_stats.h>
 #include <asm/unaligned.h>
 
+#include <soc/oplus/system/oplus_project.h>
+
 #define BUILD_ID_LENGTH 32
 #define CHIP_ID_LENGTH 32
 #define SMEM_IMAGE_VERSION_BLOCKS_COUNT 32
@@ -450,6 +452,13 @@ static struct msm_soc_info cpu_of_id[] = {
 	 */
 };
 
+#ifdef OPLUS_ARCH_EXTENDS
+static struct msm_soc_info cpu_of_id_20828 = {
+	.generic_soc_type = MSM_CPU_KONA,
+	.soc_id_string = "SM8250_AC"
+};
+#endif
+
 static enum msm_cpu cur_cpu;
 static int current_image;
 static uint32_t socinfo_format;
@@ -468,6 +477,11 @@ EXPORT_SYMBOL(socinfo_get_id);
 
 char *socinfo_get_id_string(void)
 {
+#ifdef OPLUS_ARCH_EXTENDS
+        if (get_project() == 20828) {
+		return cpu_of_id_20828.soc_id_string;
+        }
+#endif
 	return (socinfo) ? cpu_of_id[socinfo->v0_1.id].soc_id_string : NULL;
 }
 EXPORT_SYMBOL(socinfo_get_id_string);
@@ -495,8 +509,19 @@ static char *msm_read_hardware_id(void)
 	if (!cpu_of_id[socinfo->v0_1.id].soc_id_string)
 		goto err_path;
 
+#ifdef OPLUS_ARCH_EXTENDS
+	if (get_project() == 20828) {
+		ret = strlcat(msm_soc_str, cpu_of_id_20828.soc_id_string,
+				sizeof(msm_soc_str));
+	} else {
+		ret = strlcat(msm_soc_str, cpu_of_id[socinfo->v0_1.id].soc_id_string,
+                        sizeof(msm_soc_str));
+	}
+#else
 	ret = strlcat(msm_soc_str, cpu_of_id[socinfo->v0_1.id].soc_id_string,
-			sizeof(msm_soc_str));
+                        sizeof(msm_soc_str));
+#endif
+
 	if (ret > sizeof(msm_soc_str))
 		goto err_path;
 

@@ -149,6 +149,16 @@ extern int subsystem_restart_dev(struct subsys_device *dev);
 extern int subsystem_restart(const char *name);
 extern int subsystem_crashed(const char *name);
 
+#ifdef OPLUS_FEATURE_ADSP_RECOVERY
+extern void oplus_set_ssr_state(bool ssr_state);
+extern bool oplus_get_ssr_state(void);
+#endif /* OPLUS_FEATURE_ADSP_RECOVERY */
+
+#ifdef OPLUS_FEATURE_WIFI_DCS_SWITCH
+extern void __wlan_subsystem_send_uevent(struct device *dev, char *reason, const char *name);
+extern void wlan_subsystem_send_uevent(struct subsys_device *dev, char *reason, const char *name);
+#endif /*OPLUS_FEATURE_WIFI_DCS_SWITCH*/
+
 extern void *subsystem_get(const char *name);
 extern void *subsystem_get_with_fwname(const char *name, const char *fw_name);
 extern int subsystem_set_fwname(const char *name, const char *fw_name);

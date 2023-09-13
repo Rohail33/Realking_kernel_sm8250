@@ -1,0 +1,147 @@
+{
+    "type": "ic_cfg",
+    "name": "voocphy",
+    "max": 100,
+    "list": [
+        {
+            "lable": "OPLUS_IC_FUNC_VOOCPHY_ENABLE",
+            "desc": {
+                "zh": "voocphy使能"
+            },
+            "auto_debug_code": true,
+            "parameter_list": ["bool"],
+            "parameter_desc": [
+                {
+                    "range": "0-1",
+                    "type": "in",
+                    "desc": {
+                        "zh": "1: 使能, 0: 关闭"
+                    }
+                }
+            ],
+            "vict": {
+                "read": false,
+                "write": false,
+                "overwrite": false
+            }
+        },
+        {
+            "lable": "OPLUS_IC_FUNC_VOOCPHY_RESET_AGAIN",
+            "desc": {
+                "zh": "voocphy复位"
+            },
+            "auto_debug_code": true,
+            "parameter_list": [],
+            "parameter_desc": [],
+            "vict": {
+                "read": false,
+                "write": false,
+                "overwrite": false
+            }
+        },
+        {
+            "lable": "OPLUS_IC_FUNC_VOOCPHY_SET_CURR_LEVEL",
+            "desc": {
+                "zh": "voocphy设置快充电流等级"
+            },
+            "auto_debug_code": true,
+            "parameter_list": ["int"],
+            "parameter_desc": [
+                {
+                    "range": "0-*",
+                    "type": "in",
+                    "desc": {
+                        "zh": "参考cool down电流挡位对照表"
+                    }
+                }
+            ],
+            "vict": {
+                "read": false,
+                "write": false,
+                "overwrite": false
+            }
+        },
+        {
+            "lable": "OPLUS_IC_FUNC_VOOCPHY_SET_MATCH_TEMP",
+            "desc": {
+                "zh": "voocphy设置壳温"
+            },
+            "auto_debug_code": true,
+            "parameter_list": ["int"],
+            "parameter_desc": [
+                {
+                    "range": "0-*",
+                    "type": "in",
+                    "desc": {
+                        "zh": "壳温, 单位:0.1℃"
+                    }
+                }
+            ],
+            "vict": {
+                "read": false,
+                "write": false,
+                "overwrite": false
+            }
+        },
+        {
+            "lable": "OPLUS_IC_FUNC_VOOCPHY_SET_PDQC_CONFIG",
+            "desc": {
+                "zh": "PD/QC适配器升压之前需要 OVP, OCP等"
+            },
+            "auto_debug_code": true,
+            "parameter_list": [],
+            "parameter_desc": [],
+            "vict": {
+                "read": false,
+                "write": false,
+                "overwrite": false
+            }
+        },
+        {
+            "lable": "OPLUS_IC_FUNC_VOOCPHY_GET_CP_VBAT",
+            "desc": {
+                "zh": "从CP测读取电池电压"
+            },
+            "auto_debug_code": true,
+            "parameter_list": ["int *"],
+            "parameter_desc": [
+                {
+                    "range": "0-*",
+                    "type": "out",
+                    "desc": {
+                        "zh": "电池电压"
+                    }
+                }
+            ],
+            "vict": {
+                "read": false,
+                "write": false,
+                "overwrite": false
+            }
+        },
+        {
+            "lable": "OPLUS_IC_FUNC_VOOCPHY_SET_CHG_AUTO_MODE",
+            "desc": {
+                "zh": "使能或关闭 auto mode"
+            },
+            "auto_debug_code": true,
+            "parameter_list": ["bool"],
+            "parameter_desc": [
+                {
+                    "range": "0-1",
+                    "type": "in",
+                    "desc": {
+                        "zh": "1: 使能, 0: 关闭"
+                    }
+                }
+            ],
+            "vict": {
+                "read": false,
+                "write": false,
+                "overwrite": false
+            }
+        }
+    ],
+
+    "version": "V2.1:7:42427d68c80ed7fb33c1fe68f09ac2489bea83768dc0a59c73387b3824169f36"
+}

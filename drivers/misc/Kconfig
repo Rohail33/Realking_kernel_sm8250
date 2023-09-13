@@ -631,6 +631,32 @@ config KINECTICS_XR_NORDIC
 	  this also parses the gpios and interrupts from device tree and sets
 	  the gpios and interrupt handler for handling the interrupt.
 
+#ifdef OPLUS_FEATURE_TP_BASIC
+config OPLUS_RF_CABLE_MONITOR
+	bool "OPLUS rf cable monitor system"
+	depends on OF
+	select PINMUX
+	default n
+	help
+	  Say Y here to enable OPLUS rf cable monitor system support
+#endif /* OPLUS_FEATURE_TP_BASIC */
+
+#ifdef OPLUS_FEATURE_SIM_DETECT
+config SIM_DETECT
+	tristate "SIM_DETECT system"
+	default n
+	help
+	  Say Y here to enable sim detect system support
+#endif /* OPLUS_FEATURE_SIM_DETECT */
+
+#ifdef OPLUS_FEATURE_SIM_DETECT
+config OEM_QMI
+	tristate "oem qmi feature"
+	default n
+	help
+	  Say Y here to enable oem qmi support
+#endif /* OPLUS_FEATURE_SIM_DETECT */
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"
@@ -645,6 +671,17 @@ source "drivers/misc/echo/Kconfig"
 source "drivers/misc/cxl/Kconfig"
 source "drivers/misc/ocxl/Kconfig"
 source "drivers/misc/cardreader/Kconfig"
+source "drivers/misc/tri_state_key/Kconfig"
+#ifdef OPLUS_FEATURE_TP_BASIC
+source "drivers/misc/cs_press/Kconfig"
+#endif
+#ifdef OPLUS_FEATURE_TP_BASIC
+source "drivers/misc/colorctrl/Kconfig"
+source "drivers/misc/colorctrl_v2/Kconfig"
+#endif /* OPLUS_FEATURE_TP_BASIC */
+#ifdef OPLUS_FEATURE_TP_BASIC//Qingjun.Wang@BSP.Haptic,add 2020/03/17 for vib aw8697
+source "drivers/misc/aw8697_haptic/Kconfig"
+#endif
 source "drivers/misc/fpr_FingerprintCard/Kconfig"
 source "drivers/misc/qrc/Kconfig"
 endmenu

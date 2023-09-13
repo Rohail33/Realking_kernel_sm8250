@@ -1,0 +1,22 @@
+obj-$(CONFIG_OPLUS_FINGERPRINT) += oplus_fp_common/
+
+### Capacitive fingerprint sensor
+obj-$(CONFIG_OPLUS_FINGERPRINT_FPC) += fpc/
+obj-$(CONFIG_OPLUS_FINGERPRINT_CDFPS) += cdfingerfp/
+obj-$(CONFIG_OPLUS_FINGERPRINT_JIIOV_CAPACITIVE) += anc_capacitive_driver/
+obj-$(CONFIG_OPLUS_FINGERPRINT_EGIS) += egis/
+
+obj-$(CONFIG_OPLUS_FINGERPRINT_CHIPONE) +=chipone/
+
+### Optical fingerprint sensor
+ifneq ($(CONFIG_OPLUS_FINGERPRINT_GOODIX)_$(CONFIG_OPLUS_FINGERPRINT_GOODIX_OPTICAL), _)
+obj-y += goodix_optical_fp/
+endif
+obj-$(CONFIG_OPLUS_FINGERPRINT_SILEAD_OPTICAL) += silead_optical_fp/
+obj-$(CONFIG_OPLUS_FINGERPRINT_EGIS_OPTICAL)   += egis_optical_fp/
+obj-$(CONFIG_OPLUS_FINGERPRINT_SILEAD) += silead/
+obj-$(CONFIG_OPLUS_FINGERPRINT_JIIOV_OPTICAL)  += anc_driver/
+obj-$(CONFIG_OPLUS_FINGERPRINT_GOODIX_OPTICAL)	+= 	goodix_optical_fp/
+obj-$(CONFIG_OPLUS_FINGERPRINT_FOCALTECH) += focaltech_fp/
+### FEATURE MACRO
+ccflags-$(CONFIG_OPLUS_FINGERPRINT_NAVIGATION_ENABLE) += -DFP_NAVIGATION_ENABLE
