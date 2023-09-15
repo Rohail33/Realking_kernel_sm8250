@@ -5594,45 +5594,11 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 	 */
 	mb();
 
-	/*
-	 * Following are the deviations from SDHC spec v3.0 -
-	 * 1. Card detection is handled using separate GPIO.
-	 * 2. Bus power control is handled by interacting with PMIC.
-	 */
-	host->quirks |= SDHCI_QUIRK_BROKEN_CARD_DETECTION;
-	host->quirks |= SDHCI_QUIRK_SINGLE_POWER_WRITE;
-	host->quirks |= SDHCI_QUIRK_CAP_CLOCK_BASE_BROKEN;
-	host->quirks |= SDHCI_QUIRK_MULTIBLOCK_READ_ACMD12;
-	host->quirks |= SDHCI_QUIRK_NO_ENDATTR_IN_NOPDESC;
-	host->quirks2 |= SDHCI_QUIRK2_ALWAYS_USE_BASE_CLOCK;
-	host->quirks2 |= SDHCI_QUIRK2_IGNORE_DATATOUT_FOR_R1BCMD;
-	host->quirks2 |= SDHCI_QUIRK2_BROKEN_PRESET_VALUE;
-	host->quirks2 |= SDHCI_QUIRK2_USE_RESERVED_MAX_TIMEOUT;
-	host->quirks2 |= SDHCI_QUIRK2_NON_STANDARD_TUNING;
-	host->quirks2 |= SDHCI_QUIRK2_USE_PIO_FOR_EMMC_TUNING;
-
-	if (host->quirks2 & SDHCI_QUIRK2_ALWAYS_USE_BASE_CLOCK)
-		host->quirks2 |= SDHCI_QUIRK2_DIVIDE_TOUT_BY_4;
-
-	msm_host->minor = IPCAT_MINOR_MASK(readl_relaxed(host->ioaddr +
-				SDCC_IP_CATALOG));
-
-	host_version = readw_relaxed((host->ioaddr + SDHCI_HOST_VERSION));
-	dev_dbg(&pdev->dev, "Host Version: 0x%x Vendor Version 0x%x\n",
-		host_version, ((host_version & SDHCI_VENDOR_VER_MASK) >>
-		  SDHCI_VENDOR_VER_SHIFT));
-	if (((host_version & SDHCI_VENDOR_VER_MASK) >>
-		SDHCI_VENDOR_VER_SHIFT) == SDHCI_VER_100) {
-		/*
-		 * Add 40us delay in interrupt handler when
-		 * operating at initialization frequency(400KHz).
-		 */
-		host->quirks2 |= SDHCI_QUIRK2_SLOW_INT_CLR;
-		/*
-		 * Set Software Reset for DAT line in Software
-		 * Reset Register (Bit 2).
-		 */
-		host->quirks2 |= SDHCI_QUIRK2_RDWR_TX_ACTIVE_EOT;
+	/* Setup IRQ for handling power/voltage tasks with PMIC */
+	msm_host->pwr_irq = platform_get_irq_byname(pdev, "pwr_irq");
+	if (msm_host->pwr_irq < 0) {
+		ret = msm_host->pwr_irq;
+		goto clk_disable;
 	}
 
 	host->quirks2 |= SDHCI_QUIRK2_IGN_DATA_END_BIT_ERROR;
