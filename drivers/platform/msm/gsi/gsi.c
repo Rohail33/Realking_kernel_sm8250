@@ -1186,8 +1186,8 @@ int gsi_register_device(struct gsi_per_props *props, unsigned long *dev_hdl)
 			 */
 			res = devm_request_irq(gsi_ctx->dev, props->irq,
 				gsi_isr,
-				props->req_clk_cb ? IRQF_TRIGGER_RISING :
-					IRQF_TRIGGER_HIGH,
+				(props->req_clk_cb ? IRQF_TRIGGER_RISING :
+					IRQF_TRIGGER_HIGH) | IRQF_NO_SUSPEND,
 				"gsi",
 				gsi_ctx);
 		}
@@ -1201,7 +1201,6 @@ int gsi_register_device(struct gsi_per_props *props, unsigned long *dev_hdl)
 			"succeeded to register isr for %u\n",
 			props->irq);
 
-		res = enable_irq_wake(props->irq);
 		if (res)
 			GSIERR("failed to enable wake irq %u\n", props->irq);
 		else
