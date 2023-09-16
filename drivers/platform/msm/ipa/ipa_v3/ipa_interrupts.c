@@ -511,7 +511,8 @@ int ipa3_interrupts_init(u32 ipa_irq, u32 ee, struct device *ipa_dev)
 	 */
 	if (ipa3_ctx->ipa3_hw_mode != IPA_HW_MODE_EMULATION) {
 		res = request_irq(ipa_irq, (irq_handler_t) ipa3_isr,
-					IRQF_TRIGGER_RISING, "ipa", ipa_dev);
+					IRQF_NO_SUSPEND | IRQF_TRIGGER_RISING,
+					 "ipa", ipa_dev);
 		if (res) {
 			IPAERR(
 			    "fail to register IPA IRQ handler irq=%d\n",
@@ -522,7 +523,6 @@ int ipa3_interrupts_init(u32 ipa_irq, u32 ee, struct device *ipa_dev)
 		}
 		IPADBG("IPA IRQ handler irq=%d registered\n", ipa_irq);
 
-		res = enable_irq_wake(ipa_irq);
 		if (res)
 			IPAERR("fail to enable IPA IRQ wakeup irq=%d res=%d\n",
 				   ipa_irq, res);
