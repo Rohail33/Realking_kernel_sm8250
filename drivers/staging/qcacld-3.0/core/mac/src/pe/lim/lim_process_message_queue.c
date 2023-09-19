@@ -98,6 +98,12 @@ static void lim_process_sae_msg_sta(struct mac_context *mac,
 						    eSIR_SME_SUCCESS,
 						    eSIR_MAC_SUCCESS_STATUS,
 						    session);
+#ifdef OPLUS_BUG_STABILITY
+                //deliver status code 33 from wlan driver to supplicant when SAE connection is refused
+                else if (sae_msg->sae_status == eSIR_MAC_QAP_NO_BANDWIDTH_STATUS)
+                        lim_restore_from_auth_state(mac, eSIR_SME_AUTH_REFUSED,
+                                eSIR_MAC_QAP_NO_BANDWIDTH_STATUS, session);
+#endif /* OPLUS_BUG_STABILITY */
 		else
 			lim_restore_from_auth_state(mac, eSIR_SME_AUTH_REFUSED,
 				eSIR_MAC_UNSPEC_FAILURE_STATUS, session);

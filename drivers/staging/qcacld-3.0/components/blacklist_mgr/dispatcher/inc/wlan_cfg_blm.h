@@ -96,13 +96,23 @@
  *
  * </ini>
  */
+#ifndef OPLUS_BUG_STABILITY
 #define CFG_BLACK_LIST_EXPIRY_TIME CFG_INI_UINT( \
-				"black_list_expiry_time", \
-				1, \
-				600, \
-				10, \
-				CFG_VALUE_OR_DEFAULT, \
-				"black list expiry")
+                                "black_list_expiry_time", \
+                                1, \
+                                600, \
+                                10, \
+                                CFG_VALUE_OR_DEFAULT, \
+                                "black list expiry")
+#else /* OPLUS_BUG_STABILITY */
+#define CFG_BLACK_LIST_EXPIRY_TIME CFG_INI_UINT( \
+                                "black_list_expiry_time", \
+                                1, \
+                                600, \
+                                1, \
+                                CFG_VALUE_OR_DEFAULT, \
+                                "black list expiry")
+#endif /* OPLUS_BUG_STABILITY */
 
 /*
  * <ini>

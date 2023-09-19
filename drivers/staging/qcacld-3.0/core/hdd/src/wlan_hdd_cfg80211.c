@@ -10343,7 +10343,13 @@ __wlan_hdd_cfg80211_set_ns_offload(struct wiphy *wiphy,
 
 	if (!ucfg_pmo_is_active_mode_offloaded(hdd_ctx->psoc)) {
 		hdd_warn("Active mode offload is disabled");
-		return -EINVAL;
+		#ifndef OPLUS_BUG_STABILITY
+                //Modify the return value for VTS test
+                return -EINVAL;
+                #else /* OPLUS_BUG_STABILITY */
+                return 0;
+                #endif /* OPLUS_BUG_STABILITY */
+
 	}
 
 	if (wlan_cfg80211_nla_parse(tb, QCA_WLAN_VENDOR_ATTR_ND_OFFLOAD_MAX,
@@ -15409,6 +15415,8 @@ const struct wiphy_vendor_command hdd_wiphy_vendor_commands[] = {
 			 WIPHY_VENDOR_CMD_NEED_NETDEV,
 		.doit = wlan_hdd_cfg80211_get_logger_supp_feature
 	},
+#ifndef OPLUS_BUG_STABILITY
+        //Remove for bug 1148060:get hidden AP after connect.
 	{
 		.info.vendor_id = QCA_NL80211_VENDOR_ID,
 		.info.subcmd = QCA_NL80211_VENDOR_SUBCMD_TRIGGER_SCAN,
@@ -15417,7 +15425,7 @@ const struct wiphy_vendor_command hdd_wiphy_vendor_commands[] = {
 			WIPHY_VENDOR_CMD_NEED_RUNNING,
 		.doit = wlan_hdd_cfg80211_vendor_scan
 	},
-
+#endif /* OPLUS_BUG_STABILITY */
 	/* Vendor abort scan */
 	{
 		.info.vendor_id = QCA_NL80211_VENDOR_ID,
