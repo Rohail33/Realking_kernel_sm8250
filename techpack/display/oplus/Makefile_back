@@ -1,0 +1,25 @@
+#OPOO Display Driver
+ccflags-y += -I$(srctree)/include/drm -I$(srctree)/techpack/display/msm -I$(srctree)/techpack/display/msm/dsi -I$(srctree)/techpack/display/msm/dp
+ccflags-y += -I$(srctree)/techpack/display/msm/sde
+ccflags-y += -I$(srctree)/techpack/display/rotator
+ccflags-y += -I$(srctree)/techpack/display/oplus
+ifeq ($(OPLUS_FEATURE_PXLW_IRIS5),yes)
+ccflags-y += -I$(srctree)/techpack/display/msm/dsi/iris
+ccflags-y += -DOPLUS_FEATURE_PXLW_IRIS5
+endif #/* OPLUS_FEATURE_PXLW_IRIS5 */
+
+obj-$(CONFIG_DRM_OPLUS) += oplus_dsi_support.o \
+	oplus_display_private_api.o \
+	oplus_dc_diming.o \
+	oplus_onscreenfingerprint.o \
+	oplus_aod.o \
+	oplus_ffl.o \
+	oplus_display_panel.o \
+	oplus_display_panel_power.o \
+	oplus_display_panel_seed.o \
+	oplus_display_panel_common.o \
+	oplus_display_panel_hbm.o
+
+ifeq ($(OPLUS_FEATURE_ADFR_KERNEL),yes)
+obj-$(CONFIG_DRM_OPLUS) += oplus_adfr.o
+endif

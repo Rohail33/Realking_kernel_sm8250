@@ -478,15 +478,38 @@ struct sde_connector {
 	u32 bl_scale_sv;
 	u32 unset_bl_level;
 	bool allow_bl_update;
+#ifdef OPLUS_FEATURE_AOD_RAMLESS
+	struct workqueue_struct *update_bl_workq;
+	struct work_struct update_bl_work;
+#endif
 
 	u32 qsync_mode;
 	bool qsync_updated;
-
+#ifdef OPLUS_FEATURE_ADFR
+	u32 qsync_dynamic_min_fps;
+	/* store the min fps value for next window setting */
+	u32 qsync_curr_dynamic_min_fps;
+	/* deferred min fps window setting status */
+	u32 qsync_deferred_window_status;
+#endif /* OPLUS_FEATURE_ADFR */
 	bool colorspace_updated;
 
 	bool last_cmd_tx_sts;
 	bool hdr_capable;
 };
+
+#ifdef OPLUS_BUG_STABILITY
+/* DC backlight sync */
+struct dc_apollo_pcc_sync {
+	wait_queue_head_t bk_wait;
+	int dc_pcc_updated;
+	__u32 pcc;
+	__u32 pcc_last;
+	__u32 pcc_current;
+	struct mutex lock;
+	int backlight_pending;
+};
+#endif
 
 /**
  * to_sde_connector - convert drm_connector pointer to sde connector pointer
@@ -526,6 +549,16 @@ struct sde_connector {
  */
 #define sde_connector_get_qsync_mode(C) \
 	((C) ? to_sde_connector((C))->qsync_mode : 0)
+
+#ifdef OPLUS_FEATURE_ADFR
+/**
+ * sde_connector_get_qsync_dynamic_min_fps - get sde connector's qsync_dynamic_min_fps
+ * @C: Pointer to drm connector structure
+ * Returns: Current cached qsync_dynamic_min_fps for given connector
+ */
+#define sde_connector_get_qsync_dynamic_min_fps(C) \
+	((C) ? to_sde_connector((C))->qsync_dynamic_min_fps : 0)
+#endif
 
 /**
  * sde_connector_get_propinfo - get sde connector's property info pointer
@@ -970,5 +1003,9 @@ int sde_connector_get_panel_vfp(struct drm_connector *connector,
  * @connector: Pointer to DRM connector object
  */
 int sde_connector_esd_status(struct drm_connector *connector);
+
+#ifdef OPLUS_BUG_STABILITY
+int _sde_connector_update_bl_scale_(struct sde_connector *c_conn);
+#endif
 
 #endif /* _SDE_CONNECTOR_H_ */

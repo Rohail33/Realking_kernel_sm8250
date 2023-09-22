@@ -2191,6 +2191,10 @@ int sde_rm_reserve(
 			SDE_ERROR("poll timeout cur %d nxt %d enc %d\n",
 				(rsvp_cur) ? rsvp_cur->seq : -1,
 				rsvp_nxt->seq, enc->base.id);
+			#ifdef OPLUS_BUG_STABILITY
+			SDE_MM_ERROR("[sde error] poll timeout cur %d nxt %d enc %d\n",
+				rsvp_cur->seq, rsvp_nxt->seq, enc->base.id);
+			#endif
 			SDE_EVT32(enc->base.id, (rsvp_cur) ? rsvp_cur->seq : -1,
 					rsvp_nxt->seq, SDE_EVTLOG_ERROR);
 			ret = -EINVAL;

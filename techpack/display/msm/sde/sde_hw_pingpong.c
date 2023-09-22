@@ -11,6 +11,9 @@
 #include "sde_hw_pingpong.h"
 #include "sde_dbg.h"
 #include "sde_kms.h"
+#ifdef OPLUS_BUG_STABILITY
+#include "dsi_display.h"
+#endif
 
 #define PP_TEAR_CHECK_EN                0x000
 #define PP_SYNC_CONFIG_VSYNC            0x004
@@ -37,9 +40,13 @@
 static u32 dither_depth_map[DITHER_DEPTH_MAP_INDEX] = {
 	0, 0, 0, 0, 0, 1, 2, 3, 3
 };
-
 #define MERGE_3D_MODE 0x004
 #define MERGE_3D_MUX  0x000
+
+#ifdef OPLUS_BUG_STABILITY
+extern int oplus_dither_enable;
+extern int dc_apollo_enable;
+#endif
 
 static struct sde_merge_3d_cfg *_merge_3d_offset(enum sde_merge_3d idx,
 		struct sde_mdss_cfg *m,
@@ -317,7 +324,16 @@ static int sde_hw_pp_setup_dither_v1(struct sde_hw_pingpong *pp,
 	struct sde_hw_blk_reg_map *c;
 	struct drm_msm_dither *dither = (struct drm_msm_dither *)cfg;
 	u32 base = 0, offset = 0, data = 0, i = 0;
+#ifdef OPLUS_BUG_STABILITY
+	struct dsi_display *display = get_main_display();
+	bool is_oplus_project = false;
 
+	if (!display) {
+		DRM_ERROR("%s: failed to get dsi dsilay! LINE:%d\n",__func__, __LINE__);
+		return -EINVAL;
+	}
+	is_oplus_project = display->panel->oplus_priv.is_oplus_project;
+#endif
 	if (!pp)
 		return -EINVAL;
 
@@ -342,6 +358,22 @@ static int sde_hw_pp_setup_dither_v1(struct sde_hw_pingpong *pp,
 		return -EINVAL;
 
 	offset += 4;
+#ifdef OPLUS_BUG_STABILITY
+	if (is_oplus_project) {
+		dither_depth_map[5] = 1;
+		dither_depth_map[6] = 2;
+		dither_depth_map[7] = 3;
+		dither_depth_map[8] = 2;
+		SDE_DEBUG("oplus_project's dither_depth_map\n");
+	}
+	if (!strcmp(display->panel->name, "samsung ams662zs01 dsc cmd 21623")) {
+		dither_depth_map[5] = 2;
+		dither_depth_map[6] = 2;
+		dither_depth_map[7] = 2;
+		dither_depth_map[8] = 2;
+		oplus_dither_enable = 1;
+	}
+#endif
 	data = dither_depth_map[dither->c0_bitdepth] & REG_MASK(2);
 	data |= (dither_depth_map[dither->c1_bitdepth] & REG_MASK(2)) << 2;
 	data |= (dither_depth_map[dither->c2_bitdepth] & REG_MASK(2)) << 4;
@@ -357,7 +389,20 @@ static int sde_hw_pp_setup_dither_v1(struct sde_hw_pingpong *pp,
 			((dither->matrix[i + 3] & REG_MASK(4)) << 12);
 		SDE_REG_WRITE(c, base + offset, data);
 	}
-	SDE_REG_WRITE(c, base, 1);
+#ifdef OPLUS_BUG_STABILITY
+	if(is_oplus_project || (!strcmp(display->panel->name, "samsung ams662zs01 dsc cmd 21623"))) {
+		if(oplus_dither_enable || dc_apollo_enable) {
+			SDE_REG_WRITE(c, base, 1);
+		}
+		else {
+			SDE_REG_WRITE(c, base, 0);
+		}
+	} else
+#endif
+	{
+		SDE_REG_WRITE(c, base, 1);
+	}
+
 
 	return 0;
 }

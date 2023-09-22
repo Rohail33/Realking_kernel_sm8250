@@ -54,9 +54,20 @@
 #include <soc/qcom/scm.h>
 #include "soc/qcom/secure_buffer.h"
 #include "soc/qcom/qtee_shmbridge.h"
+#if defined(OPLUS_FEATURE_PXLW_IRIS5) || defined(CONFIG_PXLW_SOFT_IRIS)
+#include "iris/dsi_iris5_api.h"
+#endif
 
 #define CREATE_TRACE_POINTS
 #include "sde_trace.h"
+#ifdef OPLUS_BUG_STABILITY
+#include "oplus_display_private_api.h"
+#include "oplus_onscreenfingerprint.h"
+#endif
+
+#ifdef OPLUS_FEATURE_ADFR
+#include "oplus_adfr.h"
+#endif
 
 /* defines for secure channel call */
 #define MEM_PROTECT_SD_CTRL_SWITCH 0x18
@@ -985,6 +996,9 @@ static void sde_kms_prepare_commit(struct msm_kms *kms,
 	rc = pm_runtime_get_sync(sde_kms->dev->dev);
 	if (rc < 0) {
 		SDE_ERROR("failed to enable power resources %d\n", rc);
+		#ifdef OPLUS_BUG_STABILITY
+		SDE_MM_ERROR("DisplayDriverID@@407$$failed to enable power resources %d\n", rc);
+		#endif /* OPLUS_BUG_STABILITY */
 		SDE_EVT32(rc, SDE_EVTLOG_ERROR);
 		goto end;
 	}
@@ -1104,7 +1118,6 @@ static void _sde_kms_release_splash_resource(struct sde_kms *sde_kms,
 				sde_power_data_bus_set_quota(&priv->phandle, i,
 					SDE_POWER_HANDLE_ENABLE_BUS_AB_QUOTA,
 					SDE_POWER_HANDLE_ENABLE_BUS_IB_QUOTA);
-
 		pm_runtime_put_sync(sde_kms->dev->dev);
 	}
 }
@@ -1210,6 +1223,24 @@ static void sde_kms_complete_commit(struct msm_kms *kms,
 
 	sde_kms_check_for_ext_vote(sde_kms, &priv->phandle);
 
+#ifdef OPLUS_FEATURE_ADFR
+	if (oplus_adfr_is_support()) {
+		if (oplus_adfr_get_vsync_mode() == OPLUS_DOUBLE_TE_VSYNC) {
+			SDE_ATRACE_BEGIN("sde_kms_adfr_vsync_source_switch");
+			for_each_old_crtc_in_state(old_state, crtc, old_crtc_state, i) {
+				sde_kms_adfr_vsync_source_switch(kms, crtc);
+			}
+			SDE_ATRACE_END("sde_kms_adfr_vsync_source_switch");
+		} else if (oplus_adfr_get_vsync_mode() == OPLUS_EXTERNAL_TE_TP_VSYNC) {
+			SDE_ATRACE_BEGIN("sde_kms_adfr_vsync_switch");
+			for_each_old_crtc_in_state(old_state, crtc, old_crtc_state, i) {
+				sde_kms_adfr_vsync_switch(kms, crtc);
+			}
+			SDE_ATRACE_END("sde_kms_adfr_vsync_switch");
+		}
+	}
+#endif /* OPLUS_FEATURE_ADFR */
+
 	SDE_EVT32_VERBOSE(SDE_EVTLOG_FUNC_EXIT);
 	SDE_ATRACE_END("sde_kms_complete_commit");
 }
@@ -1273,7 +1304,7 @@ static void sde_kms_wait_for_commit_done(struct msm_kms *kms,
 			sde_encoder_virt_reset(encoder);
 	}
 
-	SDE_ATRACE_END("sde_ksm_wait_for_commit_done");
+	SDE_ATRACE_END("sde_kms_wait_for_commit_done");
 }
 
 static void sde_kms_prepare_fence(struct msm_kms *kms,
@@ -1424,7 +1455,11 @@ static int _sde_kms_setup_displays(struct drm_device *dev,
 		.soft_reset   = dsi_display_soft_reset,
 		.pre_kickoff  = dsi_conn_pre_kickoff,
 		.clk_ctrl = dsi_display_clk_ctrl,
+#ifdef OPLUS_BUG_STABILITY
+		.set_power = dsi_display_oplus_set_power,
+#else
 		.set_power = dsi_display_set_power,
+#endif
 		.get_mode_info = dsi_conn_get_mode_info,
 		.get_dst_format = dsi_display_get_dst_format,
 		.post_kickoff = dsi_conn_post_kickoff,
@@ -1434,6 +1469,11 @@ static int _sde_kms_setup_displays(struct drm_device *dev,
 		.cont_splash_config = dsi_display_cont_splash_config,
 		.get_panel_vfp = dsi_display_get_panel_vfp,
 		.get_default_lms = dsi_display_get_default_lms,
+		.get_qsync_min_fps = dsi_display_get_qsync_min_fps,
+#ifdef OPLUS_FEATURE_ADFR
+		// enable qsync on/off cmds
+		.prepare_commit = dsi_display_pre_commit,
+#endif
 		.get_qsync_min_fps = dsi_display_get_qsync_min_fps,
 	};
 	static const struct sde_connector_ops wb_ops = {
@@ -2433,6 +2473,11 @@ static int sde_kms_atomic_check(struct msm_kms *kms,
 	sde_kms = to_sde_kms(kms);
 	dev = sde_kms->dev;
 
+	if (!dev) {
+		SDE_ERROR("invalid device\n");
+		return -EINVAL;
+	}
+
 	SDE_ATRACE_BEGIN("atomic_check");
 	if (sde_kms_is_suspend_blocked(dev)) {
 		SDE_DEBUG("suspended, skip atomic_check\n");
@@ -3127,6 +3172,9 @@ static const struct msm_kms_funcs kms_funcs = {
 	.postopen = _sde_kms_post_open,
 	.check_for_splash = sde_kms_check_for_splash,
 	.get_mixer_count = sde_kms_get_mixer_count,
+#if defined(OPLUS_FEATURE_PXLW_IRIS5) || defined(CONFIG_PXLW_SOFT_IRIS)
+	.iris_operate = iris_sde_kms_iris_operate,
+#endif
 };
 
 /* the caller api needs to turn on clock before calling it */

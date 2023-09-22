@@ -11,6 +11,16 @@
 #include "sde_hw_sspp.h"
 #include "sde_hwio.h"
 #include "sde_hw_lm.h"
+#ifdef CONFIG_DRM_OPLUS
+#include "dsi_display.h"
+#endif
+#ifdef OPLUS_BUG_STABILITY
+/* DC backlight sync */
+#include "sde_connector.h"
+#include "../dsi/dsi_display.h"
+extern struct dc_apollo_pcc_sync dc_apollo;
+extern struct dsi_display *get_main_display(void);
+#endif
 
 /* Reserve space of 128 words for LUT dma payload set-up */
 #define REG_DMA_HEADERS_BUFFER_SZ (sizeof(u32) * 128)
@@ -106,6 +116,14 @@
 #define QSEED3L_COEF_LUT_CTRL_OFF              0x4c
 #define Y_INDEX                            0
 #define UV_INDEX                           1
+
+#ifdef OPLUS_BUG_STABILITY
+extern u32 g_oplus_save_pcc;
+#endif
+
+#if defined(OPLUS_FEATURE_PXLW_IRIS5)
+int igc_lut_update = 0;
+#endif
 
 enum ltm_vlut_ops_bitmask {
 	ltm_unsharp = BIT(0),
@@ -982,6 +1000,11 @@ static void _dspp_igcv31_off(struct sde_hw_dspp *ctx, void *cfg)
 		DRM_ERROR("failed to kick off ret %d\n", rc);
 }
 
+#ifdef CONFIG_DRM_OPLUS
+extern int oplus_dither_enable;
+extern struct dsi_display *get_main_display(void);
+#endif
+
 void reg_dmav1_setup_dspp_igcv31(struct sde_hw_dspp *ctx, void *cfg)
 {
 	struct drm_msm_igc_lut *lut_cfg;
@@ -990,13 +1013,23 @@ void reg_dmav1_setup_dspp_igcv31(struct sde_hw_dspp *ctx, void *cfg)
 	struct sde_hw_cp_cfg *hw_cfg = cfg;
 	struct sde_reg_dma_setup_ops_cfg dma_write_cfg;
 	struct sde_hw_dspp *dspp_list[DSPP_MAX];
+#ifdef CONFIG_DRM_OPLUS
+	struct dsi_display *dsi_display;
+#endif
 	int rc, i = 0, j = 0;
+#if defined(OPLUS_FEATURE_PW_4096) || defined(OPLUS_FEATURE_PXLW_IRIS5)
+	u32 *addr[IGC_TBL_NUM], *data;
+#else
 	u32 *addr[IGC_TBL_NUM];
+#endif
 	u32 offset = 0;
 	u32 reg;
 	u32 index, num_of_mixers, dspp_sel, blk = 0;
 
 	rc = reg_dma_dspp_check(ctx, cfg, IGC);
+#ifdef CONFIG_DRM_OPLUS
+	dsi_display = get_main_display();
+#endif
 	if (rc)
 		return;
 
@@ -1051,6 +1084,14 @@ void reg_dmav1_setup_dspp_igcv31(struct sde_hw_dspp *ctx, void *cfg)
 	addr[0] = lut_cfg->c0;
 	addr[1] = lut_cfg->c1;
 	addr[2] = lut_cfg->c2;
+#if defined(OPLUS_FEATURE_PW_4096) || defined(OPLUS_FEATURE_PXLW_IRIS5)
+	data = kzalloc((IGC_TBL_LEN + 1) * sizeof(u32), GFP_KERNEL);
+	if (!data) {
+		DRM_ERROR("unable to allocate buffer\n");
+		return;
+	}
+#endif
+
 	for (i = 0; i < IGC_TBL_NUM; i++) {
 		offset = IGC_C0_OFF + (i * sizeof(u32));
 
@@ -1060,17 +1101,29 @@ void reg_dmav1_setup_dspp_igcv31(struct sde_hw_dspp *ctx, void *cfg)
 			if (j == 0)
 				addr[i][j] |= IGC_INDEX_UPDATE;
 		}
-
+#if defined(OPLUS_FEATURE_PW_4096) || defined(OPLUS_FEATURE_PXLW_IRIS5)
+		memcpy(data, addr[i], IGC_TBL_LEN * sizeof(u32));
+		data[IGC_TBL_LEN] = data[IGC_TBL_LEN - 1];
+		REG_DMA_SETUP_OPS(dma_write_cfg, offset, data,
+			(IGC_TBL_LEN + 1) * sizeof(u32),
+			REG_BLK_WRITE_INC, 0, 0, 0);
+#else
 		REG_DMA_SETUP_OPS(dma_write_cfg, offset, addr[i],
 			IGC_TBL_LEN * sizeof(u32),
 			REG_BLK_WRITE_INC, 0, 0, 0);
+#endif
 		rc = dma_ops->setup_payload(&dma_write_cfg);
 		if (rc) {
 			DRM_ERROR("lut write failed ret %d\n", rc);
+#if defined(OPLUS_FEATURE_PW_4096) || defined(OPLUS_FEATURE_PXLW_IRIS5)
+			kfree(data);
+#endif
 			return;
 		}
 	}
-
+#if defined(OPLUS_FEATURE_PW_4096) || defined(OPLUS_FEATURE_PXLW_IRIS5)
+	kfree(data);
+#endif
 	REG_DMA_INIT_OPS(dma_write_cfg, blk, IGC, dspp_buf[IGC][ctx->idx]);
 
 	REG_DMA_SETUP_OPS(dma_write_cfg, 0, NULL, 0, HW_BLK_SELECT, 0, 0, 0);
@@ -1080,6 +1133,41 @@ void reg_dmav1_setup_dspp_igcv31(struct sde_hw_dspp *ctx, void *cfg)
 		return;
 	}
 
+#ifdef CONFIG_DRM_OPLUS
+	if (oplus_dither_enable) {
+		if (lut_cfg->flags & IGC_DITHER_ENABLE) {
+			lut_cfg->strength = 4;
+			reg = lut_cfg->strength & IGC_DITHER_DATA_MASK;
+			REG_DMA_SETUP_OPS(dma_write_cfg,
+				ctx->cap->sblk->igc.base + IGC_DITHER_OFF,
+				&reg, sizeof(reg), REG_SINGLE_WRITE, 0, 0, 0);
+			rc = dma_ops->setup_payload(&dma_write_cfg);
+			if (rc) {
+				DRM_ERROR("dither strength failed ret %d\n", rc);
+				return;
+			}
+		}
+		reg = IGC_EN;
+	} else {
+		if (lut_cfg->flags & IGC_DITHER_ENABLE) {
+			reg = lut_cfg->strength & IGC_DITHER_DATA_MASK;
+			REG_DMA_SETUP_OPS(dma_write_cfg,
+				ctx->cap->sblk->igc.base + IGC_DITHER_OFF,
+				&reg, sizeof(reg), REG_SINGLE_WRITE, 0, 0, 0);
+			rc = dma_ops->setup_payload(&dma_write_cfg);
+			if (rc) {
+				DRM_ERROR("dither strength failed ret %d\n", rc);
+				return;
+			}
+		}
+
+		if ((dsi_display == NULL) || (dsi_display->panel == NULL) || (dsi_display->panel->name == NULL)) {
+                        reg = IGC_EN;
+                } else {
+                        reg = IGC_EN|BIT(1);
+                }
+	}
+#else
 	if (lut_cfg->flags & IGC_DITHER_ENABLE) {
 		reg = lut_cfg->strength & IGC_DITHER_DATA_MASK;
 		REG_DMA_SETUP_OPS(dma_write_cfg,
@@ -1093,6 +1181,7 @@ void reg_dmav1_setup_dspp_igcv31(struct sde_hw_dspp *ctx, void *cfg)
 	}
 
 	reg = IGC_EN;
+#endif
 	REG_DMA_SETUP_OPS(dma_write_cfg,
 		ctx->cap->sblk->igc.base + IGC_OPMODE_OFF,
 		&reg, sizeof(reg), REG_SINGLE_WRITE, 0, 0, 0);
@@ -1101,6 +1190,10 @@ void reg_dmav1_setup_dspp_igcv31(struct sde_hw_dspp *ctx, void *cfg)
 		DRM_ERROR("setting opcode failed ret %d\n", rc);
 		return;
 	}
+
+#if defined(OPLUS_FEATURE_PXLW_IRIS5)
+	igc_lut_update = 1;
+#endif
 
 	REG_DMA_SETUP_KICKOFF(kick_off, hw_cfg->ctl, dspp_buf[IGC][ctx->idx],
 			REG_DMA_WRITE, DMA_CTL_QUEUE0, WRITE_IMMEDIATE);
@@ -1252,6 +1345,11 @@ void reg_dmav1_setup_dspp_pccv4(struct sde_hw_dspp *ctx, void *cfg)
 	int rc, i = 0;
 	u32 reg = 0;
 	u32 num_of_mixers, blk = 0;
+#ifdef OPLUS_BUG_STABILITY
+	/* DC backlight sync */
+	static struct drm_msm_pcc *pcc_cfg_last;
+	struct dsi_display *display = get_main_display();
+#endif
 
 	rc = reg_dma_dspp_check(ctx, cfg, PCC);
 	if (rc)
@@ -1281,6 +1379,11 @@ void reg_dmav1_setup_dspp_pccv4(struct sde_hw_dspp *ctx, void *cfg)
 	pcc_cfg = hw_cfg->payload;
 	dma_ops = sde_reg_dma_get_ops();
 	dma_ops->reset_reg_dma_buf(dspp_buf[PCC][ctx->idx]);
+#ifdef OPLUS_BUG_STABILITY
+	/* DC backlight sync */
+	if (pcc_cfg)
+		dc_apollo.pcc_current = pcc_cfg->r.r;
+#endif
 
 	REG_DMA_INIT_OPS(dma_write_cfg, blk, PCC, dspp_buf[PCC][ctx->idx]);
 
@@ -1328,6 +1431,12 @@ void reg_dmav1_setup_dspp_pccv4(struct sde_hw_dspp *ctx, void *cfg)
 		data[i + 15] = coeffs->rb;
 		data[i + 18] = coeffs->gb;
 		data[i + 21] = coeffs->rgb;
+#ifdef OPLUS_BUG_STABILITY
+		if(i == 0) {
+			g_oplus_save_pcc = coeffs->r;
+			pr_debug("backlight smooth for g_oplus_save_pcc = %d, %d, %d", coeffs->r,coeffs->g,coeffs->b);
+		}
+#endif
 	}
 
 	REG_DMA_SETUP_OPS(dma_write_cfg,
@@ -1355,6 +1464,24 @@ void reg_dmav1_setup_dspp_pccv4(struct sde_hw_dspp *ctx, void *cfg)
 	rc = dma_ops->kick_off(&kick_off);
 	if (rc)
 		DRM_ERROR("failed to kick off ret %d\n", rc);
+
+#ifdef OPLUS_BUG_STABILITY
+	/* DC backlight sync */
+	if (display != NULL && display->panel != NULL) {
+		if (display->panel->oplus_priv.dc_apollo_sync_enable) {
+			mutex_lock(&dc_apollo.lock);
+			if (pcc_cfg_last && pcc_cfg) {
+				pr_err("pcc(%d,%d)\n", dc_apollo.pcc_current, dc_apollo.pcc_last);
+				if (dc_apollo.pcc_last != dc_apollo.pcc_current) {
+					dc_apollo.pcc_last = dc_apollo.pcc_current;
+					dc_apollo.dc_pcc_updated = 1;
+				}
+			}
+			pcc_cfg_last = pcc_cfg;
+			mutex_unlock(&dc_apollo.lock);
+		}
+	}
+#endif
 
 exit:
 	kfree(data);

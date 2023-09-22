@@ -2,6 +2,12 @@
 ccflags-y := -I$(srctree)/include/drm -I$(srctree)/techpack/display/msm -I$(srctree)/techpack/display/msm/dsi -I$(srctree)/techpack/display/msm/dp
 ccflags-y += -I$(srctree)/techpack/display/msm/sde
 ccflags-y += -I$(srctree)/techpack/display/rotator
+ccflags-y += -I$(srctree)/techpack/display/oplus
+
+ifeq ($(OPLUS_FEATURE_PXLW_IRIS5),yes)
+ccflags-y += -I$(srctree)/techpack/display/msm/dsi/iris
+ccflags-y += -DOPLUS_FEATURE_PXLW_IRIS5
+endif #/* OPLUS_FEATURE_PXLW_IRIS5 */
 
 msm_drm-$(CONFIG_DRM_MSM_DP) += dp/dp_usbpd.o \
 	dp/dp_parser.o \
@@ -100,7 +106,31 @@ msm_drm-$(CONFIG_DRM_MSM_DSI) += dsi/dsi_phy.o \
 	dsi/dsi_panel.o \
 	dsi/dsi_clk_manager.o \
 	dsi/dsi_display_test.o \
+	dsi/ktz8866_init.o \
 
+#ifeq ($(OPLUS_FEATURE_PXLW_IRIS5),y)
+msm_drm-$(CONFIG_DRM_MSM_DSI) += dsi/iris/dsi_iris5_ioctl.o \
+				dsi/iris/dsi_iris5_lightup.o \
+				dsi/iris/dsi_iris5_lightup_ocp.o \
+				dsi/iris/dsi_iris5_lp.o \
+				dsi/iris/dsi_iris5_lut.o \
+				dsi/iris/dsi_iris5_pq.o \
+				dsi/iris/dsi_iris5_mode_switch.o \
+				dsi/iris/dsi_iris5_cmds.o \
+				dsi/iris/dsi_iris5_i3c.o \
+				dsi/iris/dsi_iris5_i2c.o \
+				dsi/iris/dsi_iris5_loop_back.o \
+				dsi/iris/dsi_iris5_gpio.o \
+				dsi/iris/dsi_iris5_frc.o \
+				dsi/iris/dsi_iris5_timing_switch.o \
+				dsi/iris/dsi_iris5_dbg.o \
+				dsi/iris/msm_iris5_extended.o \
+				dsi/iris/sde_iris5_extended.o \
+				dsi/iris/dsi_iris5_extended.o
+$(warning "Defined OPLUS_FEATURE_PXLW_IRIS5 and PXLW_IRIS_DUAL in makefile")
+ccflags-y += -DOPLUS_FEATURE_PXLW_IRIS5
+ccflags-y += -DPXLW_IRIS_DUAL
+#endif
 msm_drm-$(CONFIG_DSI_PARSER) += dsi/dsi_parser.o \
 
 msm_drm-$(CONFIG_DRM_MSM) += \
@@ -116,5 +146,26 @@ msm_drm-$(CONFIG_DRM_MSM) += \
 	msm_notifier.o\
 
 obj-$(CONFIG_DRM_MSM)	+= msm_drm.o
+
+#ifdef OPLUS_BUG_STABILITY
+###########################################################################################
+#build oplus so
+msm_drm-$(CONFIG_DRM_OPLUS) += ../oplus/oplus_dsi_support.o \
+	../oplus/oplus_display_private_api.o \
+	../oplus/oplus_dc_diming.o \
+	../oplus/oplus_onscreenfingerprint.o \
+	../oplus/oplus_aod.o \
+	../oplus/oplus_ffl.o \
+	../oplus/oplus_display_panel.o \
+	../oplus/oplus_display_panel_power.o \
+	../oplus/oplus_display_panel_seed.o \
+	../oplus/oplus_display_panel_common.o \
+	../oplus/oplus_display_panel_hbm.o \
+	../oplus/oplus_display_panel_cabc.o \
+#endif /*OPLUS_BUG_STABILITY*/
+
+ifeq ($(OPLUS_FEATURE_ADFR_KERNEL),yes)
+msm_drm-$(CONFIG_DRM_OPLUS) += ../oplus/oplus_adfr.o
+endif #/* OPLUS_FEATURE_ADFR_KERNEL */
 
 obj-$(CONFIG_DRM_FBDEV_EMULATION) += msm_fbdev.o

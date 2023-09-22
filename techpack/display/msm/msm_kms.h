@@ -126,6 +126,9 @@ struct msm_kms_funcs {
 	int (*get_mixer_count)(const struct msm_kms *kms,
 			const struct drm_display_mode *mode,
 			const struct msm_resource_caps_info *res, u32 *num_lm);
+#if defined(OPLUS_FEATURE_PXLW_IRIS5) || defined(CONFIG_PXLW_SOFT_IRIS)
+	int (*iris_operate)(struct msm_kms *kms, u32 operate_type, struct msm_iris_operate_value *operate_value);
+#endif
 };
 
 struct msm_kms {
