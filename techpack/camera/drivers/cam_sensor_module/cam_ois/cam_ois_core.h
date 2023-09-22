@@ -22,6 +22,7 @@ int32_t cam_ois_construct_default_power_setting(
 
 
 int cam_ois_driver_cmd(struct cam_ois_ctrl_t *e_ctrl, void *arg);
+int cam_ois_power_up(struct cam_ois_ctrl_t *o_ctrl);
 
 /**
  * @o_ctrl: OIS ctrl structure

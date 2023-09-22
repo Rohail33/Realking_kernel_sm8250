@@ -63,29 +63,6 @@ TRACE_EVENT(cam_isp_activated_irq,
 	)
 );
 
-TRACE_EVENT(cam_log_event,
-	TP_PROTO(const char *string1, const char *string2,
-		uint64_t val1, uint64_t val2),
-	TP_ARGS(string1, string2, val1, val2),
-	TP_STRUCT__entry(
-		__string(string1, string1)
-		__string(string2, string2)
-		__field(uint64_t, val1)
-		__field(uint64_t, val2)
-	),
-	TP_fast_assign(
-		__assign_str(string1, string1);
-		__assign_str(string2, string2);
-		__entry->val1 = val1;
-		__entry->val2 = val2;
-	),
-	TP_printk(
-		"%s: %s val1=%llu val2=%llu",
-			__get_str(string1), __get_str(string2),
-			__entry->val1, __entry->val2
-	)
-);
-
 TRACE_EVENT(cam_icp_fw_dbg,
 	TP_PROTO(char *dbg_message, uint64_t timestamp),
 	TP_ARGS(dbg_message, timestamp),
@@ -317,6 +294,52 @@ TRACE_EVENT(cam_cdm_cb,
 			__get_str(entity), __entry->status
 	)
 );
+
+TRACE_EVENT(cam_tracing_mark_write,
+	TP_PROTO(const char *string1),
+	TP_ARGS(string1),
+	TP_STRUCT__entry(
+		__string(string1, string1)
+	),
+	TP_fast_assign(
+		__assign_str(string1, string1);
+	),
+	TP_printk(
+		"%s",
+		__get_str(string1)
+	)
+);
+
+#include "cam_debug_util.h"
+const char* GetFileName(const char* pFilePath);
+extern pid_t camera_provider_pid;
+#define trace_begin(...)                                                                                                    \
+do {                                                                                                                        \
+	char str_buffer[STR_BUFFER_MAX_LENGTH/2] = {0};                                                                         \
+	snprintf(str_buffer, STR_BUFFER_MAX_LENGTH/2, "B|%d|%s:%d KMD ", camera_provider_pid, GetFileName(__FILE__), __LINE__); \
+	snprintf(str_buffer+strlen(str_buffer), STR_BUFFER_MAX_LENGTH/2 - strlen(str_buffer), __VA_ARGS__);                     \
+	trace_cam_tracing_mark_write(str_buffer);                                                                                   \
+} while (0)
+
+#define trace_end()                                                                                                         \
+do {                                                                                                                        \
+	char str_buffer[STR_BUFFER_MAX_LENGTH/16] = {0};                                                                        \
+	snprintf(str_buffer, STR_BUFFER_MAX_LENGTH/16, "E|%d", camera_provider_pid);                                          \
+	trace_cam_tracing_mark_write(str_buffer);                                                                                   \
+} while (0)
+
+#define trace_begin_end(...)                                                                                                \
+do {                                                                                                                        \
+	trace_begin(__VA_ARGS__);                                                                                               \
+	trace_end();                                                                                                            \
+} while (0)
+
+#define trace_int(string, value)                                                                                            \
+do {                                                                                                                        \
+	char str_buffer[STR_BUFFER_MAX_LENGTH/4] = {0};                                                                         \
+	snprintf(str_buffer, STR_BUFFER_MAX_LENGTH/4, "C|%d|%s|%d", camera_provider_pid, string, value);                      \
+	trace_cam_tracing_mark_write(str_buffer);                                                                                   \
+} while (0)
 
 #endif /* _CAM_TRACE_H */
 

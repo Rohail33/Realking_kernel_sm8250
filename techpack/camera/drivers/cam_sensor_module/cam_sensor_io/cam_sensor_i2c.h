@@ -1,7 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
  * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #ifndef _CAM_SENSOR_I2C_H_
@@ -58,8 +57,7 @@ int32_t cam_camera_cci_i2c_read_seq(struct cam_sensor_cci_client *client,
  */
 int32_t cam_cci_i2c_write_table(
 	struct camera_io_master *client,
-	struct cam_sensor_i2c_reg_setting *write_setting,
-	bool force_low_priority);
+	struct cam_sensor_i2c_reg_setting *write_setting);
 
 /**
  * @client: CCI client structure
@@ -71,8 +69,7 @@ int32_t cam_cci_i2c_write_table(
 int32_t cam_cci_i2c_write_continuous_table(
 	struct camera_io_master *client,
 	struct cam_sensor_i2c_reg_setting *write_setting,
-	uint8_t cam_sensor_i2c_write_flag,
-	bool force_low_priority);
+	uint8_t cam_sensor_i2c_write_flag);
 
 /**
  * @cci_client: CCI client structure

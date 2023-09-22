@@ -36,7 +36,6 @@
 #define HFI_ERR_SYS_UNSUPPORT_CMD       (HFI_COMMON_BASE + 0x4)
 #define HFI_ERR_SYS_CMDFAILED           (HFI_COMMON_BASE + 0x5)
 #define HFI_ERR_SYS_CMDSIZE             (HFI_COMMON_BASE + 0x6)
-#define HFI_ERR_SYS_RESET_FAILURE       (HFI_COMMON_BASE + 0x7)
 
 /* System Level Event types */
 #define HFI_EVENT_SYS_ERROR             (HFI_COMMON_BASE + 0x1)
@@ -82,12 +81,6 @@
 #define CAMERAICP_EABORTED             10
 #define CAMERAICP_EHWVIOLATION         11
 #define CAMERAICP_ECDMERROR            12
-
-/* HFI Specific errors. */
-#define CAMERAICP_HFI_ERR_COMMAND_SIZE 1000
-#define CAMERAICP_HFI_ERR_MESSAGE_SIZE 1001
-#define CAMERAICP_HFI_QUEUE_EMPTY      1002
-#define CAMERAICP_HFI_QUEUE_FULL       1003
 
 /* Core level commands */
 /* IPE/BPS core Commands */
@@ -230,6 +223,10 @@
 #define HFI_DEBUG_CFG_ARM9WD     0x10000000
 
 #define HFI_DEV_VERSION_MAX      0x5
+
+/* Hang dump settings */
+#define HFI_SET_HANG_DUMP_ALWAYS     0x2
+#define HFI_SET_HANG_DUMP_ON_FAILURE 0x1
 
 /**
  * start of sys command packet types
