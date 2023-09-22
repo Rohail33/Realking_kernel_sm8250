@@ -14,6 +14,9 @@
 #include <dsp/q6afe-v2.h>
 #include <dsp/q6audio-v2.h>
 #include <dsp/q6common.h>
+#ifdef OPLUS_FEATURE_AUDIODETECT
+#include <dsp/q6voice.h>
+#endif /* OPLUS_FEATURE_AUDIODETECT */
 
 #include "msm-qti-pp-config.h"
 #include "msm-pcm-routing-v2.h"
@@ -1542,6 +1545,179 @@ static const struct snd_kcontrol_new get_rms_controls[] = {
 	0, msm_qti_pp_get_rms_value_control, msm_qti_pp_put_rms_value_control),
 };
 
+#ifdef OPLUS_FEATURE_AUDIODETECT
+#define INT_AUDDET_PARAM 500
+#define INT_AUDDET_MAX_VAL 200
+
+int g_auddet_ena_val = 1;
+
+static const DECLARE_TLV_DB_LINEAR(auddet_max_value, 0, INT_AUDDET_MAX_VAL);
+
+int adm_get_all_mute_pp_param(void)
+{
+	int ret = 0;
+	int be_idx = 0;
+	struct msm_pcm_routing_bdai_data msm_bedai;
+
+	for (be_idx = 0; be_idx < MSM_BACKEND_DAI_MAX; be_idx++) {
+		msm_pcm_routing_get_bedai_info(be_idx, &msm_bedai);
+		if ((be_idx < MSM_BACKEND_DAI_MAX) && msm_bedai.active) {
+			pr_err("%s :be_idx:%x, port_id:0x%x\n",__func__, be_idx, msm_bedai.port_id);
+			ret = adm_get_all_mute_pp_param_from_port(msm_bedai.port_id);
+		}
+	}
+	return ret;
+}
+
+static int mute_detect_result_get(struct snd_kcontrol *kcontrol,
+						struct snd_ctl_elem_value *ucontrol)
+{
+	int ret = 0;
+	int be_idx = 0;
+	struct msm_pcm_routing_bdai_data msm_bedai;
+
+	//ret = get_voice_mute_state(RTAC_CVP, VSS_ICOMMON_CMD_GET_PARAM_V3, MUTE_DETECT_START_PARAM_ID);
+
+	ucontrol->value.integer.value[0] = ret;
+
+	if (g_auddet_ena_val == 0) {
+		pr_info("%s : disable auddet, return\n",__func__);
+		return ret;
+	}
+
+	for (be_idx = 0; be_idx < MSM_BACKEND_DAI_MAX; be_idx++) {
+		msm_pcm_routing_get_bedai_info(be_idx, &msm_bedai);
+		if ((be_idx < MSM_BACKEND_DAI_MAX) && msm_bedai.active) {
+			pr_err("%s :be_idx:%x, port_id:0x%x\n",__func__, be_idx, msm_bedai.port_id);
+			ret = adm_get_all_mute_pp_param_from_port(msm_bedai.port_id);
+		}
+	}
+	return ret;
+}
+
+static int mute_detect_result_set(struct snd_kcontrol *kcontrol,
+						struct snd_ctl_elem_value *ucontrol)
+{
+	//ktv_afe_reverb_half_demping_ctrl = ucontrol->value.integer.value[0];
+	pr_err("%s : enter: %d\n",__func__, ucontrol->value.integer.value[0]);
+	return 0;
+}
+
+static int mute_detect_voice_result_get(struct snd_kcontrol *kcontrol,
+						struct snd_ctl_elem_value *ucontrol)
+{
+	int ret = 0;
+
+	ucontrol->value.integer.value[0] = ret;
+
+	if (g_auddet_ena_val == 0) {
+		pr_info("%s : disable auddet, return\n",__func__);
+		return ret;
+	}
+
+	ret = voice_get_cvp_param();
+
+	return ret;
+}
+
+
+
+static int auddet_ena_set(struct snd_kcontrol *kcontrol,
+						struct snd_ctl_elem_value *ucontrol)
+{
+	//ktv_afe_reverb_half_demping_ctrl = ucontrol->value.integer.value[0];
+	int ret = 0;
+	int ena_val = 0;
+	int be_idx = 0;
+	struct msm_pcm_routing_bdai_data msm_bedai;
+
+	ena_val = ucontrol->value.integer.value[0];
+	pr_info("%s : enter: %d\n",__func__, ucontrol->value.integer.value[0]);
+
+	for (be_idx = 0; be_idx < MSM_BACKEND_DAI_MAX; be_idx++) {
+		msm_pcm_routing_get_bedai_info(be_idx, &msm_bedai);
+		if ((be_idx < MSM_BACKEND_DAI_MAX) && msm_bedai.active) {
+			pr_err("%s :be_idx:%x, port_id:0x%x\n",__func__, be_idx, msm_bedai.port_id);
+			ret = adm_set_auddet_enable_param(msm_bedai.port_id, (uint8_t)ena_val);
+			if (ret) {
+				pr_err("%s: Failed to set auddet enable, err %d\n", __func__, ret);
+			} else {
+				pr_err("%s: set auddet enable ok\n", __func__);
+				g_auddet_ena_val = ena_val;
+				break;
+			}
+		}
+	}
+	return 0;
+}
+
+static int auddet_ena_get(struct snd_kcontrol *kcontrol,
+						struct snd_ctl_elem_value *ucontrol)
+{
+	int ret = 0;
+	pr_info("%s : enter: %d\n",__func__, g_auddet_ena_val);
+
+	ucontrol->value.integer.value[0] = g_auddet_ena_val;
+	return ret;
+}
+
+static int auddet_voice_ena_set(struct snd_kcontrol *kcontrol,
+						struct snd_ctl_elem_value *ucontrol)
+{
+	int ret = 0;
+	u8 ena_val = 0;
+
+	ena_val = (u8)ucontrol->value.integer.value[0];
+	pr_info("%s : enter: %d\n",__func__, ena_val);
+
+	ret = voice_set_cvp_auddet_param(ena_val);
+
+	if (ret) {
+		pr_err("%s: Failed to set auddet enable, err %d\n", __func__, ret);
+	} else {
+		pr_err("%s: set auddet enable ok\n", __func__);
+		g_auddet_ena_val = ena_val;
+	}
+
+	return 0;
+}
+
+static int auddet_voice_ena_get(struct snd_kcontrol *kcontrol,
+						struct snd_ctl_elem_value *ucontrol)
+{
+	int ret = 0;
+	pr_info("%s : enter: %d\n",__func__, g_auddet_ena_val);
+
+	ucontrol->value.integer.value[0] = g_auddet_ena_val;
+	return ret;
+}
+
+
+static int mute_detect_voice_result_set(struct snd_kcontrol *kcontrol,
+						struct snd_ctl_elem_value *ucontrol)
+{
+	//ktv_afe_reverb_half_demping_ctrl = ucontrol->value.integer.value[0];
+	pr_err("%s : enter: %d\n",__func__, ucontrol->value.integer.value[0]);
+	return 0;
+}
+
+static const struct snd_kcontrol_new oplus_auddet_mixer_controls[] = {
+    SOC_SINGLE_EXT_TLV("MuteDetectResult", SND_SOC_NOPM, 0,
+    INT_AUDDET_MAX_VAL, 0, mute_detect_result_get,
+    mute_detect_result_set, auddet_max_value),
+    SOC_SINGLE_EXT_TLV("MuteDetectVoiceResult", SND_SOC_NOPM, 0,
+    INT_AUDDET_MAX_VAL, 0, mute_detect_voice_result_get,
+    mute_detect_voice_result_set, auddet_max_value),
+    SOC_SINGLE_EXT_TLV("AUDDET_ENA", SND_SOC_NOPM, 0,
+    INT_AUDDET_MAX_VAL, 0, auddet_ena_get,
+    auddet_ena_set, auddet_max_value),
+    SOC_SINGLE_EXT_TLV("AUDDET_VOICE_ENA", SND_SOC_NOPM, 0,
+    INT_AUDDET_MAX_VAL, 0, auddet_voice_ena_get,
+    auddet_voice_ena_set, auddet_max_value),
+};
+#endif /* OPLUS_FEATURE_AUDIODETECT */
+
+
 static const struct snd_kcontrol_new eq_enable_mixer_controls[] = {
 	SOC_SINGLE_EXT("MultiMedia1 EQ Enable", SND_SOC_NOPM,
 	MSM_FRONTEND_DAI_MULTIMEDIA1, 1, 0, msm_qti_pp_get_eq_enable_mixer,
@@ -1773,5 +1949,9 @@ void msm_qti_pp_add_controls(struct snd_soc_component *component)
 	snd_soc_add_component_controls(component,
 				dtmf_detect_enable_mixer_controls,
 			ARRAY_SIZE(dtmf_detect_enable_mixer_controls));
+#ifdef OPLUS_FEATURE_AUDIODETECT
+	snd_soc_add_component_controls(component, oplus_auddet_mixer_controls,
+			ARRAY_SIZE(oplus_auddet_mixer_controls));
+#endif /* OPLUS_FEATURE_AUDIODETECT */
 }
 #endif /* CONFIG_QTI_PP */

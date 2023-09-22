@@ -151,6 +151,19 @@ static int voice_pack_and_set_cvs_ui_property(struct voice_data *v,
 					      struct param_hdr_v3 param_hdr,
 					      u8 *param_data);
 
+#ifdef OPLUS_FEATURE_AUDIODETECT
+int voice_rx_muted_cnt = 0;
+int voice_tx_muted_cnt = 0;
+int voice_rx_zd_cnt = 0;
+int voice_tx_zd_cnt = 0;
+int voice_rx_pop_cnt = 0;
+int voice_tx_pop_cnt = 0;
+int voice_rx_clip_cnt = 0;
+int voice_tx_clip_cnt = 0;
+
+uint32_t voice_cvpparam_tmp_buf[16];
+#endif /* OPLUS_FEATURE_AUDIODETECT */
+
 static void voice_itr_init(struct voice_session_itr *itr,
 			   u32 session_id)
 {
@@ -7790,6 +7803,9 @@ static int32_t qdsp_cvs_callback(struct apr_client_data *data, void *priv)
 	struct common_data *c = NULL;
 	struct voice_data *v = NULL;
 	int i = 0;
+#ifdef OPLUS_FEATURE_AUDIODETECT
+	int ret = 0;
+#endif /* OPLUS_FEATURE_AUDIODETECT */
 
 	if ((data == NULL) || (priv == NULL)) {
 		pr_err("%s: data or priv is NULL\n", __func__);
@@ -7903,10 +7919,23 @@ static int32_t qdsp_cvs_callback(struct apr_client_data *data, void *priv)
 				if (ptr[1] != 0) {
 					pr_err("%s: CVP get param error = %d, resuming\n",
 						__func__, ptr[1]);
+#ifdef OPLUS_FEATURE_AUDIODETECT
+					ret = rtac_make_voice_callback(RTAC_CVP,
+						data->payload,
+						data->payload_size);
+					pr_info("%s: rtac_make_voice_callback = %d\n",
+						__func__, ret);
+#else /* OPLUS_FEATURE_AUDIODETECT */
 					rtac_make_voice_callback(RTAC_CVP,
 						data->payload,
 						data->payload_size);
+#endif /* OPLUS_FEATURE_AUDIODETECT */
 				}
+#ifdef OPLUS_FEATURE_AUDIODETECT
+				v->cvs_state = CMD_STATUS_SUCCESS;
+				v->async_err = ptr[1];
+				wake_up(&v->cvs_wait);
+#endif /* OPLUS_FEATURE_AUDIODETECT */
 				break;
 			default:
 				pr_debug("%s: cmd = 0x%x\n", __func__, ptr[0]);
@@ -8040,8 +8069,21 @@ static int32_t qdsp_cvs_callback(struct apr_client_data *data, void *priv)
 			pr_err("%s: VSS_ICOMMON_RSP_GET_PARAM returned error = 0x%x\n",
 			       __func__, ptr[0]);
 		}
+#ifdef OPLUS_FEATURE_AUDIODETECT
+		ret = rtac_make_voice_callback(RTAC_CVS, data->payload,
+					data->payload_size);
+		pr_info("%s: VSS_ICOMMON_RSP_GET_PARAM rtac_make_voice_callback = %d\n",
+			__func__, ret);
+
+		v->cvs_state = CMD_STATUS_SUCCESS;
+		//v->async_err = ptr[1];
+		pr_info("%s: VSS_ICOMMON_RSP_GET_PARAM ptr1 = %d\n",
+			__func__, ptr[1]);
+		wake_up(&v->cvs_wait);
+#else /* OPLUS_FEATURE_AUDIODETECT */
 		rtac_make_voice_callback(RTAC_CVS, data->payload,
 					data->payload_size);
+#endif /* OPLUS_FEATURE_AUDIODETECT */
 	}  else if (data->opcode == VSS_ISTREAM_EVT_RX_DTMF_DETECTED) {
 		struct vss_istream_evt_rx_dtmf_detected *dtmf_rx_detected;
 		uint32_t *voc_pkt = data->payload;
@@ -8076,6 +8118,9 @@ static int32_t qdsp_cvp_callback(struct apr_client_data *data, void *priv)
 	struct common_data *c = NULL;
 	struct voice_data *v = NULL;
 	int i = 0;
+#ifdef OPLUS_FEATURE_AUDIODETECT
+	int ret = 0;
+#endif /* OPLUS_FEATURE_AUDIODETECT */
 
 	if ((data == NULL) || (priv == NULL)) {
 		pr_err("%s: data or priv is NULL\n", __func__);
@@ -8207,10 +8252,23 @@ static int32_t qdsp_cvp_callback(struct apr_client_data *data, void *priv)
 				if (ptr[1] != 0) {
 					pr_err("%s: CVP get param error = %d, resuming\n",
 						__func__, ptr[1]);
+#ifdef OPLUS_FEATURE_AUDIODETECT
+					ret = rtac_make_voice_callback(RTAC_CVP,
+						data->payload,
+						data->payload_size);
+					pr_info("%s: rtac_make_voice_callback = %d\n",
+						__func__, ret);
+#else /* OPLUS_FEATURE_AUDIODETECT */
 					rtac_make_voice_callback(RTAC_CVP,
 						data->payload,
 						data->payload_size);
+#endif /* OPLUS_FEATURE_AUDIODETECT */
 				}
+#ifdef OPLUS_FEATURE_AUDIODETECT
+				v->cvp_state = CMD_STATUS_SUCCESS;
+				v->async_err = ptr[1];
+				wake_up(&v->cvp_wait);
+#endif /* OPLUS_FEATURE_AUDIODETECT */
 				break;
 			case VSS_ISOUNDFOCUS_CMD_SET_SECTORS:
 				if (!ptr[1])
@@ -8272,8 +8330,25 @@ static int32_t qdsp_cvp_callback(struct apr_client_data *data, void *priv)
 			pr_err("%s: VSS_ICOMMON_RSP_GET_PARAM returned error = 0x%x\n",
 			       __func__, ptr[0]);
 		}
+#ifdef OPLUS_FEATURE_AUDIODETECT
+		ret = rtac_make_voice_callback(RTAC_CVP, data->payload,
+			data->payload_size);
+		pr_info("%s: VSS_ICOMMON_RSP_GET_PARAM rtac_make_voice_callback = %d\n",
+			__func__, ret);
+
+		v->cvp_state = CMD_STATUS_SUCCESS;
+		//v->async_err = ptr[1];
+		pr_info("%s: VSS_ICOMMON_RSP_GET_PARAM ptr0 = %d, ptr1 = %d, ptr2 = %d, ptr3 = %d, ptr4 = %d, ptr5 = %d, ptr6 = %d, ptr7 = %d, ptr8 = %d\n",
+			__func__, ptr[0], ptr[1], ptr[2], ptr[3], ptr[4], ptr[5], ptr[6], ptr[7], ptr[8]);	//ptr[5] is the param we got
+		voice_cvpparam_tmp_buf[0] = ptr[5];
+		voice_cvpparam_tmp_buf[1] = ptr[6];
+		voice_cvpparam_tmp_buf[2] = ptr[7];
+		voice_cvpparam_tmp_buf[3] = ptr[8];
+		wake_up(&v->cvp_wait);
+#else /* OPLUS_FEATURE_AUDIODETECT */
 		rtac_make_voice_callback(RTAC_CVP, data->payload,
 			data->payload_size);
+#endif /* OPLUS_FEATURE_AUDIODETECT */
 	} else if (data->opcode == VSS_IVPCM_EVT_NOTIFY_V2) {
 		if ((data->payload != NULL) && data->payload_size ==
 		    sizeof(struct vss_ivpcm_evt_notify_v2_t) &&
@@ -9850,6 +9925,176 @@ int voc_get_source_tracking(struct source_tracking_param *sourceTrackingData)
 	return ret;
 }
 EXPORT_SYMBOL(voc_get_source_tracking);
+
+#ifdef OPLUS_FEATURE_AUDIODETECT
+int voice_set_cvp_auddet_param(u8 bEnable)
+{
+	struct param_hdr_v3 param_hdr;
+
+	int ret = 0;
+	int i, j;
+	uint32_t auddet_ena = bEnable;
+
+	struct voice_data	*v = NULL;
+	memset(&param_hdr, 0, sizeof(param_hdr));
+
+	param_hdr.module_id = MUTE_DETECT_MODULE_ID;
+	param_hdr.instance_id = INSTANCE_ID_0;
+	param_hdr.param_size = sizeof(auddet_ena);
+
+	param_hdr.param_id = MUTE_DETECT_ENABLE_PARAM_ID;
+
+	mutex_lock(&common.common_lock);
+	for (i = 0; i < MAX_VOC_SESSIONS; i++) {
+		v = &common.voice[i];
+		if (is_voc_state_active(v->voc_state)) {
+			for (j = 0; j < 2; j++) {
+				pr_info("%s: active voice session = %d\n", __func__, v->session_id);
+
+				if (j == 0) {
+					param_hdr.instance_id = INSTANCE_ID_0;
+				} else {
+					param_hdr.instance_id = 0x8000;
+				}
+
+				ret = voice_pack_and_set_cvp_param(v, param_hdr,
+								   (u8 *) &auddet_ena);
+			}
+		}
+	}
+
+	mutex_unlock(&common.common_lock);
+	return ret;
+}
+EXPORT_SYMBOL(voice_set_cvp_auddet_param);
+
+int voice_get_cvp_param(void)
+{
+	struct vss_icommon_cmd_get_param *get_param = NULL;
+	uint32_t pkt_size = sizeof(struct vss_icommon_cmd_get_param);
+	void *apr_cvp;
+
+	int ret = 0;
+	int i, j;
+
+	struct voice_data	*v = NULL;
+	//u32 total_size = 0;
+	//struct param_hdr_v3 param_hdr;
+	//uint32_t param_size = (1) * sizeof(uint32_t) + sizeof(struct param_hdr_v3);
+
+	//memset(&param_hdr, 0, sizeof(param_hdr));
+	//param_hdr.module_id = MUTE_DETECT_MODULE_ID;
+	//param_hdr.instance_id = INSTANCE_ID_0;
+	//param_hdr.param_size = param_size;
+	//param_hdr.param_id = MUTE_DETECT_RESULT_PARAM_ID;
+	//total_size = sizeof(union param_hdrs) + param_hdr.param_size;
+
+	mutex_lock(&common.common_lock);
+	for (i = 0; i < MAX_VOC_SESSIONS; i++) {
+		v = &common.voice[i];
+		if (is_voc_state_active(v->voc_state)) {
+		for (j = 0; j < 2; j++) {
+			apr_cvp = common.apr_q6_cvp;
+			if (!apr_cvp) {
+				pr_err("%s: apr_cvp is NULL\n", __func__);
+				return -EINVAL;
+			}
+			pr_info("%s: active voice session = %d\n", __func__, v->session_id);
+
+			pkt_size = sizeof(struct vss_icommon_cmd_get_param);
+
+			get_param = kzalloc(pkt_size, GFP_KERNEL);
+			if (!get_param)
+				return -ENOMEM;
+
+			pr_info("%s: pkt_size = %d\n", __func__, pkt_size);
+
+			get_param->apr_hdr.hdr_field =
+				APR_HDR_FIELD(APR_MSG_TYPE_SEQ_CMD, APR_HDR_LEN(APR_HDR_SIZE),
+					      APR_PKT_VER);
+			get_param->apr_hdr.pkt_size =
+				APR_PKT_SIZE(APR_HDR_SIZE, pkt_size - APR_HDR_SIZE);
+
+			get_param->apr_hdr.src_svc = 0;
+			get_param->apr_hdr.src_domain = APR_DOMAIN_APPS;
+			get_param->apr_hdr.src_port = voice_get_idx_for_session(v->session_id);
+			get_param->apr_hdr.dest_svc = 0;
+			get_param->apr_hdr.dest_domain = APR_DOMAIN_ADSP;
+			get_param->apr_hdr.dest_port = voice_get_cvp_handle(v);
+			get_param->apr_hdr.token = VOC_SET_MEDIA_FORMAT_PARAM_TOKEN;
+			get_param->apr_hdr.opcode = q6common_is_instance_id_supported() ?
+							    VSS_ICOMMON_CMD_GET_PARAM_V3 :
+							    VSS_ICOMMON_CMD_GET_PARAM_V2;
+
+			get_param->payload_size = (4) * sizeof(uint32_t) + sizeof(struct param_hdr_v3);
+
+			get_param->module_id = MUTE_DETECT_MODULE_ID;
+			if (j == 0) {
+				get_param->instance_id = INSTANCE_ID_0;
+			} else {
+				get_param->instance_id = 0x8000;
+			}
+			get_param->param_id = MUTE_DETECT_RESULT_PARAM_ID;
+
+			v->cvp_state = CMD_STATUS_FAIL;
+			v->async_err = 0;
+			ret = apr_send_pkt(apr_cvp, (u32 *) get_param);
+			if (ret < 0) {
+				pr_err("%s: Failed to send apr packet, error %d\n", __func__,
+				       ret);
+				goto done;
+			}
+
+			ret = wait_event_timeout(v->cvp_wait,
+						 v->cvp_state == CMD_STATUS_SUCCESS,
+						 msecs_to_jiffies(TIMEOUT_MS));
+
+			pr_info("%s: send wait done\n", __func__);
+
+			if (!ret) {
+				pr_err("%s: wait_event timeout\n", __func__);
+				ret = -ETIMEDOUT;
+				goto done;
+			}
+
+			if (v->async_err > 0) {
+				pr_err("%s: DSP returned error[%s]\n", __func__,
+				       adsp_err_get_err_str(v->async_err));
+				ret = adsp_err_get_lnx_err_code(v->async_err);
+				kfree(get_param);
+				get_param = NULL;
+				goto done;
+			}
+
+			if (j == 0) {
+				pr_info("%s: get voice rx param\n", __func__);
+				voice_rx_muted_cnt = voice_cvpparam_tmp_buf[0];
+				voice_rx_zd_cnt =  voice_cvpparam_tmp_buf[1];
+				voice_rx_pop_cnt =  voice_cvpparam_tmp_buf[2];
+				voice_rx_clip_cnt =  voice_cvpparam_tmp_buf[3];
+			} else {
+				pr_info("%s: get voice tx param\n", __func__);
+				voice_tx_muted_cnt = voice_cvpparam_tmp_buf[0];
+				voice_tx_zd_cnt =  voice_cvpparam_tmp_buf[1];
+				voice_tx_pop_cnt =  voice_cvpparam_tmp_buf[2];
+				voice_tx_clip_cnt =  voice_cvpparam_tmp_buf[3];
+			}
+			kfree(get_param);
+			get_param = NULL;
+			ret = 0;
+		}
+		}
+	}
+done:
+	mutex_unlock(&common.common_lock);
+	if (get_param != NULL) {
+		kfree(get_param);
+		get_param = NULL;
+	}
+	return ret;
+}
+EXPORT_SYMBOL(voice_get_cvp_param);
+#endif /* OPLUS_FEATURE_AUDIODETECT */
 
 static int voice_set_cvp_param(struct voice_data *v,
 			       struct vss_icommon_mem_mapping_hdr *mem_hdr,

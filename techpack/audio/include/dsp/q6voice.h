@@ -461,6 +461,32 @@ struct vss_icommon_cmd_set_param {
 	uint8_t param_data[0];
 } __packed;
 
+#ifdef OPLUS_FEATURE_AUDIODETECT
+struct vss_icommon_cmd_get_param {
+	/* APR Header */
+	struct apr_hdr apr_hdr;
+
+	/* The memory mapping header to be used when sending outband */
+	struct vss_icommon_mem_mapping_hdr mem_hdr;
+
+	/* Size of the parameter data payload in bytes. */
+	uint16_t payload_size;
+
+	/* Valid ID of the module. */
+	uint32_t module_id;
+
+	/* Instance of the module. */
+	uint16_t instance_id;
+
+	/* This field must be set to zero. */
+	uint16_t reserved;
+
+	/* Valid ID of the parameter. */
+	uint32_t param_id;
+
+} __packed;
+#endif /* OPLUS_FEATURE_AUDIODETECT */
+
 /* TO MVM commands */
 #define VSS_IMVM_CMD_CREATE_PASSIVE_CONTROL_SESSION	0x000110FF
 /**< No payload. Wait for APRV2_IBASIC_RSP_RESULT response. */
@@ -2144,6 +2170,10 @@ int voice_set_topology_specific_info(struct voice_data *v,
 int voc_set_sound_focus(struct sound_focus_param sound_focus_param);
 int voc_get_sound_focus(struct sound_focus_param *soundFocusData);
 int voc_get_source_tracking(struct source_tracking_param *sourceTrackingData);
+#ifdef OPLUS_FEATURE_AUDIODETECT
+int voice_set_cvp_auddet_param(u8 bEnable);
+int voice_get_cvp_param(void);
+#endif /* OPLUS_FEATURE_AUDIODETECT */
 int voc_set_afe_sidetone(uint32_t session_id, bool sidetone_enable);
 bool voc_get_afe_sidetone(void);
 #endif

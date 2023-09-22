@@ -68,6 +68,22 @@ struct msm_pcm_pdata {
 	struct msm_pcm_channel_mixer *chmixer_pspd[MSM_FRONTEND_DAI_MM_SIZE][2];
 };
 
+#ifdef OPLUS_FEATURE_KTV
+static bool is_ktv_mode(struct msm_pcm_loopback *pcm) {
+	struct snd_soc_pcm_runtime *soc_pcm_tx =
+			pcm->capture_substream->private_data;
+	struct msm_pcm_stream_app_type_cfg cfg_data = {0};
+	int be_id = 0;
+	int ret = msm_pcm_routing_get_stream_app_type_cfg(
+		soc_pcm_tx->dai_link->id, SESSION_TYPE_RX,
+					&be_id, &cfg_data);
+	if (ret < 0) {
+		return false;
+	}
+	return (cfg_data.acdb_dev_id == 98);
+}
+#endif /* OPLUS_FEATURE_KTV */
+
 static void stop_pcm(struct msm_pcm_loopback *pcm);
 static int msm_pcm_loopback_get_session(struct snd_soc_pcm_runtime *rtd,
 					struct msm_pcm_loopback **pcm);
@@ -300,7 +316,9 @@ static int msm_pcm_open(struct snd_pcm_substream *substream)
 			return -ENOMEM;
 		}
 		pcm->session_id = pcm->audio_client->session;
-		pcm->audio_client->perf_mode = pdata->perf_mode;
+		#ifdef OPLUS_FEATURE_KTV
+		pcm->audio_client->perf_mode = is_ktv_mode(pcm) ? LOW_LATENCY_PCM_MODE : pdata->perf_mode;
+		#endif /* OPLUS_FEATURE_KTV */
 		ret = q6asm_open_loopback_v2(pcm->audio_client,
 					     bits_per_sample);
 		if (ret < 0) {
@@ -466,17 +484,26 @@ static int msm_pcm_prepare(struct snd_pcm_substream *substream)
 				pcm->playback_substream->private_data;
 		struct snd_soc_pcm_runtime *soc_pcm_tx =
 			pcm->capture_substream->private_data;
+		#ifdef OPLUS_FEATURE_KTV
+		int tx_perf_mode = is_ktv_mode(pcm) ? LEGACY_PCM_MODE : pcm->audio_client->perf_mode;
+		#endif /* OPLUS_FEATURE_KTV */
 		event.event_func = msm_pcm_route_event_handler;
 		event.priv_data = (void *) pcm;
-
 		if (!pcm->audio_client) {
 			mutex_unlock(&pcm->lock);
 			pr_err("%s: audio client freed\n", __func__);
 			return -EINVAL;
 		}
+
+		#ifndef OPLUS_FEATURE_KTV
 		msm_pcm_routing_reg_phy_stream(soc_pcm_tx->dai_link->id,
 			pcm->audio_client->perf_mode,
 			pcm->session_id, pcm->capture_substream->stream);
+		#else
+		msm_pcm_routing_reg_phy_stream(soc_pcm_tx->dai_link->id,
+			tx_perf_mode,
+			pcm->session_id, pcm->capture_substream->stream);
+		#endif
 		msm_pcm_routing_reg_phy_stream_v2(soc_pcm_rx->dai_link->id,
 			pcm->audio_client->perf_mode,
 			pcm->session_id, pcm->playback_substream->stream,

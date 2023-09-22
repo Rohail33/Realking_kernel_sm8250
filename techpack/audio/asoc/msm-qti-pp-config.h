@@ -82,6 +82,9 @@ int msm_qti_pp_send_chmix_cfg_cmd(int port_id, int copp_idx,
 #define msm_qti_pp_add_controls(platform) do {} while (0)
 #endif /* CONFIG_QTI_PP */
 
+#ifdef OPLUS_FEATURE_AUDIODETECT
+int adm_get_all_mute_pp_param(void);
+#endif /* OPLUS_FEATURE_AUDIODETECT */
 
 #if defined(CONFIG_QTI_PP) && defined(CONFIG_QTI_PP_AUDIOSPHERE)
 int msm_qti_pp_asphere_init(int port_id, int copp_idx);

@@ -1173,6 +1173,11 @@ static int rx_macro_digital_mute(struct snd_soc_dai *dai, int mute)
 	if (!rx_macro_get_data(component, &rx_dev, &rx_priv, __func__))
 		return -EINVAL;
 
+	#ifdef OPLUS_BUG_STABILITY
+	if (rx_priv->active_ch_cnt[dai->id] < 2)
+		return 0;
+	#endif /* OPLUS_BUG_STABILITY */
+
 	switch (dai->id) {
 	case RX_MACRO_AIF1_PB:
 	case RX_MACRO_AIF2_PB:
@@ -1635,6 +1640,11 @@ static int rx_macro_enable_mix_path(struct snd_soc_dapm_widget *w,
 		rx_macro_set_idle_detect_thr(component, rx_priv, w->shift,
 					INTERP_MIX_PATH);
 		rx_macro_enable_interp_clk(component, event, w->shift);
+		#ifdef OPLUS_BUG_STABILITY
+		if (rx_priv->active_ch_cnt[RX_MACRO_AIF1_PB] == 1)
+			snd_soc_component_update_bits(component, mix_reg,
+						0x20, 0x20);
+		#endif /* OPLUS_BUG_STABILITY */
 		break;
 	case SND_SOC_DAPM_POST_PMU:
 		snd_soc_component_write(component, gain_reg,
@@ -1721,7 +1731,12 @@ static int rx_macro_enable_main_path(struct snd_soc_dapm_widget *w,
 		rx_macro_set_idle_detect_thr(component, rx_priv, w->shift,
 						INTERP_MAIN_PATH);
 		rx_macro_enable_interp_clk(component, event, w->shift);
+		#ifndef OPLUS_BUG_STABILITY
 		if (rx_macro_adie_lb(component, w->shift))
+		#else /* OPLUS_BUG_STABILITY */
+		if (rx_macro_adie_lb(component, w->shift) ||
+			rx_priv->active_ch_cnt[RX_MACRO_AIF1_PB] == 1)
+		#endif /* OPLUS_BUG_STABILITY */
 			snd_soc_component_update_bits(component,
 						reg, 0x20, 0x20);
 		break;

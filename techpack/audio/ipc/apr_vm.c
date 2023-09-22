@@ -381,6 +381,10 @@ static void apr_adsp_up(void)
 		schedule_work(&apr_priv->add_chld_dev_work);
 	spin_unlock(&apr_priv->apr_lock);
 	snd_event_notify(apr_priv->dev, SND_EVENT_UP);
+
+	#ifdef OPLUS_FEATURE_ADSP_RECOVERY
+	oplus_set_ssr_state(false);
+	#endif
 }
 
 int apr_load_adsp_image(void)

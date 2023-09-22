@@ -158,6 +158,11 @@ int adm_validate_and_get_port_index(int port_id);
 
 int adm_get_default_copp_idx(int port_id);
 
+#ifdef OPLUS_FEATURE_AUDIODETECT
+int adm_set_auddet_enable_param(int port_id, uint8_t val);
+int adm_get_all_mute_pp_param_from_port(int port_id);
+#endif /* OPLUS_FEATURE_AUDIODETECT */
+
 int adm_get_topology_for_port_from_copp_id(int port_id, int copp_id);
 
 int adm_get_topology_for_port_copp_idx(int port_id, int copp_idx);
@@ -176,6 +181,10 @@ int adm_get_pp_topo_module_list_v2(int port_id, int copp_idx,
 				   int32_t *returned_params);
 
 int adm_set_volume(int port_id, int copp_idx, int volume);
+
+#ifdef OPLUS_FEATURE_KTV
+int adm_set_reverb_param(int port_id, int copp_idx, int32_t* params);
+#endif /* OPLUS_FEATURE_KTV */
 
 int adm_set_softvolume(int port_id, int copp_idx,
 		       struct audproc_softvolume_params *softvol_param);

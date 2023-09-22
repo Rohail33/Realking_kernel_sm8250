@@ -17,6 +17,7 @@
 #include <linux/nvmem-consumer.h>
 #include <linux/slab.h>
 #include <soc/qcom/subsystem_restart.h>
+#include <linux/regulator/consumer.h>
 
 #define Q6_PIL_GET_DELAY_MS 100
 #define BOOT_CMD 1
@@ -63,7 +64,10 @@ static void adsp_load_fw(struct work_struct *adsp_ldr_work)
 	int rc = 0;
 	u32 adsp_state;
 	const char *img_name;
-
+#ifdef VENDOR_EDIT
+	struct regulator *vdd_2v8 = NULL;
+	struct regulator *vdd_1v8 = NULL;
+#endif
 	if (!pdev) {
 		dev_err(&pdev->dev, "%s: Platform device null\n", __func__);
 		goto fail;
@@ -74,6 +78,38 @@ static void adsp_load_fw(struct work_struct *adsp_ldr_work)
 			"%s: Device tree information missing\n", __func__);
 		goto fail;
 	}
+#ifdef VENDOR_EDIT
+	vdd_2v8 = regulator_get(&pdev->dev, "vdd");
+	vdd_1v8 = regulator_get(&pdev->dev, "vddio");
+
+	if (vdd_2v8 != NULL)
+	{
+		dev_err(&pdev->dev,"%s: vdd_2v8 is not NULL\n", __func__);
+		regulator_set_voltage(vdd_2v8, 2704000, 3304000);
+		regulator_set_load(vdd_2v8, 200000);
+		rc = regulator_enable(vdd_2v8);
+                if (rc) {
+			dev_err(&pdev->dev,"%s: regulator_enable fail\n", __func__);
+                }
+	}
+	else
+		dev_err(&pdev->dev,"%s: vdd_2v8 is NULL\n", __func__);
+
+	msleep(10);
+
+	if (vdd_1v8 != NULL)
+	{
+		dev_err(&pdev->dev,"%s: vdd_1v8 is not NULL\n", __func__);
+		regulator_set_voltage(vdd_1v8, 1704000, 1952000);
+		regulator_set_load(vdd_1v8, 200000);
+		rc = regulator_enable(vdd_1v8);
+		if (rc) {
+			dev_err(&pdev->dev,"%s: regulator_enable fail\n", __func__);
+		}
+	}
+	else
+		dev_err(&pdev->dev,"%s: vdd_1v8 is NULL\n", __func__);
+#endif//VENDOR_EDIT
 
 	rc = of_property_read_u32(pdev->dev.of_node, adsp_dt, &adsp_state);
 	if (rc) {
