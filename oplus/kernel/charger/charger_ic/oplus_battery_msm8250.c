@@ -15746,12 +15746,15 @@ static void smbchg_usbin_collapse_irq_enable(bool enable)
 {
 	static bool collapse_en = true;
 	struct oplus_chg_chip *chip = g_oplus_chip;
+	struct irq_data *irq_data = NULL;
 
-	if (enable && !collapse_en){
-		enable_irq(chip->pmic_spmi.smb5_chip->chg.irq_info[USBIN_COLLAPSE_IRQ].irq);
-	}else if (!enable && collapse_en){
+	if (enable && !collapse_en) {
+		irq_data = irq_get_irq_data(chip->pmic_spmi.smb5_chip->chg.irq_info[USBIN_COLLAPSE_IRQ].irq);
+		if (irq_data && irqd_irq_disabled(irq_data))
+			enable_irq(chip->pmic_spmi.smb5_chip->chg.irq_info[USBIN_COLLAPSE_IRQ].irq);
+	} else if (!enable && collapse_en)
 		disable_irq(chip->pmic_spmi.smb5_chip->chg.irq_info[USBIN_COLLAPSE_IRQ].irq);
-	}
+
 	collapse_en = enable;
 }
 
