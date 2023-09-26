@@ -7300,9 +7300,10 @@ static void find_best_target(struct sched_domain *sd, cpumask_t *cpus,
 
 			/*
 			 * Skip processing placement further if we are visiting
-			 * cpus with lower capacity than start cpu
+			 * cpus with lower capacity than start cpu when the task
+			 * is boosted
 			 */
-			if (capacity_orig < capacity_orig_of(start_cpu))
+			if (capacity_orig < capacity_orig_of(start_cpu) && boosted)
 				continue;
 
 			/*
