@@ -5587,16 +5587,13 @@ static int dsi_display_bind(struct device *dev,
 	}
 
 #ifdef OPLUS_BUG_STABILITY
-	if(0 != oplus_set_display_vendor(display)) {
-		pr_err("maybe send a null point to oplus display manager\n");
-	}
-
-	/* Add for SUA feature request */
-	if(is_silence_reboot()) {
-		lcd_closebl_flag = 1;
-		lcd_closebl_flag_fp = 1;
-	}
+        /* Add for SUA feature request */
+        if(is_silence_reboot()) {
+                lcd_closebl_flag = 1;
+                lcd_closebl_flag_fp = 1;
+        }
 #endif /*OPLUS_BUG_STABILITY*/
+
 
 	mutex_lock(&display->display_lock);
 
@@ -5869,6 +5866,13 @@ static int dsi_display_init(struct dsi_display *display)
 		DSI_ERR("component add failed, rc=%d\n", rc);
 
 	DSI_DEBUG("component add success: %s\n", display->name);
+
+#ifdef OPLUS_BUG_STABILITY
+        if(0 != oplus_set_display_vendor(display)) {
+                pr_err("maybe send a null point to oplus display manager\n");
+        }
+#endif /*OPLUS_BUG_STABILITY*/
+
 end:
 	return rc;
 }
