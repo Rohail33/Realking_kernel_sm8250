@@ -1578,7 +1578,6 @@ static void f2fs_put_super(struct super_block *sb)
 	kfree(sbi->raw_super);
 
 	destroy_device_list(sbi);
-	f2fs_destroy_page_array_cache(sbi);
 	mempool_destroy(sbi->write_io_dummy);
 #ifdef CONFIG_QUOTA
 	for (i = 0; i < MAXQUOTAS; i++)
@@ -4100,11 +4099,6 @@ try_onemore:
 			goto free_percpu;
 		}
 	}
-
-	/* init per sbi slab cache */
-	err = f2fs_init_page_array_cache(sbi);
-	if (err)
-		goto free_io_dummy;
 
 	/* get an inode for meta space */
 	sbi->meta_inode = f2fs_iget(sb, F2FS_META_INO(sbi));
