@@ -1817,42 +1817,6 @@ struct f2fs_sb_info {
 
 	struct workqueue_struct *post_read_wq;	/* post read workqueue */
 
-	/* For reclaimed segs statistics per each GC mode */
-	unsigned int gc_segment_mode;		/* GC state for reclaimed segments */
-	unsigned int gc_reclaimed_segs[MAX_GC_MODE];	/* Reclaimed segs for each mode */
-
-	int max_fragment_chunk;			/* max chunk size for block fragmentation mode */
-	int max_fragment_hole;			/* max hole size for block fragmentation mode */
-
-#ifdef CONFIG_F2FS_FS_COMPRESSION
-	struct kmem_cache *page_array_slab;	/* page array entry */
-	unsigned int page_array_slab_size;	/* default page array slab size */
-
-	/* For runtime compression statistics */
-	u64 compr_written_block;
-	u64 compr_saved_block;
-	u32 compr_new_inode;
-
-	/* For compressed block cache */
-	struct inode *compress_inode;		/* cache compressed blocks */
-	unsigned int compress_percent;		/* cache page percentage */
-	unsigned int compress_watermark;	/* cache page watermark */
-	atomic_t compress_page_hit;		/* cache hit count */
-#endif
-
-#ifdef CONFIG_F2FS_IOSTAT
-	/* For app/fs IO statistics */
-	spinlock_t iostat_lock;
-	unsigned long long rw_iostat[NR_IO_TYPE];
-	unsigned long long prev_rw_iostat[NR_IO_TYPE];
-	bool iostat_enable;
-	unsigned long iostat_next_period;
-	unsigned int iostat_period_ms;
-
-	/* For io latency related statistics info in one iostat period */
-	spinlock_t iostat_lat_lock;
-	struct iostat_lat_info *iostat_io_lat;
-#endif
 };
 
 struct f2fs_private_dio {

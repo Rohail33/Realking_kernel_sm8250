@@ -1,10 +1,4 @@
 # SPDX-License-Identifier: GPL-2.0
-
-ifdef CONFIG_INLINE_OPTIMIZATION
-ccflags-y += -mllvm -inline-threshold=15000
-ccflags-y += -mllvm -inlinehint-threshold=10000
-endif
-
 obj-$(CONFIG_F2FS_FS) += f2fs.o
 
 f2fs-y		:= dir.o file.o inode.o namei.o hash.o super.o inline.o

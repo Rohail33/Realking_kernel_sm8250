@@ -147,6 +147,11 @@ static inline int f2fs_getxattr(struct inode *inode, int index,
 {
 	return -EOPNOTSUPP;
 }
+static inline ssize_t f2fs_listxattr(struct dentry *dentry, char *buffer,
+		size_t buffer_size)
+{
+	return -EOPNOTSUPP;
+}
 #endif
 
 #ifdef CONFIG_F2FS_FS_SECURITY
