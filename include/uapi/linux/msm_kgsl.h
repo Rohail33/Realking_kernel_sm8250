@@ -424,6 +424,10 @@ struct kgsl_context_property_fault {
 	__u32 timestamp;
 };
 
+struct kgsl_gpu_model {
+	char gpu_model[32];
+};
+
 /* Context property sub types */
 #define KGSL_CONTEXT_PROP_FAULTS 1
 
