@@ -1270,7 +1270,7 @@ static int dx_make_map(struct inode *dir, struct ext4_dir_entry_2 *de,
 	int count = 0;
 	char *base = (char *) de;
 	struct dx_hash_info h = *hinfo;
-	int blocksize = EXT4_BLOCK_SIZE(dir->i_sb);
+        blocksize = EXT4_BLOCK_SIZE(dir->i_sb);
 
 	while ((char *) de < base + blocksize) {
 		if (de->name_len && de->inode) {
