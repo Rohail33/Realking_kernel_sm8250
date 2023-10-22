@@ -332,7 +332,7 @@ static int __init devfreq_boost_init(void)
 		struct boost_dev *b = &d->devices[i];
 
 		thread[i] = kthread_run(devfreq_boost_thread, b,
-						      "devfreq_boostd/%d", i);
+					"devfreq_boostd/%d", i);
 		if (IS_ERR(thread[i])) {
 			ret = PTR_ERR(thread[i]);
 			pr_err("Failed to create kthread, err: %d\n", ret);
