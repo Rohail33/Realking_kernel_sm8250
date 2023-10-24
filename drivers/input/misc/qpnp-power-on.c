@@ -239,6 +239,7 @@ struct qpnp_pon {
 	bool			resin_pon_reset;
 	ktime_t			kpdpwr_last_release_time;
 	bool			log_kpd_event;
+	ktime_t			time_kpdpwr_bark;
 };
 
 int in_long_press;
