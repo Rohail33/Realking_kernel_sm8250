@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  * Copyright (c) 2002,2007-2021, The Linux Foundation. All rights reserved.
  */
 
@@ -886,14 +887,17 @@ static int kgsl_memdesc_file_setup(struct kgsl_memdesc *memdesc, uint64_t size)
 {
 	int ret;
 
-	memdesc->shmem_filp = shmem_file_setup("kgsl-3d0", size,
-			VM_NORESERVE);
-	if (IS_ERR(memdesc->shmem_filp)) {
-		ret = PTR_ERR(memdesc->shmem_filp);
-		pr_err("kgsl: unable to setup shmem file err %d\n",
-				ret);
-		memdesc->shmem_filp = NULL;
-		return ret;
+	if (memdesc->priv & KGSL_MEMDESC_USE_SHMEM) {
+		memdesc->shmem_filp = shmem_file_setup("kgsl-3d0", size,
+				VM_NORESERVE);
+		if (IS_ERR(memdesc->shmem_filp)) {
+			ret = PTR_ERR(memdesc->shmem_filp);
+			pr_err("kgsl: unable to setup shmem file err %d\n",
+					ret);
+			memdesc->shmem_filp = NULL;
+			return ret;
+		}
+		mapping_set_unevictable(memdesc->shmem_filp->f_mapping);
 	}
 
 	return 0;
