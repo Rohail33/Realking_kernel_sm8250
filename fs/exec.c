@@ -1861,6 +1861,9 @@ static int __do_execve_file(int fd, struct filename *filename,
 		goto out_unmark;
 
 	bprm.argc = count(argv, MAX_ARG_STRINGS);
+	if (bprm.argc == 0)
+		pr_warn_once("process '%s' launched '%s' with NULL argv: empty string added\n",
+			     current->comm, bprm.filename);
 	if ((retval = bprm.argc) < 0)
 		goto out;
 
