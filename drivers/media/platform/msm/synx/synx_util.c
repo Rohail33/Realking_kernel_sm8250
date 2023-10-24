@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2019, 2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022, Qualcomm Innovation Center, Inc. All rights reserved.
  */
 #define pr_fmt(fmt) "synx: " fmt
 
@@ -250,6 +251,7 @@ int synx_deinit_object(struct synx_table_row *row)
 			pr_debug("dispatched kernel cb\n");
 		}
 	}
+
 
 	memset(row, 0, sizeof(*row));
 	clear_bit(index, synx_dev->bitmap);
@@ -591,7 +593,7 @@ void *synx_from_handle(s32 synx_obj)
 		return NULL;
 	}
 
-	base = current->tgid << 16;
+	base = (current->tgid << 16) & 0x7FFFFFFF;
 
 	if ((base >> 16) != (synx_obj >> 16)) {
 		pr_err("current client: %d, base: %d, synx_obj: 0x%x\n",
@@ -605,16 +607,20 @@ void *synx_from_handle(s32 synx_obj)
 void synx_release_handle(void *pObj)
 {
 	struct synx_table_row *row = pObj;
+	s32 idx;
 
 	if (!row)
 		return;
 
+	idx = row->index;
+	mutex_lock(&synx_dev->row_locks[idx]);
 	dma_fence_put(row->fence);
+	mutex_unlock(&synx_dev->row_locks[idx]);
 }
 
 s32 synx_create_handle(void *pObj)
 {
-	s32 base = current->tgid << 16;
+	s32 base = (current->tgid << 16) & 0x7FFFFFFF;
 	s32 id;
 	struct synx_handle_entry *entry;
 	unsigned long flags;

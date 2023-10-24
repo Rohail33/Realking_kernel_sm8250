@@ -649,18 +649,14 @@ config QTI_MAXIM_FAN_CONTROLLER
 	  Also, this driver initializes the power for the fan controller
 	  and exposes sysfs node to control different speeds of fan.
 
-config PERF_HELPER
-	tristate "Record perflock messages"
-	default y
+config KINECTICS_XR_NORDIC
+	tristate "Nordic Misc driver support in XR Reference devices"
 	help
-	  this module support record perf lock history and other perf messages.
-
-
-config FORCE_FAST_CHARGE
-	bool "Force faster charge rate for USB"
-	default n
-	help
-	  This allows users to override default charge rate for USB
+	  This driver supports Nordic Chip in XR Reference devices.
+	  This driver interfaces with SoC to Nordic chip over SPI and contains
+	  code to power up the Nordic chip and initializes SPI interface. Also,
+	  this also parses the gpios and interrupts from device tree and sets
+	  the gpios and interrupt handler for handling the interrupt.
 
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"

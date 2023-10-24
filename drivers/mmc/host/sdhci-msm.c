@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * drivers/mmc/host/sdhci-msm.c - Qualcomm Technologies, Inc. MSM SDHCI Platform
  * driver source file
@@ -1430,12 +1431,6 @@ int sdhci_msm_execute_tuning(struct sdhci_host *host, u32 opcode)
 		(ios.timing == MMC_TIMING_MMC_HS200) ||
 		(ios.timing == MMC_TIMING_UHS_SDR104)))
 		return 0;
-
-	/*
-	 * Clear tuning_done flag before tuning to ensure proper
-	 * HS400 settings.
-	 */
-	msm_host->tuning_done = 0;
 
 	/*
 	 * Don't allow re-tuning for CRC errors observed for any commands
@@ -3177,6 +3172,7 @@ static irqreturn_t sdhci_msm_pwr_irq(int irq, void *data)
 	struct sdhci_host *host = (struct sdhci_host *)data;
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
 	struct sdhci_msm_host *msm_host = pltfm_host->priv;
+	struct mmc_host *mmc = host->mmc;
 	const struct sdhci_msm_offset *msm_host_offset =
 					msm_host->offset;
 	u8 irq_status = 0;
@@ -3192,6 +3188,17 @@ static irqreturn_t sdhci_msm_pwr_irq(int irq, void *data)
 		mmc_hostname(msm_host->mmc), irq, irq_status);
 
 	sdhci_msm_clear_pwrctl_status(host, irq_status);
+
+	if (mmc->ops->get_cd && !mmc->ops->get_cd(mmc) &&
+		irq_status & CORE_PWRCTL_BUS_ON) {
+		irq_ack = CORE_PWRCTL_BUS_FAIL;
+		sdhci_msm_writeb_relaxed(irq_ack, host,
+			msm_host_offset->CORE_PWRCTL_CTL);
+		spin_lock_irqsave(&host->lock, flags);
+		complete(&msm_host->pwr_irq_completion);
+		spin_unlock_irqrestore(&host->lock, flags);
+		return IRQ_HANDLED;
+	}
 
 	/* Handle BUS ON/OFF*/
 	if (irq_status & CORE_PWRCTL_BUS_ON) {
@@ -3370,6 +3377,7 @@ static void sdhci_msm_check_power_status(struct sdhci_host *host, u32 req_type)
 	unsigned long flags;
 	bool done = false;
 	u32 io_sig_sts = SWITCHABLE_SIGNALLING_VOL;
+	struct mmc_host *mmc = host->mmc;
 
 	spin_lock_irqsave(&host->lock, flags);
 	pr_debug("%s: %s: request %d curr_pwr_state %x curr_io_level %x\n",
@@ -3425,6 +3433,15 @@ static void sdhci_msm_check_power_status(struct sdhci_host *host, u32 req_type)
 			req_type);
 		sdhci_msm_dump_pwr_ctrl_regs(host);
 	}
+
+	if (mmc->ops->get_cd && !mmc->ops->get_cd(mmc) &&
+			(req_type & REQ_BUS_ON)) {
+		host->pwr = 0;
+		sdhci_writeb(host, 0, SDHCI_POWER_CONTROL);
+		if (host->ops->check_power_status)
+			host->ops->check_power_status(host, REQ_BUS_OFF);
+	}
+
 	pr_debug("%s: %s: request %d done\n", mmc_hostname(host->mmc),
 			__func__, req_type);
 }
