@@ -245,7 +245,7 @@ calc_rate(unsigned long rate, u32 m, u32 n, u32 mode, u32 hid_div)
 	if (mode)
 		rate = mult_frac(rate, m, n);
 
-	return tmp;
+	return rate;
 }
 
 static unsigned long
