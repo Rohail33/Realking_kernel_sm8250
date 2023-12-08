@@ -25,7 +25,7 @@ qcom,04908437_xiaomi_k11_4520mah_averaged_masterslave_nov9th2020 {
 	qcom,ffc-term-current-ma = <(-755)>;
 	qcom,fg-cc-cv-threshold-mv = <4440>;
 	qcom,fg-ffc-cc-cv-threshold-mv = <4450>;
-	qcom,nom-batt-capacity-mah = <4520>;
+	qcom,nom-batt-capacity-mah = <9000>;
 	qcom,batt-id-kohm = <100>;
 	qcom,battery-beta = <4250>;
 	qcom,therm-room-temp = <100000>;
