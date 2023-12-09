@@ -975,6 +975,7 @@ static int qusb_phy_regulator_init(struct qusb_phy *qphy)
 	return PTR_ERR_OR_ZERO(qphy->dpdm_rdev);
 }
 
+#ifdef CONFIG_DEBUG_FS
 static int qusb_phy_create_debugfs(struct qusb_phy *qphy)
 {
 	struct dentry *file;
@@ -1016,6 +1017,7 @@ static int qusb_phy_create_debugfs(struct qusb_phy *qphy)
 create_err:
 	return ret;
 }
+#endif /* CONFIG_DEBUG_FS */
 
 static int qusb2_get_regulators(struct qusb_phy *qphy)
 {
@@ -1326,7 +1328,9 @@ static int qusb_phy_probe(struct platform_device *pdev)
 		usb_remove_phy(&qphy->phy);
 
 	qphy->suspended = true;
+#ifdef CONFIG_DEBUG_FS
 	qusb_phy_create_debugfs(qphy);
+#endif
 
 	/*
 	 * EUD may be enable in boot loader and to keep EUD session alive across
