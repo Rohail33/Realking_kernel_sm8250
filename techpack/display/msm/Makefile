@@ -127,7 +127,6 @@ msm_drm-$(CONFIG_DRM_MSM_DSI) += dsi/iris/dsi_iris5_ioctl.o \
 				dsi/iris/msm_iris5_extended.o \
 				dsi/iris/sde_iris5_extended.o \
 				dsi/iris/dsi_iris5_extended.o
-$(warning "Defined OPLUS_FEATURE_PXLW_IRIS5 and PXLW_IRIS_DUAL in makefile")
 ccflags-y += -DOPLUS_FEATURE_PXLW_IRIS5
 ccflags-y += -DPXLW_IRIS_DUAL
 #endif
