@@ -1,0 +1,123 @@
+/*this is for different project dtsi*/
+&op_wlchg {
+	status = "okay";
+	op,max-voltage-mv = <4550>;
+	op,fastchg-curr-max-ma = <1500>;
+	op,fastchg-curr-min-ma = <400>;
+	op,fastchg-vol-entry-max-mv = <4380>;
+	op,fastchg-vol-normal-max-mv = <4480>;
+	op,fastchg-vol-hot-max-mv = <4130>;
+	op,fastchg-vol-min-mv = <3300>;
+	op,fastchg-temp-max = <430>;
+	op,fastchg-temp-min = <120>;
+	op,fastchg-soc-max = <85>;
+	op,fastchg-soc-min = <1>;
+	op,fastchg-soc-mid = <75>;
+	op,fastchg-discharge-curr-max = <2000>;
+	/*
+	 * | temp_min | temp_max | target_curr_ua | vol_max_mv |need wait |
+	 *
+	 * temp_min: Switch to the previous level when the temperature is lower
+	 *           than this value. If it is 0, do not switch.
+	 * temp_max: Switch to the next level when the temperature is greater
+	 *           than this value
+	 * target_curr_ua: Target current in this temperature range.
+	 * vol_max_mv: Maximum battery voltage.
+	 * need wait: 1:Need wait for a while after switching to the next level.
+	 *            0:No need to wait after switching to the next level.
+	 */
+	op,fastchg-ffc_step = <0   405  1500000 4420 1
+			       380 420  1000000 4450 1
+			       390 420  850000  4480 1
+			       400 420  625000  4480 0>;
+	/* ibatmax setting for different temp regions */
+	op,epp-ibatmax-ma = <0 1000 2500 2500 2500 2500 1500 0>;
+	op,bpp-ibatmax-ma = <0 1000 1500 1500 1500 1500 1500 0>;
+	op,bpp-sdp-ibatmax-ma = <0 1000 1000 1000 1000 1000 1000 0>;
+	op,epp-iclmax-ma = <0 300 1100 1100 1100 1100 650 0>;
+	op,bpp-iclmax-ma = <0 500 1000 1000 1000 1000 1000 0>;
+	op,bpp-sdp-iclmax-ma = <0 500 500 500 500 500 500 0>;
+	op,fastchg-ibatmax-ma = <4000 6000>;
+	/* temp region settings */
+	cold-bat-decidegc = <20>;
+	little-cold-bat-decidegc = <0>;
+	cool-bat-decidegc = <50>;
+	little-cool-bat-decidegc = <120>;
+	pre-normal-bat-decidegc = <160>;
+	warm-bat-decidegc = <440>;
+	hot-bat-decidegc = <500>;
+
+	cool-vbat-thr-mv = <4180>;
+	cool-epp-ibat-ma = <1500>;
+	cool-epp-icl-ma = <650>;
+	/* deviation check */
+	op,rx-freq-threshold = <129>;
+
+	/*wireless charge skin-therm*/
+	fastchg-skin-temp-max = <420>;
+	fastchg-skin-temp-min = <400>;
+	epp-skin-temp-max = <390>;
+	epp-skin-temp-min = <370>;
+	op,epp-curr-step = <1100 550>;
+
+	/* fod parameter*/
+	op,fastchg-fod-enable;
+	op,fastchg-match-q = /bits/ 8 <0x44 0x56 0x56>;
+	op,fastchg-fod-parm-new = /bits/ 8 <0xac 0x32 0xac 0x28 0xa0 0xba
+					0x9a 0xd3 0x9a 0xce 0x9f 0xf6>;
+	op,fastchg-fod-parm = /bits/ 8 <0xac 0x32 0xac 0x28 0xa0 0x1e
+					0x9a 0x37 0x9a 0x32 0x9f 0xc4>;
+	op,fastchg-fod-parm-startup = /bits/ 8 <0xac 0x7f 0xac 0x28 0xa0 0x1e
+						0x9a 0x37 0x9a 0x32 0x9f 0xc4>;
+
+	/* vbatdet setting for different temp regions */
+	vbatdet-mv = <0 3675 4235 4370 4370 4370 4030 0>;
+};
+
+&op_wlchg_rx {
+	status = "okay";
+};
+
+&op_wlchg_cp1 {
+	status = "okay";
+};
+
+&op_wlchg_cp2 {
+	status = "okay";
+};
+
+&op_wlchg_gpio {
+	status = "okay";
+};
+
+&op_wlchg_pm8250_gpio {
+	status = "okay";
+};
+
+&op_wlchg_pm8150a_gpio {
+	status = "okay";
+};
+
+&pm8150b_pdphy {
+	pinctrl-names = "default";
+	pinctrl-0 = <&vbus_gpio_default>;
+	otg-use_external_boost;
+	otg_en-gpio = <&pm8150l_gpios 4 0x00>;
+	vbus-gpio = <&tlmm 172 0x00>;
+};
+
+/* @bsp, Battery & Charging config START */
+//&kona_mtp_batterydata {
+//	#include "OP-fg-batterydata-4510mah.dtsi"
+//};
+/* @bsp, Battery & Charging config END */
+
+//&usb1 {
+//	status = "disabled";
+//};
+
+//&vendor {
+//	extcon_usb1 {
+//		status = "disabled";
+//	};
+//};

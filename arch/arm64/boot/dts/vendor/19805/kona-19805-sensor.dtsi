@@ -1,0 +1,146 @@
+&soc {
+	sensor_fb: sensor_fb {
+		   compatible = "oplus,sensor-feedback";
+		   master-id  = <3>;
+		   smem-id    = <608>;
+	};
+	//#ifdef OPLUS_FEATURE_SENSOR_SMEM
+	/*enum sensor_id { OPLUS_ACCEL,OPLUS_GYRO,OPLUS_MAG,OPLUS_LIGHT,OPLUS_PROXIMITY,OPLUS_SAR,OPLUS_CT,OPLUS_BAROMETER,SENSORS_NUM};*/
+	oplus_sensor {
+		compatible = "oplus,sensor-devinfo";
+		als-row-coe = <466>;
+		/*enum {LSM6DSM = 0x01, BMI160 = 0x02, LSM6DS3 = 0x04, BMI260 = 0x8 };*/
+		gsensor@0 {
+			sensor-name = <0x8>;//BMI260 using
+			sensor-direction = <4>;
+			sensor-index = <0>;//source num
+			sensor-type = <0>;//OPLUS_ACCEL
+		};
+		/* enum {AKM0991X = 0x01, MMC5603 = 0x02};*/
+		msensor@0 {
+			sensor-name = <0x1>;//AKM0991X
+			sensor-direction = <4>;
+			sensor-index = <0>;
+			sensor-type = <2>;//OPLUS_MAG
+			parameter-number= <18>;
+			//sensor-parameter = <2>;//0-useless;other- to differ special parameter
+			soft-mag-parameter = <10000 0 0 0 0 0 0 0 10000 0 0 0 0 0 0 0 10000 0>;//e00 sign e01 sign ...
+		};
+		msensor@1 {
+			sensor-name = <0x2>;//MMC5603 using
+			sensor-direction = <1>;
+			sensor-index = <1>;
+			sensor-type = <2>;//OPLUS_MAG
+			parameter-number= <18>;
+			soft-mag-parameter = <9941 0 1024 0 356 0 137 0 9375 0 608 0 102 0 495 0 11471 0>;//e00 sign e01 sign ...
+		};
+		/*enum {STK3A5X=0x01,TCS3701=0x02,TCS3408=0x04};*/
+		// OP8T(19805) updating prj, we use old stk2232.c for stk33502
+		lsensor@0 {
+			sensor-name = <0x01>;//STK33502
+			sensor-index = <0>;
+			sensor-type = <3>;//OPLUS_LIGHT
+			bus-number = <5>;
+			irq-number = <136>;
+			als-type = <2>;//<1-normal;2-under screen;3-normal needed compensation>
+			is-unit-device = <1>;//<1-alsps unit device;0-separate device>
+			is-als-dri = <0>;//<0-polling 1-irq>
+			als-factor = <466>;
+			is_als_initialed = <0>;
+			als_buffer_length = <10>;
+		};
+		psensor@0 {
+			sensor-name = <0x1>;//STK33502
+			sensor-index = <0>;
+			sensor-type = <4>;//OPLUS_PROXIMITY
+			bus-number = <5>;
+			irq-number = <136>;
+			ps-type = <1>;
+			ps_saturation = <2600>;
+			is_need_close_pd = <0>;
+			parameter-number = <4>;
+                        sensor-reg = <0x01 0x32
+                          0x03 0x80
+                          0xDB 0x00>; //override special reg
+
+		};
+		/* enum {SX9324 = 0x01} */
+		ssensor@0 {
+			sensor-name = <0x1>; //SX9324
+			sensor-index = <0>;
+			sensor-type = <5>; //OPLUS_SAR
+			parameter-number = <18>;
+			sensor-reg       = <0x10 0x16
+					    0x24 0x5F
+					    0x26 0x00
+					    0x27 0x5F
+					    0x28 0x37
+					    0x29 0x1F
+					    0x2A 0x3D
+					    0x36 0x24
+					    0x37 0x24>; //override special reg
+		};
+		sdsensor@0 {
+			sensor-name = <0x1>; //SX9324
+			sensor-index = <0>;
+			sensor-type = <9>; //OPLUS_SARS
+			parameter-number = <18>;
+			sensor-reg       = <0x23 0x00
+					    0x24 0x5F
+					    0x26 0x00
+					    0x27 0x5F
+					    0x28 0x3D
+					    0x29 0x1F
+					    0x2A 0x37
+					    0x36 0x32
+					    0x37 0x24>; //override special reg
+		};
+		/* enum {tcs3408 = 0x01  stk37600 = 0x02} */
+		cctrsensor@0 {
+			decoupled-driver = <0>; //0 - tcs3408 driver; 1 - oplus_cct driver
+			sensor-name = <0x1>; //tcs3408
+			sensor-index = <0>;
+			sensor-type = <7>; //OPLUS_CCT_REAR
+			para-matrix = <4>;//0-default
+		};
+		/*enum {LPS22HH = 0x01, BMP380 = 0x02}*/
+		bsensor@1 {
+			sensor-name = <0x2>;//BMP380
+			sensor-index = <0>;//source num
+			sensor-type = <8>;//BAROMETER
+		};
+		/*virtual sensor
+		enum sensor_algo_id {
+			OPLUS_PICKUP_DETECT,
+			OPLUS_LUX_AOD,
+			OPLUS_TP_GESTURE,
+			OPLUS_FP_DISPLAY,
+			OPLUS_FREE_FALL,
+			OPLUS_CAMERA_PROTECT,
+			SENSOR_ALGO_NUM
+		}*/
+		pickup_detect {
+			sensor-type = <0>;//OPLUS_PICKUP_DETECT
+			is-virtual-sensor;
+			is-need-prox = <1>;//0 - disable; 1 - enable
+			prox-type = <0>;//prox_type: 0 - proximity; 1 - proximity_fake
+		};
+		lux_aod {
+			sensor-type = <1>; //OPLUS_LUX_AOD
+			is-virtual-sensor;
+			thrd-low = <12>;
+			thrd-high = <50>;
+			als-type = <1>; // 0 - ambient_light; 1 - wise_light
+		};
+		fp_display {
+			sensor-type = <3>;//OPLUS_FP_DISPLAY
+			is-virtual-sensor;
+			prox-type = <0>; //  0 - proximity; 1 - proximity_fake
+		};
+		free_fall {
+			sensor-type = <4>;//OPLUS_FREE_FALL
+			is-virtual-sensor;
+		};
+	};
+	//#endif /*OPLUS_FEATURE_SENSOR_SMEM*/
+};
