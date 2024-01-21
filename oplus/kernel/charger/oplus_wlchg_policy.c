@@ -5932,7 +5932,7 @@ static const struct file_operations proc_match_q_ops = {
 
 static ssize_t proc_wireless_ftm_test_read(struct file *file, char __user *buf, size_t count, loff_t *ppos)
 {
-	char string[2] = { 0, 0 };
+	char string[3] = { 0, 0 };
 	int rc;
 	int err_no = 0;
 
@@ -5956,7 +5956,7 @@ static ssize_t proc_wireless_ftm_test_read(struct file *file, char __user *buf, 
 	else if (rc > 0)
 		err_no |= WLCHG_FTM_TEST_CP2_ERR;
 
-	snprintf(string, 2, "%d\n", err_no);
+	snprintf(string, sizeof(string), "%d\n", err_no);
 	rc = simple_read_from_buffer(buf, count, ppos, string, 2);
 
 	return rc;

@@ -3353,7 +3353,7 @@ static int sec_tp_remove(struct i2c_client *client)
     return 0;
 }
 
-static int sec_i2c_suspend(struct device *dev)
+static int __maybe_unused sec_i2c_suspend(struct device *dev)
 {
     struct touchpanel_data *ts = dev_get_drvdata(dev);
 
@@ -3363,7 +3363,7 @@ static int sec_i2c_suspend(struct device *dev)
     return 0;
 }
 
-static int sec_i2c_resume(struct device *dev)
+static int __maybe_unused sec_i2c_resume(struct device *dev)
 {
     struct touchpanel_data *ts = dev_get_drvdata(dev);
 

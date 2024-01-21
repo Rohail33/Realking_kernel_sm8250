@@ -5683,7 +5683,7 @@ static int goodix_tp_remove(struct i2c_client *client)
     return 0;
 }
 
-static int goodix_i2c_suspend(struct device *dev)
+static int __maybe_unused goodix_i2c_suspend(struct device *dev)
 {
     struct touchpanel_data *ts = dev_get_drvdata(dev);
 
@@ -5693,7 +5693,7 @@ static int goodix_i2c_suspend(struct device *dev)
     return 0;
 }
 
-static int goodix_i2c_resume(struct device *dev)
+static int __maybe_unused goodix_i2c_resume(struct device *dev)
 {
     struct touchpanel_data *ts = dev_get_drvdata(dev);
 

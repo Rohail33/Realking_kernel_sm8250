@@ -83,9 +83,9 @@ extern int msm_vidc_err_recovery_disable;
 	do { \
 		if (is_print_allowed(sid, __level)) { \
 			if (msm_vidc_debug & VIDC_FTRACE) { \
-				char trace_logbuf[MAX_TRACER_LOG_LENGTH]; \
+				char trace_logbuf[248]; \
 				int log_length = snprintf(trace_logbuf, \
-					MAX_TRACER_LOG_LENGTH, \
+					248, \
 					VIDC_DBG_TAG __fmt, \
 					get_debug_level_str(__level), \
 					sid, \

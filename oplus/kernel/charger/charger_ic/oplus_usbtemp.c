@@ -1349,7 +1349,7 @@ int oplus_usbtemp_monitor_common_new_method(void *data)
 	struct timespec pre_hi_current_time = (struct timespec){0};
 	struct timespec now_time = (struct timespec){0};
 	bool usbtemp_first_time_in_curr_range = false;
-	static current_read_count = 0;
+	static int current_read_count = 0;
 	struct oplus_chg_chip *chip = (struct oplus_chg_chip *) data;
 #ifndef CONFIG_OPLUS_CHARGER_MTK
 	struct smb_charger *chg = NULL;

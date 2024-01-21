@@ -716,7 +716,7 @@ static int stm8s_parse_fw_from_dt(struct oplus_vooc_chip *chip)
 	return 0;
 }
 
-static stm8s_parse_fw_from_array(struct oplus_vooc_chip *chip)
+static int stm8s_parse_fw_from_array(struct oplus_vooc_chip *chip)
 {
 	if (chip->batt_type_4400mv) {
 		chip->firmware_data = Stm8s_firmware_data_4400mv;

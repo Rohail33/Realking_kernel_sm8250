@@ -10533,7 +10533,7 @@ static void oplus_chg_check_status_full(struct oplus_chg_chip *chip)
 	int is_batt_full = 0;
 	static int fastchg_present_wait_count = 0;
 	static int pps_to_ffc_full_count = 0;
-	static last_recharging_vol = 0;
+	static int last_recharging_vol = 0;
 	int recharging_vol = 0;
 
 	if (chip->chg_ctrl_by_vooc) {
@@ -11830,7 +11830,7 @@ static void oplus_chg_reset_adapter_work(struct work_struct *work)
 	}
 }
 
-void oplus_chg_turn_on_charging_in_work()
+void oplus_chg_turn_on_charging_in_work(void)
 {
 	if (g_charger_chip)
 		schedule_delayed_work(&g_charger_chip->turn_on_charging_work, 0);
