@@ -37,7 +37,7 @@
 #define SWRM_DSD_PARAMS_PORT 4
 
 #define SWR_BROADCAST_CMD_ID            0x0F
-#define SWR_AUTO_SUSPEND_DELAY          1 /* delay in sec */
+#define SWR_AUTO_SUSPEND_DELAY          750 /* delay in ms */
 #define SWR_DEV_ID_MASK			0xFFFFFFFFFFFF
 #define SWR_REG_VAL_PACK(data, dev, id, reg)	\
 			((reg) | ((id) << 16) | ((dev) << 20) | ((data) << 24))
@@ -60,7 +60,7 @@
 #define SWR_OVERFLOW_RETRY_COUNT 30
 
 /* pm runtime auto suspend timer in msecs */
-static int auto_suspend_timer = SWR_AUTO_SUSPEND_DELAY * 1000;
+static int auto_suspend_timer = SWR_AUTO_SUSPEND_DELAY;
 module_param(auto_suspend_timer, int, 0664);
 MODULE_PARM_DESC(auto_suspend_timer, "timer for auto suspend");
 

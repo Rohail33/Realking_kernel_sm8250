@@ -192,7 +192,7 @@ enum geni_i3c_err_code {
 
 #define DM_I3C_CB_ERR   ((BIT(NACK) | BIT(BUS_PROTO) | BIT(NACK_7E)) << 5)
 
-#define I3C_AUTO_SUSPEND_DELAY	250
+#define I3C_AUTO_SUSPEND_DELAY	100
 #define KHZ(freq)		(1000 * freq)
 #define PACKING_BYTES_PW	4
 #define XFER_TIMEOUT		HZ

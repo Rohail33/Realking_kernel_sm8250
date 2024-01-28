@@ -263,8 +263,8 @@ static void ufshcd_update_uic_error_cnt(struct ufs_hba *hba, u32 reg, int type)
 /* Interrupt aggregation default timeout, unit: 40us */
 #define INT_AGGR_DEF_TO	0x02
 
-/* default value of auto suspend is 3 seconds */
-#define UFSHCD_AUTO_SUSPEND_DELAY_MS 3000 /* millisecs */
+/* default value of auto suspend is 1 second */
+#define UFSHCD_AUTO_SUSPEND_DELAY_MS 1000 /* millisecs */
 
 /* default value of ref clock gating wait time is 100 micro seconds */
 #define UFSHCD_REF_CLK_GATING_WAIT_US 100 /* microsecs */
