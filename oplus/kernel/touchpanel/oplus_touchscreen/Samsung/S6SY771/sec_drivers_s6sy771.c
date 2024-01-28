@@ -874,9 +874,13 @@ static int sec_power_control(void *chip_data, bool enable)
         TPD_INFO("%s: write sense on %s\n", __func__, (ret < 0) ? "failed" : "success");
         chip_info->is_power_down = false;
         sec_refresh_switch(chip_info->display_refresh_rate);
-        enable_irq(chip_info->client->irq);
+        if (chip_info->irq_requested) {
+            enable_irq(chip_info->client->irq);
+        }
     } else {
-        disable_irq_nosync(chip_info->client->irq);
+        if (chip_info->irq_requested) {
+            disable_irq_nosync(chip_info->client->irq);
+        }
 
         if (gpio_is_valid(chip_info->hw_res->reset_gpio)) {
             TPD_INFO("Set the reset_gpio 0\n");
@@ -3404,6 +3408,7 @@ static int sec_tp_probe(struct i2c_client *client, const struct i2c_device_id *i
     if (ret < 0) {
         goto err_register_driver;
     }
+    chip_info->irq_requested = true;
     ts->tp_suspend_order = TP_LCD_SUSPEND;
     chip_info->auto_test_need_cal_support = of_property_read_bool(ts->dev->of_node, "auto_test_need_cal_support");
 	chip_info->old_firmware_flag_check = of_property_read_bool(ts->dev->of_node, "old_firmware_flag_check");
