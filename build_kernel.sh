@@ -43,8 +43,6 @@ revert_modifications() {
   git checkout arch/arm64/boot/dts/vendor/qcom/dsi-panel-* &>/dev/null
 }
 
-# kernel-SU add
-curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -
 
 echo -e "$blue***********************************************"
 echo "          BUILDING KERNEL          "
@@ -121,11 +119,6 @@ echo $TIME
 
 # Restore anykernel.sh
 mv -f anykernel/anykernel.sh.bak anykernel/anykernel.sh
-
-# Kernel-Su Remove from tree.
-git checkout drivers/Makefile &>/dev/null
-rm -rf KernelSU
-rm -rf drivers/kernelsu
 
 # Revert changes back to the original state
 revert_modifications
