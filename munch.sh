@@ -61,9 +61,6 @@ else
     exit 1
 fi
 
-# Kernel-SU add
-
-curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -
 
 # Build the kernel
 echo "**** Kernel defconfig is set to $KERNEL_DEFCONFIG ****"
@@ -93,11 +90,6 @@ cp -fp tmp/tmp.zip RealKing-Munch-${zip_name}-$TIME.zip
 rm -rf tmp
 echo $TIME
 
-# Kernel-SU Remove
-
-git checkout drivers/Makefile &>/dev/null
-rm -rf KernelSU
-rm -rf drivers/kernelsu
 
 # Revert changes back to the original state
 revert_changes
