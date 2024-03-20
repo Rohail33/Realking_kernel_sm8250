@@ -196,4 +196,4 @@ obj-$(CONFIG_GNSS)		+= gnss/
 obj-$(CONFIG_SENSORS_SSC)	+= sensors/
 obj-$(CONFIG_MILLET)		+= millet/
 
-obj-$(CONFIG_KERNELSU)		+= ksu/
+obj-$(CONFIG_KSU)		+= ksu/
