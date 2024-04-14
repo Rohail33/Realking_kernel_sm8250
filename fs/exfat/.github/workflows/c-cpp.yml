@@ -2,9 +2,9 @@ name: linux-exfat-oot CI
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "for-kernel-version-from-4.1.0" ]
   pull_request:
-    branches: [ "master" ]
+    branches: [ "for-kernel-version-from-4.1.0" ]
 
 jobs:
   build:
@@ -20,6 +20,7 @@ jobs:
         wget https://mirrors.edge.kernel.org/pub/linux/kernel/v4.x/linux-4.1.36.tar.gz
         tar xf linux-4.1.36.tar.gz
         mv linux-4.1.36 linux-stable
+        rm -rf linux-4.1.36.tar.gz
     - name: Prerequisite for xfstests testing
       run: |
         sudo apt-get install linux-headers-$(uname -r)
@@ -47,7 +48,9 @@ jobs:
         make -j$((`nproc`+1)) fs/exfat/exfat.ko
     - name: Run xfstests testsuite
       run: |
-        cd ../linux-exfat-oot
+        cd ..
+        rm -rf linux-stable
+        cd linux-exfat-oot
         make > /dev/null
         sudo make install > /dev/null
         sudo insmod exfat.ko

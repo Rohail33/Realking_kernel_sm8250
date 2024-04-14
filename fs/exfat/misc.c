@@ -163,6 +163,16 @@ void exfat_truncate_atime(struct timespec *ts)
 	ts->tv_nsec = 0;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 7, 0)
+void exfat_truncate_inode_atime(struct inode *inode)
+{
+	struct timespec64 atime = inode_get_atime(inode);
+
+	exfat_truncate_atime(&atime);
+	inode_set_atime_to_ts(inode, atime);
+}
+#endif
+
 u16 exfat_calc_chksum16(void *data, int len, u16 chksum, int type)
 {
 	int i;
