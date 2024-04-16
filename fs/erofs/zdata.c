@@ -216,7 +216,6 @@ struct z_erofs_decompress_frontend {
 	struct z_erofs_collector clt;
 	struct erofs_map_blocks map;
 
-	bool readahead;
 	/* used for applying cache strategy on the fly */
 	bool backmost;
 	erofs_off_t headoffset;
@@ -1251,7 +1250,7 @@ static void move_to_bypass_jobqueue(struct z_erofs_pcluster *pcl,
 }
 
 static void z_erofs_submit_queue(struct super_block *sb,
-				 struct z_erofs_decompress_frontend *f,
+				 z_erofs_next_pcluster_t owned_head,
 				 struct list_head *pagepool,
 				 struct z_erofs_decompressqueue *fgq,
 				 bool *force_fg)
@@ -1260,7 +1259,6 @@ static void z_erofs_submit_queue(struct super_block *sb,
 	z_erofs_next_pcluster_t qtail[NR_JOBQUEUES];
 	struct z_erofs_decompressqueue *q[NR_JOBQUEUES];
 	void *bi_private;
-	z_erofs_next_pcluster_t owned_head = f->clt.owned_head;
 	/* since bio will be NULL, no need to initialize last_index */
 	pgoff_t last_index;
 	unsigned int nr_bios = 0;
@@ -1316,8 +1314,6 @@ submit_bio_retry:
 					LOG_SECTORS_PER_BLOCK;
 				bio->bi_private = bi_private;
 				bio->bi_opf = REQ_OP_READ;
-				if (f->readahead)
-					bio->bi_opf |= REQ_RAHEAD;
 				++nr_bios;
 			}
 
@@ -1349,14 +1345,14 @@ submit_bio_retry:
 }
 
 static void z_erofs_runqueue(struct super_block *sb,
-			     struct z_erofs_decompress_frontend *f,
+			     struct z_erofs_collector *clt,
 			     struct list_head *pagepool, bool force_fg)
 {
 	struct z_erofs_decompressqueue io[NR_JOBQUEUES];
 
-	if (f->clt.owned_head == Z_EROFS_PCLUSTER_TAIL)
+	if (clt->owned_head == Z_EROFS_PCLUSTER_TAIL)
 		return;
-	z_erofs_submit_queue(sb, f, pagepool, io, &force_fg);
+	z_erofs_submit_queue(sb, clt->owned_head, pagepool, io, &force_fg);
 
 	/* handle bypass queue (no i/o pclusters) immediately */
 	z_erofs_decompress_queue(&io[JQ_BYPASS], pagepool);
@@ -1386,7 +1382,7 @@ static int z_erofs_readpage(struct file *file, struct page *page)
 	(void)z_erofs_collector_end(&f.clt);
 
 	/* if some compressed cluster ready, need submit them anyway */
-	z_erofs_runqueue(inode->i_sb, &f, &pagepool, true);
+	z_erofs_runqueue(inode->i_sb, &f.clt, &pagepool, true);
 
 	if (err)
 		erofs_err(inode->i_sb, "failed to read, err [%d]", err);
@@ -1456,7 +1452,7 @@ static int z_erofs_readpages(struct file *filp, struct address_space *mapping,
 
 	(void)z_erofs_collector_end(&f.clt);
 
-	z_erofs_runqueue(inode->i_sb, &f, &pagepool, sync);
+	z_erofs_runqueue(inode->i_sb, &f.clt, &pagepool, sync);
 
 	if (f.map.mpage)
 		put_page(f.map.mpage);
