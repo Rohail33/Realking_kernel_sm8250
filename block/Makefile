@@ -29,7 +29,6 @@ obj-$(CONFIG_IOSCHED_BFQ)	+= bfq.o
 obj-$(CONFIG_IOSCHED_FIOPS)     += fiops-iosched.o
 obj-$(CONFIG_IOSCHED_SIO)       += sio-iosched.o
 obj-$(CONFIG_IOSCHED_ZEN)	+= zen-iosched.o
-obj-$(CONFIG_IOSCHED_BFQ_SQ)	+= bfq-sq-iosched.o
 
 obj-$(CONFIG_BLOCK_COMPAT)	+= compat_ioctl.o
 obj-$(CONFIG_BLK_CMDLINE_PARSER)	+= cmdline-parser.o
