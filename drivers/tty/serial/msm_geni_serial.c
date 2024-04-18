@@ -1628,6 +1628,23 @@ static int stop_rx_sequencer(struct uart_port *uport)
 			goto exit_rx_seq;
 		}
 		port->s_cmd_done = false;
+
+		/* Check if Cancel Interrupt arrived but irq is delayed */
+		s_irq_status = geni_read_reg(uport->membase,
+					     SE_GENI_S_IRQ_STATUS);
+		if (s_irq_status & S_CMD_CANCEL_EN) {
+			/* Clear delayed Cancel IRQ */
+			geni_write_reg(S_CMD_CANCEL_EN, uport->membase,
+				       SE_GENI_S_IRQ_CLEAR);
+			IPC_LOG_MSG(port->ipc_log_misc,
+				    "%s Cancel Command succeeded 0x%x\n",
+				    __func__, s_irq_status);
+			/* Reset the error code and skip abort operation */
+			msm_geni_update_uart_error_code(port,
+							UART_ERROR_DEFAULT);
+			goto exit_enable_irq;
+		}
+
 		reinit_completion(&port->s_cmd_timeout);
 		geni_abort_s_cmd(uport->membase);
 		/* Ensure this goes through before polling. */
@@ -1668,6 +1685,7 @@ static int stop_rx_sequencer(struct uart_port *uport)
 			}
 		}
 	}
+exit_enable_irq:
 	/* Enable the interrupts once the cancel operation is done. */
 	msm_geni_serial_enable_interrupts(uport);
 	port->s_cmd = false;
