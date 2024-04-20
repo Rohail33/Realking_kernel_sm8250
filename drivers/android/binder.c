@@ -78,6 +78,7 @@
 
 #include <linux/delayacct.h>
 #include <uapi/linux/android/binder.h>
+#include <linux/rekernel.h>
 #include <uapi/linux/sched/types.h>
 
 #include <asm/cacheflush.h>
@@ -3140,6 +3141,51 @@ static inline u64 binder_clock(void)
 	return trace_clock_local();
 }
 
+static inline bool line_is_frozen(struct task_struct *task)
+{
+	return frozen(task->group_leader) || freezing(task->group_leader);
+}
+
+static int send_netlink_message(char *msg, uint16_t len) {
+    struct sk_buff *skbuffer;
+    struct nlmsghdr *nlhdr;
+
+    skbuffer = nlmsg_new(len, GFP_ATOMIC);
+    if (!skbuffer) {
+        printk("netlink alloc failure.\n");
+        return -1;
+    }
+
+    nlhdr = nlmsg_put(skbuffer, 0, 0, netlink_unit, len, 0);
+    if (!nlhdr) {
+        printk("nlmsg_put failaure.\n");
+        nlmsg_free(skbuffer);
+        return -1;
+    }
+
+    memcpy(nlmsg_data(nlhdr), msg, len);
+    return netlink_unicast(rekernel_netlink, skbuffer, USER_PORT, MSG_DONTWAIT);
+}
+
+static int start_rekernel_server(void) {
+  extern struct net init_net;
+  struct netlink_kernel_cfg rekernel_cfg = { 
+    .input = NULL,
+  };
+  if (rekernel_netlink)
+    return 0;
+  for (netlink_unit = NETLINK_REKERNEL_MIN; netlink_unit < NETLINK_REKERNEL_MAX; netlink_unit++) {
+    rekernel_netlink = (struct sock *)netlink_kernel_create(&init_net, netlink_unit, &rekernel_cfg);
+    if (rekernel_netlink != NULL)
+      break;
+  }
+  printk("Created Re:Kernel server! NETLINK UNIT: %d\n", netlink_unit);
+  if (rekernel_netlink == NULL) {
+    printk("Failed to create Re:Kernel server!\n");
+    return -1;
+  }
+  return 0;
+}
 static void binder_transaction(struct binder_proc *proc,
 			       struct binder_thread *thread,
 			       struct binder_transaction_data *tr, int reply,
@@ -3247,6 +3293,18 @@ static void binder_transaction(struct binder_proc *proc,
 			millet_sendmsg(BINDER_TYPE, target_proc->tsk, &data);
 		}
 #endif
+		if (start_rekernel_server() == 0) {
+			if (target_proc
+            	&& (NULL != target_proc->tsk)
+            	&& (NULL != proc->tsk)
+            	&& (task_uid(target_proc->tsk).val > MIN_USERAPP_UID)
+            	&& (proc->pid != target_proc->pid)
+            	&& line_is_frozen(target_proc->tsk)) {
+     				char binder_kmsg[PACKET_SIZE];
+            		snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=reply,oneway=0,from_pid=%d,from=%d,target_pid=%d,target=%d;", proc->pid, task_uid(proc->tsk).val, target_proc->pid, task_uid(target_proc->tsk).val);
+         			send_netlink_message(binder_kmsg, strlen(binder_kmsg));
+   			}
+		}
 	} else {
 		if (tr->target.handle) {
 			struct binder_ref *ref;
@@ -3316,6 +3374,19 @@ static void binder_transaction(struct binder_proc *proc,
 			millet_sendmsg(BINDER_TYPE, target_proc->tsk, &data);
 		}
 #endif
+		if (start_rekernel_server() == 0) {
+			if (target_proc
+            	&& (NULL != target_proc->tsk)
+            	&& (NULL != proc->tsk)
+            	&& (task_uid(target_proc->tsk).val <= MAX_SYSTEM_UID)
+            	&& (proc->pid != target_proc->pid)
+            	&& line_is_frozen(target_proc->tsk)) {
+     				char binder_kmsg[PACKET_SIZE];
+            		snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=transaction,oneway=%d,from_pid=%d,from=%d,target_pid=%d,target=%d;",  tr->flags & TF_ONE_WAY, proc->pid, task_uid(proc->tsk).val, target_proc->pid, task_uid(target_proc->tsk).val);
+         			send_netlink_message(binder_kmsg, strlen(binder_kmsg));
+   			}
+		}
+
 		if (security_binder_transaction(proc->tsk,
 						target_proc->tsk) < 0) {
 			return_error = BR_FAILED_REPLY;
