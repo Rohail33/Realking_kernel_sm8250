@@ -554,6 +554,11 @@ static int vote_clock_on(struct uart_port *uport)
 	int ret = 0;
 	u32 geni_ios;
 
+	if (port->ioctl_count) {
+		IPC_LOG_MSG(port->ipc_log_pwr,
+			    "%s clock already on\n", __func__);
+		return ret;
+	}
 	ret = msm_geni_serial_power_on(uport);
 	if (ret) {
 		dev_err(uport->dev, "Failed to vote clock on\n");
@@ -574,6 +579,7 @@ static int vote_clock_off(struct uart_port *uport)
 {
 	struct msm_geni_serial_port *port = GET_DEV_PORT(uport);
 	int usage_count;
+	int ret = 0;
 
 	if (!pm_runtime_enabled(uport->dev)) {
 		dev_err(uport->dev, "RPM not available.Can't enable clocks\n");
@@ -588,6 +594,12 @@ static int vote_clock_off(struct uart_port *uport)
 		return -EPERM;
 	}
 	wait_for_transfers_inflight(uport);
+	if (ret) {
+		IPC_LOG_MSG(port->ipc_log_pwr,
+			    "%s wait_for_transfer_inflight return ret: %d",
+			    __func__, ret);
+		return -EAGAIN;
+	}
 	port->ioctl_count--;
 	msm_geni_serial_power_off(uport);
 	usage_count = atomic_read(&uport->dev->power.usage_count);
@@ -1989,8 +2001,11 @@ static int msm_geni_serial_handle_dma_rx(struct uart_port *uport, bool drop_rx)
 
 	if (atomic_read(&msm_port->check_wakeup_byte)) {
 		offset = msm_geni_find_wakeup_byte(uport, rx_bytes);
-		if (atomic_read(&msm_port->check_wakeup_byte)) {
+		if (offset == -EINVAL) {
 			/* wakeup byte not found, drop the rx data */
+			IPC_LOG_MSG(msm_port->ipc_log_rx,
+				    "%s wakeup byte not found in %d bytes\n",
+				    __func__, rx_bytes);
 			memset(msm_port->rx_buf, 0, rx_bytes);
 			return 0;
 		}
