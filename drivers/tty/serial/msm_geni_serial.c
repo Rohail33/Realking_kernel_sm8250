@@ -2314,10 +2314,14 @@ static void msm_geni_wakeup_work(struct work_struct *work)
 	/* wait to receive wakeup byte in rx path */
 	if (!wait_for_completion_timeout(&port->wakeup_comp,
 					 msecs_to_jiffies(WAKEBYTE_TIMEOUT_MSEC
-					 )))
+					 ))) {
 		IPC_LOG_MSG(port->ipc_log_rx,
 			    "%s completion of wakeup_comp task timedout %dmsec\n",
 			    __func__, WAKEBYTE_TIMEOUT_MSEC);
+		/* Check if port is closed during the task timeout time */
+		if (!uport->state->port.tty)
+			return;
+	}
 	msm_geni_serial_power_off(uport);
 }
 
