@@ -2608,6 +2608,8 @@ static int msm_geni_serial_startup(struct uart_port *uport)
 	if (msm_port->wakeup_irq > 0) {
 		msm_port->wakeup_irq_wq = alloc_workqueue("%s", WQ_HIGHPRI, 1,
 							  dev_name(uport->dev));
+		if (!msm_port->wakeup_irq_wq)
+			return -ENOMEM;
 		INIT_DELAYED_WORK(&msm_port->wakeup_irq_dwork,
 				  msm_geni_wakeup_work);
 		ret = request_irq(msm_port->wakeup_irq, msm_geni_wakeup_isr,
