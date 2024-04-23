@@ -2010,8 +2010,8 @@ static int msm_geni_serial_handle_dma_rx(struct uart_port *uport, bool drop_rx)
 				     (unsigned char *)(msm_port->rx_buf),
 				     rx_bytes);
 	if (ret != rx_bytes) {
-		dev_err(uport->dev, "%s: ret %d rx_bytes %d\n",
-			__func__, ret, rx_bytes);
+		IPC_LOG_MSG(msm_port->ipc_log_rx, "%s: ret %d rx_bytes %d\n",
+			    __func__, ret, rx_bytes);
 		WARN_ON_ONCE(1);
 	}
 	uport->icount.rx += ret;
