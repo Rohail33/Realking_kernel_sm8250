@@ -1584,7 +1584,8 @@ static int stop_rx_sequencer(struct uart_port *uport)
 			IPC_LOG_MSG(port->ipc_log_misc, "%s: Interrupt delay\n",
 					 __func__);
 			handle_rx_dma_xfer(s_irq_status, uport);
-			if (!port->ioctl_count) {
+			if (pm_runtime_enabled(uport->dev) &&
+			    !port->ioctl_count) {
 				usage_count = atomic_read(
 						&uport->dev->power.usage_count);
 				IPC_LOG_MSG(port->ipc_log_misc,
