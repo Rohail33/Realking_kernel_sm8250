@@ -2804,7 +2804,6 @@ void sk_stop_timer(struct sock *sk, struct timer_list* timer)
 }
 EXPORT_SYMBOL(sk_stop_timer);
 
-void sock_init_data_uid(struct socket *sock, struct sock *sk, kuid_t uid)
 
 void sk_stop_timer_sync(struct sock *sk, struct timer_list *timer)
 {
@@ -2812,7 +2811,7 @@ void sk_stop_timer_sync(struct sock *sk, struct timer_list *timer)
 		__sock_put(sk);
 }
 EXPORT_SYMBOL(sk_stop_timer_sync);
-
+void sock_init_data_uid(struct socket *sock, struct sock *sk, kuid_t uid)
 {
 	sk_init_common(sk);
 	sk->sk_send_head	=	NULL;
