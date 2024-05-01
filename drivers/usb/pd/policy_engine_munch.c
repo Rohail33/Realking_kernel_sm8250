@@ -1065,7 +1065,7 @@ static int pd_eval_src_caps(struct usbpd *pd)
 //	else if (pd->request_reject == 1)
 	//	;
 	//else
-		pd_select_pdo(pd, 1, 0, 0);
+	   pd_select_pdo(pd, 1, 0, 0);
 
 	return 0;
 }
