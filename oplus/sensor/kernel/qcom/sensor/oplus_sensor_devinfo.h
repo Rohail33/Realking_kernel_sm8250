@@ -26,7 +26,7 @@
 #define REG_NUM 10
 #define PARAMETER_NUM 25
 #define FEATURE_NUM 10
-#define SOURCE_NUM 2
+#define SOURCE_NUM 3
 #define ALGO_PARAMETER_NUM 15
 #define ALGO_FEATURE_NUM  5
 #define DEFAULT_CONFIG 0xff
