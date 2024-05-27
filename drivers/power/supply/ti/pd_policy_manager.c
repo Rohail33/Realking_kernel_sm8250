@@ -1198,7 +1198,10 @@ reg[%d-%d-%d-%d-%d],step[%d-%d-%d-%d-%d-%d-%d-%d],pmconfig[%d-%d-%d,%d-%d-%d-%d]
 
 	usbpd_pm_check_night_charging_enabled(pdpm);
 
-	if (pdpm->cp.bat_therm_fault) { /* battery overheat, stop charge*/
+	if (pdpm->sw.night_charging) {
+		pr_info("night charging enabled[%d]\n", pdpm->sw.night_charging);
+		return PM_ALGO_RET_NIGHT_CHARGING;
+	} else if (pdpm->cp.bat_therm_fault) { /* battery overheat, stop charge*/
 		pr_info("bat_therm_fault:%d\n", pdpm->cp.bat_therm_fault);
 		return PM_ALGO_RET_THERM_FAULT;
 	} else if (!pdpm->cp.charge_enabled ||
@@ -1227,9 +1230,6 @@ reg[%d-%d-%d-%d-%d],step[%d-%d-%d-%d-%d-%d-%d-%d],pmconfig[%d-%d-%d,%d-%d-%d-%d]
 		return PM_ALGO_RET_UNSUPPORT_PPSTA;
 	} else if (pm_config.cp_sec_enable) {
 		pdpm->master_ibus_below_critical_low_count = 0;
-	} else if (pdpm->sw.night_charging) {
-		pr_info("night charging enabled[%d]\n", pdpm->sw.night_charging);
-		return PM_ALGO_RET_NIGHT_CHARGING;
 	}
 
 	/* charge pump taper charge */
@@ -1534,6 +1534,30 @@ static int usbpd_pm_sm(struct usbpd_pm *pdpm)
 		break;
 
 	case PD_PM_STATE_FC2_EXIT:
+/*To avoid vbus reverse injection charger issue,turn off charge pump first and then apply voltage.*/
+#if defined(CONFIG_CHARGER_LN8000)
+                if (pm_config.cp_sec_enable && pdpm->cp_sec.charge_enabled) {
+                        usbpd_pm_enable_cp_sec(pdpm, false);
+                        usbpd_pm_check_cp_sec_enabled(pdpm);
+                }
+
+                if (pdpm->cp.charge_enabled) {
+                        usbpd_pm_enable_cp(pdpm, false);
+                        usbpd_pm_check_cp_enabled(pdpm);
+                }
+#else
+                if (pdpm->cp.charge_enabled) {
+                        usbpd_pm_enable_cp(pdpm, false);
+                        usbpd_pm_check_cp_enabled(pdpm);
+                }
+
+                if (pm_config.cp_sec_enable && pdpm->cp_sec.charge_enabled) {
+                        usbpd_pm_enable_cp_sec(pdpm, false);
+                        usbpd_pm_check_cp_sec_enabled(pdpm);
+                }
+#endif
+		msleep(5);
+
 		if (!pdpm->fc2_exit_flag) {
 			if (pdpm->cp.vbus_volt > 6000) {
 				pdpm->fc2_exit_flag = true;
@@ -1560,28 +1584,6 @@ static int usbpd_pm_sm(struct usbpd_pm *pdpm)
 
 		msleep(50);
 		usbpd_pm_check_sw_enabled(pdpm);
-
-#if defined(CONFIG_CHARGER_LN8000)
-		if (pm_config.cp_sec_enable && pdpm->cp_sec.charge_enabled) {
-			usbpd_pm_enable_cp_sec(pdpm, false);
-			usbpd_pm_check_cp_sec_enabled(pdpm);
-		}
-
-		if (pdpm->cp.charge_enabled) {
-			usbpd_pm_enable_cp(pdpm, false);
-			usbpd_pm_check_cp_enabled(pdpm);
-		}
-#else
-		if (pdpm->cp.charge_enabled) {
-			usbpd_pm_enable_cp(pdpm, false);
-			usbpd_pm_check_cp_enabled(pdpm);
-		}
-
-		if (pm_config.cp_sec_enable && pdpm->cp_sec.charge_enabled) {
-			usbpd_pm_enable_cp_sec(pdpm, false);
-			usbpd_pm_check_cp_sec_enabled(pdpm);
-		}
-#endif
 
 		if (recover)
 			usbpd_pm_move_state(pdpm, PD_PM_STATE_ENTRY);

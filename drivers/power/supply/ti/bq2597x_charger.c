@@ -1866,7 +1866,7 @@ static int bq2597x_init_device(struct bq2597x *bq)
 	}
 
 	bq2597x_enable_wdt(bq, false);
-	bq2597x_set_ss_timeout(bq, 1500);
+	bq2597x_set_ss_timeout(bq, 100000);
 	bq2597x_set_ibus_ucp_thr(bq, 300);
 	bq2597x_enable_ucp(bq,1);
 	bq2597x_set_sense_resistor(bq, bq->cfg->sense_r_mohm);

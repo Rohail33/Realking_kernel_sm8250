@@ -470,12 +470,12 @@ static u8 checksum(u8 *data, u8 len)
 	return 0xFF - sum;
 }
 
-static void fg_print_buf(const char *msg, u8 *buf, u8 len)
+static char* fg_print_buf(const char *msg, u8 *buf, u8 len)
 {
 	int i;
 	int idx = 0;
 	int num;
-	u8 strbuf[128];
+	static u8 strbuf[128];
 
 	bq_dbg(PR_REGISTER, "%s buf: ", msg);
 	for (i = 0; i < len; i++) {
@@ -483,6 +483,8 @@ static void fg_print_buf(const char *msg, u8 *buf, u8 len)
 		idx += num;
 	}
 	bq_dbg(PR_REGISTER, "%s\n", strbuf);
+
+	return strbuf;
 }
 
 #if 0
@@ -620,6 +622,23 @@ static int fg_seal(struct bq_fg_chip *bq)
 }
 #endif
 
+static int fg_write_read_block(struct bq_fg_chip *bq, u8 reg, u8 *data, u8 len, u8 lens)
+{
+	int ret;
+
+	if (bq->skip_reads || bq->skip_writes)
+		return 0;
+
+	ret = __fg_write_block(bq->client, reg, data, len);
+	if (ret < 0)
+		return ret;
+
+	msleep(4);
+	ret = __fg_read_block(bq->client, reg, data, lens);
+
+	return ret;
+}
+
 
 static int fg_mac_read_block(struct bq_fg_chip *bq, u16 cmd, u8 *buf, u8 len)
 {
@@ -628,20 +647,37 @@ static int fg_mac_read_block(struct bq_fg_chip *bq, u16 cmd, u8 *buf, u8 len)
 	u8 t_buf[40];
 	u8 t_len;
 	int i;
+	u8 *strbuf;
+	//u8 copy_str[7];
 
 	t_buf[0] = (u8)cmd;
 	t_buf[1] = (u8)(cmd >> 8);
-	ret = fg_write_block(bq, bq->regs[BQ_FG_REG_ALT_MAC], t_buf, 2);
+
+	mutex_lock(&bq->i2c_rw_lock);
+		
+	ret = fg_write_read_block(bq, bq->regs[BQ_FG_REG_ALT_MAC], t_buf, 2, 36);
+
+	mutex_unlock(&bq->i2c_rw_lock);
+
 	if (ret < 0)
 		return ret;
 
-	msleep(4);
+	if (cmd == FG_MAC_CMD_LIFETIME1) {
+		strbuf = fg_print_buf("mac_read_block FG_MAC_CMD_LIFETIME1: ", t_buf, 36);
+		//bq_dbg(PR_OEM, "LTP: %s\n", strbuf);
+		//memcpy(copy_str, strbuf, 5);
 
-	ret = fg_read_block(bq, bq->regs[BQ_FG_REG_ALT_MAC], t_buf, 36);
-	if (ret < 0)
-		return ret;
+		//bq_dbg(PR_OEM, "Truncate str: %s\n", copy_str);
+		if (strncmp(strbuf, "60 00", 5)) 
+			return 2;
+	}
 
-	fg_print_buf("mac_read_block", t_buf, 36);
+	if (cmd == FG_MAC_CMD_LIFETIME3) {
+		strbuf = fg_print_buf("mac_read_block FG_MAC_CMD_LIFETIME3: ", t_buf, 36);
+
+		if (strncmp(strbuf, "62 00", 5))
+			return 2;
+	}
 
 	cksum = t_buf[34];
 	t_len = t_buf[35];
@@ -725,7 +761,7 @@ static int fg_mac_write_block(struct bq_fg_chip *bq, u16 cmd, u8 *data, u8 len)
 	if (ret < 0)
 		return ret;
 
-	fg_print_buf("mac_write_block", t_buf, len + 2);
+	//fg_print_buf("mac_write_block", t_buf, len + 2);
 
 	cksum = checksum(data, len + 2);
 	t_buf[0] = cksum;
@@ -1185,13 +1221,30 @@ static int fg_get_temp_max_fac(struct bq_fg_chip *bq)
 	char data_limetime1[32];
 	int ret = 0;
 	int val = 0;
+	int retry = 0;
 
 	memset(data_limetime1, 0, sizeof(data_limetime1));
 
-	ret = fg_mac_read_block(bq, FG_MAC_CMD_LIFETIME1, data_limetime1, sizeof(data_limetime1));
+	while (retry < 2) {
+		ret = fg_mac_read_block(bq, FG_MAC_CMD_LIFETIME1, data_limetime1, sizeof(data_limetime1));
+		retry++;
+		if (ret == 2) {
+			bq_dbg(PR_OEM, "the address FG_MAC_CMD_LIFETIME1 is error, retry:%d.\n", retry);
+			continue;
+		}
+		break;
+	}
+
 	if (ret)
 		bq_dbg(PR_OEM, "failed to get FG_MAC_CMD_LIFETIME1\n");
 	val = data_limetime1[6];
+
+	if (val < 20 || val > 60) {
+		ret = fg_mac_read_block(bq, FG_MAC_CMD_LIFETIME1, data_limetime1, sizeof(data_limetime1));
+		if (ret)
+			bq_dbg(PR_OEM, "failed to get FG_MAC_CMD_LIFETIME1\n");
+		val = data_limetime1[6];
+	}
 
 	bq_dbg(PR_OEM, "fg get temperature max is: %d\n",val);
 	return val;
@@ -1203,11 +1256,21 @@ static int fg_get_time_ot(struct bq_fg_chip *bq)
 	char data[32];
 	int ret = 0;
 	int val = 0;
+	int retry = 0;
 
 	memset(data_limetime3, 0, sizeof(data_limetime3));
 	memset(data, 0, sizeof(data));
 
-	ret = fg_mac_read_block(bq, FG_MAC_CMD_LIFETIME3, data_limetime3, sizeof(data_limetime3));
+	while (retry < 2) {
+		ret = fg_mac_read_block(bq, FG_MAC_CMD_LIFETIME3, data_limetime3, sizeof(data_limetime3));
+		retry++;
+		if (ret == 2) {
+			bq_dbg(PR_OEM, "the address FG_MAC_CMD_LIFETIME3 is error, retry:%d.\n", retry);
+			continue;
+		}
+		break;
+	}
+
 	if (ret)
 		bq_dbg(PR_OEM, "failed to get FG_MAC_CMD_LIFETIME3\n");
 
@@ -2321,10 +2384,20 @@ static int fg_get_lifetime_data(struct bq_fg_chip *bq)
 {
 	int ret;
 	u8 t_buf[40];
+	int retry = 0;
 
 	memset(t_buf, 0, sizeof(t_buf));
 
-	ret = fg_mac_read_block(bq, FG_MAC_CMD_LIFETIME1, t_buf, 32);
+	while (retry < 2) {
+		ret = fg_mac_read_block(bq, FG_MAC_CMD_LIFETIME1, t_buf, 32);
+		retry++;
+		if (ret == 2) {
+			bq_dbg(PR_OEM, "the address FG_MAC_CMD_LIFETIME1 is error, retry:%d.\n", retry);
+			continue;
+		}
+		break;
+	}
+
 	if (ret < 0)
 		return ret;
 
@@ -2335,7 +2408,17 @@ static int fg_get_lifetime_data(struct bq_fg_chip *bq)
 	bq->min_temp_cell = t_buf[7];
 
 	memset(t_buf, 0, sizeof(t_buf));
-	ret = fg_mac_read_block(bq, FG_MAC_CMD_LIFETIME3, t_buf, 32);
+	retry = 0;
+	while (retry < 2) {
+		ret = fg_mac_read_block(bq, FG_MAC_CMD_LIFETIME3, t_buf, 32);
+		retry++;
+		if (ret == 2) {
+			bq_dbg(PR_OEM, "the address FG_MAC_CMD_LIFETIME3 is error, retry:%d.\n", retry);
+			continue;
+		}
+		break;
+	}
+
 	if (ret < 0)
 		return ret;
 

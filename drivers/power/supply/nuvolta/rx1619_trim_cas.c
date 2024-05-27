@@ -26,7 +26,7 @@
 #include <asm/uaccess.h>
 //#include <soc/qcom/socinfo.h>
 
-#define rx1619_1_DRIVER_NAME      "rx1619_trim"
+#define rx1619_1_DRIVER_NAME "rx1619_trim"
 
 static struct rx1619_1_chg *g_chip;
 
@@ -34,7 +34,7 @@ struct rx1619_1_chg {
 	char *name;
 	struct i2c_client *client;
 	struct device *dev;
-	struct regmap       *regmap;
+	struct regmap *regmap;
 };
 
 /*
@@ -52,7 +52,6 @@ static int rx1619_1_read(struct rx1619_1_chg *chip, u8 *val, u16 addr)
 	return rc;
 }*/
 
-
 static int rx1619_1_write(struct rx1619_1_chg *chip, u8 val, u16 addr)
 {
 	int rc = 0;
@@ -61,8 +60,6 @@ static int rx1619_1_write(struct rx1619_1_chg *chip, u8 val, u16 addr)
 
 	return rc;
 }
-
-
 
 void rx1619_1_trim(void)
 {
@@ -89,13 +86,15 @@ static const struct regmap_config rx1619_1_regmap_config = {
 	.max_register = 0xFFFF,
 };
 
-static int rx1619_1_probe(struct i2c_client *client, const struct i2c_device_id *id)
+static int rx1619_1_probe(struct i2c_client *client,
+			  const struct i2c_device_id *id)
 {
 	struct rx1619_1_chg *chip;
 
 	chip = devm_kzalloc(&client->dev, sizeof(*chip), GFP_KERNEL);
 	if (!chip) {
-		dev_err(&client->dev, "i2c allocated device info data failed!\n");
+		dev_err(&client->dev,
+			"i2c allocated device info data failed!\n");
 		return -ENOMEM;
 	}
 
@@ -125,21 +124,24 @@ static int rx1619_1_remove(struct i2c_client *client)
 }
 
 static const struct i2c_device_id rx1619_1_id[] = {
-	{rx1619_1_DRIVER_NAME, 0},
+	{ rx1619_1_DRIVER_NAME, 0 },
 	{},
 };
+
 MODULE_DEVICE_TABLE(i2c, rx1619_1_id);
 
-static struct of_device_id  rx1619_1_match_table[] = {
-	{ .compatible = "nuvolta,wl_rx1619_trim",},
+static struct of_device_id rx1619_1_match_table[] = {
+	{
+		.compatible = "nuvolta,wl_rx1619_trim",
+	},
 	{}
 };
 
 static struct i2c_driver rx1619_1_driver = {
 	.driver = {
-		.name = rx1619_1_DRIVER_NAME,
-		.of_match_table = rx1619_1_match_table,
-	},
+		   .name = rx1619_1_DRIVER_NAME,
+		   .of_match_table = rx1619_1_match_table,
+		   },
 	.probe = rx1619_1_probe,
 	.remove = rx1619_1_remove,
 	.id_table = rx1619_1_id,
@@ -148,9 +150,7 @@ static struct i2c_driver rx1619_1_driver = {
 static int __init rx1619_1_init(void)
 {
 	int ret;
-#ifdef CONFIG_RX1619_REMOVE
-	return 0;
-#endif
+
 	ret = i2c_add_driver(&rx1619_1_driver);
 	if (ret)
 		printk(KERN_ERR "rx1619_1 i2c driver init failed!\n");

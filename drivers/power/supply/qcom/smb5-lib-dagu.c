@@ -8118,6 +8118,96 @@ static void smb_check_init_boot(struct work_struct *work)
 	if (chg->usb_psy)
 		power_supply_changed(chg->usb_psy);
 }
+
+static void smb_check_sc8551_work(struct work_struct *work)
+{
+	struct smb_charger *chg = container_of(work, struct smb_charger,
+			check_sc8551_work.work);
+
+	union power_supply_propval val = {0,};
+	int master_en = 0;
+	int slave_en = 0;
+
+	int master_vbus_present = 0, slave_vbus_present = 0;
+	int master_vbus = 0, slave_vbus = 0;
+	int master_vbat = 0, slave_vbat = 0;
+	int master_ibus = 0, slave_ibus = 0;
+	int master_ibat = 0, slave_ibat = 0;
+
+	if (!chg->cp_psy)
+		chg->cp_psy = power_supply_get_by_name("bq2597x-master");
+	if (!chg->cp_sec_psy)
+		chg->cp_sec_psy = power_supply_get_by_name("bq2597x-slave");
+
+	if (chg->cp_psy) {
+		power_supply_get_property(chg->cp_psy,
+				POWER_SUPPLY_PROP_CHARGING_ENABLED, &val);
+		master_en = val.intval;
+	}
+	if (chg->cp_sec_psy) {
+		power_supply_get_property(chg->cp_sec_psy,
+				POWER_SUPPLY_PROP_CHARGING_ENABLED, &val);
+		slave_en = val.intval;
+	}
+
+	if (master_en) {
+		smblib_err(chg, "SC8551 Master start check C/V.\n");
+		power_supply_get_property(chg->cp_psy, POWER_SUPPLY_PROP_TI_VBUS_PRESENT, &val);
+		master_vbus_present = val.intval;
+		power_supply_get_property(chg->cp_psy, POWER_SUPPLY_PROP_TI_BUS_VOLTAGE, &val);
+		master_vbus = val.intval;
+		power_supply_get_property(chg->cp_psy, POWER_SUPPLY_PROP_TI_BUS_CURRENT, &val);
+		master_ibus = val.intval;
+		power_supply_get_property(chg->cp_psy, POWER_SUPPLY_PROP_TI_BATTERY_VOLTAGE, &val);
+		master_vbat = val.intval;
+		//power_supply_get_property(chg->cp_psy, POWER_SUPPLY_PROP_TI_BATTERY_CURRENT, &val);
+		if (chg->bms_psy) {
+			power_supply_get_property(chg->bms_psy, POWER_SUPPLY_PROP_CURRENT_NOW, &val);
+			master_ibat = -(val.intval / 1000);
+		}
+
+		smblib_err(chg, "SC8551 Master: vbus_present:%d, Vbus:%d, Ibus:%d, Vbat:%d, Ibat:%d.\n",
+				master_vbus_present, master_vbus, master_ibus, master_vbat, master_ibat);
+	}
+	if (slave_en) {
+		smblib_err(chg, "SC8551 Slave start check C/V.\n");
+		power_supply_get_property(chg->cp_sec_psy, POWER_SUPPLY_PROP_TI_VBUS_PRESENT, &val);
+		slave_vbus_present = val.intval;
+		power_supply_get_property(chg->cp_sec_psy, POWER_SUPPLY_PROP_TI_BUS_VOLTAGE, &val);
+		slave_vbus = val.intval;
+		power_supply_get_property(chg->cp_sec_psy, POWER_SUPPLY_PROP_TI_BUS_CURRENT, &val);
+		slave_ibus = val.intval;
+		power_supply_get_property(chg->cp_sec_psy, POWER_SUPPLY_PROP_TI_BATTERY_VOLTAGE, &val);
+		slave_vbat = val.intval;
+		//power_supply_get_property(chg->cp_sec_psy, POWER_SUPPLY_PROP_TI_BATTERY_CURRENT, &val);
+		if (chg->bms_psy) {
+			power_supply_get_property(chg->bms_psy, POWER_SUPPLY_PROP_CURRENT_NOW, &val);
+			slave_ibat = -(val.intval / 1000);
+		}
+
+		smblib_err(chg, "SC8551 Slave: vbus_present:%d, Vbus:%d, Ibus:%d, Vbat:%d, Ibat:%d.\n",
+				slave_vbus_present, slave_vbus, slave_ibus, slave_vbat, slave_ibat);
+	}
+
+	if (master_en) {
+		if (master_vbus_present && (master_vbus > 3000) && (master_ibus < 200)) {
+			smblib_err(chg, "Ibus low, close master charge pump.\n");
+			val.intval = 0;
+			power_supply_set_property(chg->cp_psy, POWER_SUPPLY_PROP_CHARGING_ENABLED, &val);
+		}
+	}
+	if (slave_en) {
+		if (slave_vbus_present && (slave_vbus > 3000) && (slave_ibus < 200)) {
+			smblib_err(chg, "Ibus low, close slave charge pump.\n");
+			val.intval = 0;
+			power_supply_set_property(chg->cp_sec_psy, POWER_SUPPLY_PROP_CHARGING_ENABLED, &val);
+		}
+
+	}
+
+	schedule_delayed_work(&chg->check_sc8551_work, msecs_to_jiffies(1000));
+}
+
 static void smblib_micro_usb_plugin(struct smb_charger *chg, bool vbus_rising)
 {
 	int rc = 0;
@@ -8300,6 +8390,7 @@ void smblib_usb_plugin_locked(struct smb_charger *chg)
 		if (chg->ext_fg)
 			schedule_delayed_work(&chg->after_ffc_chg_dis_work,
 					msecs_to_jiffies(FFC_DISABLE_CHG_RECHECK_DELAY_10S));
+		schedule_delayed_work(&chg->check_sc8551_work, 0);
 	} else {
 		/* when vbus absent, disable batt_temp irq wakeup */
 		if (chg->irq_info[BAT_TEMP_IRQ].irq && chg->batt_temp_irq_enabled) {
@@ -8402,6 +8493,7 @@ void smblib_usb_plugin_locked(struct smb_charger *chg)
 
 		/* clear chg_awake wakeup source when charger is absent */
 		vote(chg->awake_votable, CHG_AWAKE_VOTER, false, 0);
+		cancel_delayed_work_sync(&chg->check_sc8551_work);
 	}
 
 	if (chg->connector_type == POWER_SUPPLY_CONNECTOR_MICRO_USB)
@@ -9642,6 +9734,7 @@ static void typec_src_removal(struct smb_charger *chg)
 	cancel_delayed_work_sync(&chg->pl_enable_work);
 	cancel_delayed_work_sync(&chg->raise_qc3_vbus_work);
 	cancel_delayed_work_sync(&chg->check_init_boot);
+	cancel_delayed_work_sync(&chg->check_sc8551_work);
 
 	/* reset input current limit voters */
 	vote(chg->usb_icl_votable, SW_ICL_MAX_VOTER, true,
@@ -9911,7 +10004,6 @@ out:
 	return IRQ_HANDLED;
 }
 
-extern bool has_dp_flag;
 irqreturn_t typec_state_change_irq_handler(int irq, void *data)
 {
 	struct smb_irq_data *irq_data = data;
@@ -9941,14 +10033,6 @@ irqreturn_t typec_state_change_irq_handler(int irq, void *data)
 			pval.intval = 1;
 			power_supply_set_property(chg->ps_psy,
 					POWER_SUPPLY_PROP_PS_EN, &pval);
-		}
-	} else {
-		if (chg->ps_psy) {
-			if (!has_dp_flag) {
-				pval.intval = 0;
-				power_supply_set_property(chg->ps_psy,
-						POWER_SUPPLY_PROP_PS_EN, &pval);
-			}
 		}
 	}
 
@@ -12380,6 +12464,7 @@ int smblib_init(struct smb_charger *chg)
 	INIT_DELAYED_WORK(&chg->cc_un_compliant_charge_work, smblib_cc_un_compliant_charge_work);
 	INIT_DELAYED_WORK(&chg->clean_cp_to_sw_work, smblib_clean_cp_to_sw_work);
 	INIT_DELAYED_WORK(&chg->check_init_boot, smb_check_init_boot);
+	INIT_DELAYED_WORK(&chg->check_sc8551_work, smb_check_sc8551_work);
 
     smblib_err(chg,"enter dagu smb5-lib! \n");
 

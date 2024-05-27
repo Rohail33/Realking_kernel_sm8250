@@ -1443,6 +1443,30 @@ static int usbpd_pm_sm(struct usbpd_pm *pdpm)
 		break;
 
 	case PD_PM_STATE_FC2_EXIT:
+/*To avoid vbus reverse injection charger issue,turn off charge pump first and then apply voltage.*/
+#if defined(CONFIG_CHARGER_LN8000_PSYCHE)
+                if (pm_config.cp_sec_enable && pdpm->cp_sec.charge_enabled) {
+                        usbpd_pm_enable_cp_sec(pdpm, false);
+                        usbpd_pm_check_cp_sec_enabled(pdpm);
+                }
+
+                if (pdpm->cp.charge_enabled) {
+                        usbpd_pm_enable_cp(pdpm, false);
+                        usbpd_pm_check_cp_enabled(pdpm);
+                }
+#else
+                if (pdpm->cp.charge_enabled) {
+                        usbpd_pm_enable_cp(pdpm, false);
+                        usbpd_pm_check_cp_enabled(pdpm);
+                }
+
+                if (pm_config.cp_sec_enable && pdpm->cp_sec.charge_enabled) {
+                        usbpd_pm_enable_cp_sec(pdpm, false);
+                        usbpd_pm_check_cp_sec_enabled(pdpm);
+                }
+#endif
+		msleep(5);
+
 		if (!pdpm->fc2_exit_flag) {
 			if (pdpm->cp.vbus_volt > 6000) {
 				pdpm->fc2_exit_flag = true;
@@ -1469,28 +1493,6 @@ static int usbpd_pm_sm(struct usbpd_pm *pdpm)
 
 		msleep(50);
 		usbpd_pm_check_sw_enabled(pdpm);
-
-#if defined(CONFIG_CHARGER_LN8000_PSYCHE)
-		if (pm_config.cp_sec_enable && pdpm->cp_sec.charge_enabled) {
-			usbpd_pm_enable_cp_sec(pdpm, false);
-			usbpd_pm_check_cp_sec_enabled(pdpm);
-		}
-
-		if (pdpm->cp.charge_enabled) {
-			usbpd_pm_enable_cp(pdpm, false);
-			usbpd_pm_check_cp_enabled(pdpm);
-		}
-#else
-		if (pdpm->cp.charge_enabled) {
-			usbpd_pm_enable_cp(pdpm, false);
-			usbpd_pm_check_cp_enabled(pdpm);
-		}
-
-		if (pm_config.cp_sec_enable && pdpm->cp_sec.charge_enabled) {
-			usbpd_pm_enable_cp_sec(pdpm, false);
-			usbpd_pm_check_cp_sec_enabled(pdpm);
-		}
-#endif
 
 		if (recover)
 			usbpd_pm_move_state(pdpm, PD_PM_STATE_ENTRY);

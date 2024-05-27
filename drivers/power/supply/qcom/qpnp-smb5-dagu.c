@@ -5015,7 +5015,7 @@ static int smb5_probe(struct platform_device *pdev)
 	chg->has_dp = false;
 	mutex_init(&chg->adc_lock);
 
-    pr_info("end qpnp-smb5 !\n");
+    pr_info("end dagu qpnp-smb5 !\n");
 
 	chg->regmap = dev_get_regmap(chg->dev->parent, NULL);
 	if (!chg->regmap) {
@@ -5204,7 +5204,7 @@ static int smb5_probe(struct platform_device *pdev)
 	}
 
 	schedule_delayed_work(&chg->reg_work, 30 * HZ);
-	pr_info(" QPNP SMB5 probed successfully\n");
+	pr_info("dagu QPNP SMB5 probed successfully\n");
 
 	return rc;
 

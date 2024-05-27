@@ -7017,6 +7017,21 @@ static int fg_gen4_parse_dt(struct fg_gen4_chip *chip)
 //#define FFC_SYS_TERMI_CURRENT -1280000
 static int scale_count;
 extern bool off_charge_flag;
+
+#define SMOOTH_VOLT_LEN         4
+
+struct LowSoc_HighVolt_Smooth{
+	int volt_lim;
+	int time;
+};
+
+struct LowSoc_HighVolt_Smooth lowsoc_highvolt_smooth[SMOOTH_VOLT_LEN] = {
+	{0,    10},
+	{3400, 30},
+	{3500, 45},
+	{3600, 60},
+};
+
 static void fg_battery_soc_smooth_tracking(struct fg_gen4_chip *chip)
 {
 	struct fg_dev *fg = &chip->fg;
@@ -7025,6 +7040,7 @@ static void fg_battery_soc_smooth_tracking(struct fg_gen4_chip *chip)
 	int last_batt_soc = fg->param.batt_soc;
 	int time_since_last_change_sec;
 	int last_smooth_batt_soc = fg->param.smooth_batt_soc;
+	int i;
 
 	struct timespec last_change_time = fg->param.last_soc_change_time;
 
@@ -7052,6 +7068,17 @@ static void fg_battery_soc_smooth_tracking(struct fg_gen4_chip *chip)
 		else
 			delta_time = time_since_last_change_sec / 20;
 	}
+
+	//increase unit_time when low power but high voltage, to prevent cliff fall when low power but high voltage
+	if(fg->param.batt_raw_soc == 0 && last_batt_soc > 1){
+		for(i = SMOOTH_VOLT_LEN; i > 0; i--){
+			if(fg->param.batt_mv > lowsoc_highvolt_smooth[i-1].volt_lim){
+				delta_time = time_since_last_change_sec / lowsoc_highvolt_smooth[i-1].time;
+				break;
+			}
+		}
+	}	
+
 
 	if (delta_time < 0)
 		delta_time = 0;

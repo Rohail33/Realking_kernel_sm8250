@@ -201,6 +201,14 @@
 #define BC_SET_AP_OVERLOAD    0x31
 #define BC_ENABLE_FAST_CHARGE 0x32
 
+/* Adapter_list = {0x00:'ADAPTER_UNKNOWN',  */
+/*            0x01:'SDP 500mA',  */
+/*            0x02:'CDP 1.1A',  */
+/*            0x03:'DCP 1.5A',  */
+/*            0x05:'QC2.0',  */
+/*            0x06:'QC3.0',  */
+/*            0x07:'PD',} */
+//define adapter type
 #define ADAPTER_NONE 0x00
 #define ADAPTER_SDP  0x01
 #define ADAPTER_CDP  0x02

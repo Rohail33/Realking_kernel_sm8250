@@ -956,14 +956,27 @@ static int fg_read_rsoc(struct bq_fg_chip *bq, int *soc)
 	return ret;
 }
 
+#define SMOOTH_VOLT_LEN    4 
+struct LowSoc_HighVolt_Smooth{
+	int volt_value;
+	int unit_time;
+};
+struct LowSoc_HighVolt_Smooth lowsoc_highvolt_smooth[SMOOTH_VOLT_LEN] = {
+	{0,    10000},
+	{6800, 30000},
+	{7000, 45000},
+	{7200, 60000},
+}; 
+static int fg_read_volt(struct bq_fg_chip *bq);
 static int fg_read_system_soc(struct bq_fg_chip *bq)
 {
-	int batt_soc = 0, curr = 0, temp = 0, raw_soc = 0, soc = 0;
+	int batt_soc = 0, curr = 0, volt = 0, temp = 0, raw_soc = 0, soc = 0;
 	static ktime_t last_change_time = -1;
 	int unit_time = 0, delta_time = 0;
 	int change_delta = 0;
 	int soc_changed = 0;
 	int ret = 0;
+  	int i;
 
 	if (bq->fake_soc != -EINVAL)
 		return bq->fake_soc;
@@ -1003,7 +1016,16 @@ static int fg_read_system_soc(struct bq_fg_chip *bq)
 	} else {
 		if (raw_soc == 0 && bq->last_soc > 1) {
 			bq->ffc_smooth = false;
-			unit_time = 10000;
+
+			//increase unit_time when low power but high voltage, to prevent cliff fall when low power but high voltage
+			volt = fg_read_volt(bq);
+			for(i = SMOOTH_VOLT_LEN; i > 0; i--){
+				if(volt > lowsoc_highvolt_smooth[i-1].volt_value){
+					unit_time = lowsoc_highvolt_smooth[i-1].unit_time;
+					break;
+				}
+			}
+
 			calc_delta_time(last_change_time, &change_delta);
 			delta_time = change_delta / unit_time;
 			if (delta_time < 0) {
@@ -1443,11 +1465,6 @@ static int fg_get_property(struct power_supply *psy, enum power_supply_property 
 					power_supply_get_property(bq->batt_psy,
 						POWER_SUPPLY_PROP_STATUS, &pval);
 					status = pval.intval;
-				}
-				if (vbat_mv > SHUTDOWN_VOL
-					&& status != POWER_SUPPLY_STATUS_CHARGING) {
-					val->intval = 1;
-					break;
 				}
 				if (vbat_mv > SHUTDOWN_DELAY_VOL
 					&& status != POWER_SUPPLY_STATUS_CHARGING) {
