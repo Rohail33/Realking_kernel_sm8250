@@ -399,6 +399,9 @@ enum tzdbg_stats_type {
 	TZDBG_STATS_MAX
 };
 
+int tz_log_tag = TZDBG_LOG;
+int qsee_log_tag = TZDBG_QSEE_LOG;
+
 struct tzdbg_stat {
 	size_t display_len;
 	size_t display_offset;
@@ -476,6 +479,7 @@ static int tzdbg_request_encrypted_log(dma_addr_t buf_paddr,
 
 static struct proc_dir_entry *g_proc_dir;
 static struct proc_dir_entry *p_qsee_log_dump_handler;
+static struct proc_dir_entry *p_tz_log_dump_handler;
 static DECLARE_WAIT_QUEUE_HEAD(qseelog_waitqueue);
 static atomic_t qseelog_wait = ATOMIC_INIT(0);
 
@@ -1289,32 +1293,25 @@ static const struct file_operations tzdbg_fops = {
 	.open    = simple_open,
 };
 
-static ssize_t qsee_log_dump_procfs_read(struct file *file, char __user *buf,
-	size_t count, loff_t *offp)
+static ssize_t qsee_log_dump_procfs_read(struct file *file, char __user *buf, size_t count, loff_t *offp)
 {
-	int len = 0;
-
-	len = _disp_qsee_log_stats(count);
-	*offp = 0;
-
-	if (len > count)
-		len = count;
-
-	return simple_read_from_buffer(buf, len, offp,
-				tzdbg.stat[TZDBG_QSEE_LOG].data, len);
+	file->private_data = (void *)(&qsee_log_tag);
+	return tzdbgfs_read(file, buf, count, offp);
 }
-
-
-static int qsee_log_dump_procfs_open(struct inode *inode, struct file *pfile)
-{
-	pfile->private_data = inode->i_private;
-	return 0;
-}
-
 const struct file_operations qsee_log_dump_proc_fops = {
-	.owner   = THIS_MODULE,
-	.read    = qsee_log_dump_procfs_read,
-	.open    = qsee_log_dump_procfs_open,
+	.owner = THIS_MODULE,
+	.read = qsee_log_dump_procfs_read,
+};
+
+static ssize_t tz_log_dump_procfs_read(struct file *file, char __user *buf, size_t count, loff_t *offp)
+{
+	file->private_data = (void *)(&tz_log_tag);
+	return tzdbgfs_read(file, buf, count, offp);
+}
+
+const struct file_operations tz_log_dump_proc_fops = {
+	.owner = THIS_MODULE,
+	.read = tz_log_dump_procfs_read,
 };
 
 
@@ -1503,11 +1500,20 @@ static int  tzdbgfs_init(struct platform_device *pdev)
 		goto err;
 	}
 
-	p_qsee_log_dump_handler = proc_create("qsee_log", 0, g_proc_dir,
-					      &qsee_log_dump_proc_fops);
+	p_qsee_log_dump_handler =
+		proc_create_data("qsee_log", 0, g_proc_dir,
+				 &qsee_log_dump_proc_fops,
+				 &tzdbg.debug_tz[TZDBG_QSEE_LOG]);
 	if (p_qsee_log_dump_handler == NULL)
-		pr_err("%s: qsee log dump dirs in proc create failed !\n",
-								__func__);
+		pr_err("%s: qsee log dump dirs in proc  create qsee file failed ! \n",
+		       __func__);
+
+	p_tz_log_dump_handler =
+		proc_create_data("log", 0, g_proc_dir, &tz_log_dump_proc_fops,
+				 &tzdbg.debug_tz[TZDBG_LOG]);
+	if (p_tz_log_dump_handler == NULL)
+		pr_err("%s: qsee log dump dirs in proc  create tz file failed ! \n",
+		       __func__);
 
 	platform_set_drvdata(pdev, dent_dir);
 	return 0;
