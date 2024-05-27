@@ -63,6 +63,10 @@
 #include <linux/rtmm.h>
 #endif
 
+#ifdef CONFIG_MI_RECLAIM
+#include <linux/mi_reclaim.h>
+#endif
+
 #define CREATE_TRACE_POINTS
 #include <trace/events/vmscan.h>
 
@@ -2507,6 +2511,11 @@ static void get_scan_count(struct lruvec *lruvec, struct mem_cgroup *memcg,
 	fraction[1] = fp;
 	denominator = ap + fp + 1;
 out:
+#ifdef CONFIG_MI_RECLAIM
+	if (mi_reclaim(current->comm))
+		scan_balance = SCAN_ANON;
+#endif
+
 	*lru_pages = 0;
 	for_each_evictable_lru(lru) {
 		int file = is_file_lru(lru);
@@ -4546,35 +4555,68 @@ void check_move_unevictable_pages(struct page **pages, int nr_pages)
 }
 #endif /* CONFIG_SHMEM */
 
+#ifdef CONFIG_MI_RECLAIM
+unsigned long mi_reclaim_global(unsigned long nr_to_reclaim, int reclaim_type)
+{
+	struct reclaim_state reclaim_state;
+	struct scan_control sc = {
+		.nr_to_reclaim = min(nr_to_reclaim, SWAP_CLUSTER_MAX),
+		.gfp_mask = GFP_HIGHUSER_MOVABLE,
+		.reclaim_idx = MAX_NR_ZONES - 1,
+		.order = 0,
+		.priority = DEF_PRIORITY,
+		.may_writepage = !!(reclaim_type & 4),
+		.may_unmap = !!(reclaim_type & 1),
+		.may_swap = !!(reclaim_type & 2),
+		.target_mem_cgroup = NULL,
+		.nodemask = NULL,
+	};
+	struct zonelist *zonelist = node_zonelist(numa_node_id(), sc.gfp_mask);
+	struct task_struct *p = current;
+	unsigned long nr_reclaimed;
+
+	fs_reclaim_acquire(sc.gfp_mask);
+	reclaim_state.reclaimed_slab = 0;
+	p->reclaim_state = &reclaim_state;
+
+	nr_reclaimed = do_try_to_free_pages(zonelist, &sc);
+
+	p->reclaim_state = NULL;
+	fs_reclaim_release(sc.gfp_mask);
+
+	return nr_reclaimed;
+}
+#endif
+
 #ifdef CONFIG_CAM_RECLAIM
 unsigned long cam_reclaim_global(unsigned long nr_to_reclaim, int reclaim_type)
 {
-        struct reclaim_state reclaim_state;
-        struct scan_control sc = {
-                .nr_to_reclaim = max(nr_to_reclaim, SWAP_CLUSTER_MAX),
-                .gfp_mask = GFP_HIGHUSER_MOVABLE,
-                .reclaim_idx = MAX_NR_ZONES - 1,
-                .order = 0,
-                .priority = DEF_PRIORITY,
-                .may_writepage = !!(reclaim_type & 4),
-                .may_unmap = !!(reclaim_type & 1),
-                .may_swap = !!(reclaim_type & 2),
-                .target_mem_cgroup = NULL,
-                .nodemask = NULL,
-        };
-        struct zonelist *zonelist = node_zonelist(numa_node_id(), sc.gfp_mask);
-        struct task_struct *p = current;
-        unsigned long nr_reclaimed;
+	struct reclaim_state reclaim_state;
+	struct scan_control sc = {
+		.nr_to_reclaim = max(nr_to_reclaim, SWAP_CLUSTER_MAX),
+		.gfp_mask = GFP_HIGHUSER_MOVABLE,
+		.reclaim_idx = MAX_NR_ZONES - 1,
+		.order = 0,
+		.priority = DEF_PRIORITY,
+		.may_writepage = !!(reclaim_type & 4),
+		.may_unmap = !!(reclaim_type & 1),
+		.may_swap = !!(reclaim_type & 2),
+		.target_mem_cgroup = NULL,
+		.nodemask = NULL,
+	};
+	struct zonelist *zonelist = node_zonelist(numa_node_id(), sc.gfp_mask);
+	struct task_struct *p = current;
+	unsigned long nr_reclaimed;
 
-        fs_reclaim_acquire(sc.gfp_mask);
-        reclaim_state.reclaimed_slab = 0;
-        p->reclaim_state = &reclaim_state;
+	fs_reclaim_acquire(sc.gfp_mask);
+	reclaim_state.reclaimed_slab = 0;
+	p->reclaim_state = &reclaim_state;
 
-        nr_reclaimed = do_try_to_free_pages(zonelist, &sc);
+	nr_reclaimed = do_try_to_free_pages(zonelist, &sc);
 
-        p->reclaim_state = NULL;
-        fs_reclaim_release(sc.gfp_mask);
+	p->reclaim_state = NULL;
+	fs_reclaim_release(sc.gfp_mask);
 
-        return nr_reclaimed;
+	return nr_reclaimed;
 }
 #endif

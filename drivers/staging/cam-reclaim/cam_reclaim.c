@@ -22,15 +22,14 @@
 
 #include "cam_reclaim.h"
 
-#define CAM_RECLAIM_ATTR(_name, _mode, _show, _store)                          \
-	struct kobj_attribute kobj_attr_##_name =                              \
-		__ATTR(_name, _mode, _show, _store)
+#define CAM_RECLAIM_ATTR(_name, _mode, _show, _store) \
+	struct kobj_attribute kobj_attr_##_name \
+		= __ATTR(_name, _mode, _show, _store)
 
 cam_reclaim_t g_cam_reclaim;
 cam_reclaim_t *pg_cam_reclaim;
 
-extern unsigned long cam_reclaim_global(unsigned long nr_to_reclaim,
-					int reclaim_type);
+extern unsigned long cam_reclaim_global(unsigned long nr_to_reclaim, int reclaim_type);
 
 static inline unsigned long interval_time(unsigned long start)
 {
@@ -67,46 +66,34 @@ inline int cam_reclaim_anonprivate(void)
 	return pg_cam_reclaim->page_reclaim.reclaim_anonprivate;
 }
 
-static int sysmeminfo_process(int force_reclaim_type, u64 reclaim_pages,
-			      unsigned long real_reclaim,
-			      u64 total_reclaim_pages, bool debug)
+static int sysmeminfo_process(int force_reclaim_type, u64 reclaim_pages, unsigned long real_reclaim, u64 total_reclaim_pages, bool debug)
 {
 	struct sysinfo i;
 	long nr_cached;
 	unsigned long pages[NR_LRU_LISTS], anon_mem;
 	int lru;
-	bool zram_enable;
+	bool   zram_enable;
 
 	for (lru = LRU_BASE; lru < NR_LRU_LISTS; lru++)
 		pages[lru] = global_node_page_state(NR_LRU_BASE + lru);
 	si_meminfo(&i);
-	nr_cached = global_node_page_state(NR_FILE_PAGES) -
-		    total_swapcache_pages() - i.bufferram;
+	nr_cached = global_node_page_state(NR_FILE_PAGES) - total_swapcache_pages() - i.bufferram;
 	si_swapinfo(&i);
 
 	if (debug) {
-		pr_info("reclaim: reclaim_type=%d total_reclaim_pages=%llu reclaim_pages=%llu real_reclaim=%lu freeram=%llu freeswap=%llu nr_cached=%llu Active(anon)=%llu Inactive(anon)=%llu Active(file)=%llu Inactive(file)=%llu KReclaimable=%llu\n",
-			force_reclaim_type, total_reclaim_pages, reclaim_pages,
-			real_reclaim, KB(i.freeram), KB(i.freeswap),
-			KB(nr_cached), KB(pages[LRU_ACTIVE_ANON]),
-			KB(pages[LRU_INACTIVE_ANON]),
-			KB(pages[LRU_ACTIVE_FILE]),
-			KB(pages[LRU_INACTIVE_FILE]),
-			KB(global_node_page_state(NR_SLAB_RECLAIMABLE) +
-			   global_node_page_state(NR_KERNEL_MISC_RECLAIMABLE)));
+		pr_info("reclaim: reclaim_type=%d total_reclaim_pages=%llu reclaim_pages=%llu real_reclaim=%lu freeram=%llu freeswap=%llu nr_cached=%llu"
+			" Active(anon)=%llu Inactive(anon)=%llu Active(file)=%llu Inactive(file)=%llu KReclaimable=%llu\n",
+			force_reclaim_type, total_reclaim_pages, reclaim_pages, real_reclaim, KB(i.freeram), KB(i.freeswap), KB(nr_cached), KB(pages[LRU_ACTIVE_ANON]), KB(pages[LRU_INACTIVE_ANON]), KB(pages[LRU_ACTIVE_FILE]), KB(pages[LRU_INACTIVE_FILE]), KB(global_node_page_state(NR_SLAB_RECLAIMABLE) + global_node_page_state(NR_KERNEL_MISC_RECLAIMABLE)));
 	}
 
-	if ((force_reclaim_type == 1) && (KB(nr_cached) < 104800)) {
+        if ((force_reclaim_type == 1) && (KB(nr_cached) < 104800)) {
 		pr_info("file cached is too small, stop reclaim work\n");
 		return 0;
 	} else if (force_reclaim_type == 3) {
-		anon_mem = KB(pages[LRU_ACTIVE_ANON]) +
-			   KB(pages[LRU_INACTIVE_ANON]);
+		anon_mem = KB(pages[LRU_ACTIVE_ANON]) + KB(pages[LRU_INACTIVE_ANON]);
 		zram_enable = (i.totalswap > 0);
-		if (anon_mem < 206000 || !zram_enable ||
-		    i.freeswap < FREE_SWAP_LIMIT) {
-			pr_info("anon_mem is not right, stop reclaim work, zram enable %d\n",
-				zram_enable);
+		if (anon_mem < 206000 || !zram_enable || i.freeswap < FREE_SWAP_LIMIT) {
+			pr_info("anon_mem is not right, stop reclaim work, zram enable %d\n", zram_enable);
 			return 0;
 		}
 	}
@@ -123,7 +110,7 @@ static inline void do_reclaim(int force_reclaim_type)
 
 	unsigned long once_reclaim_time_up;
 	unsigned long nr_want_reclaim_pages;
-	unsigned long per_want_reclaim_pages;
+        unsigned long per_want_reclaim_pages;
 	u64 reclaim_pages;
 	u64 spent_time;
 	u64 start_time_ns;
@@ -134,19 +121,16 @@ static inline void do_reclaim(int force_reclaim_type)
 
 	spin_lock(&pg_cam_reclaim->page_reclaim.reclaim_lock);
 	nr_want_reclaim_pages = pg_cam_reclaim->page_reclaim.nr_reclaim;
-	per_want_reclaim_pages = pg_cam_reclaim->page_reclaim.per_reclaim;
-	once_reclaim_time_up =
-		pg_cam_reclaim->page_reclaim.once_reclaim_time_up;
+        per_want_reclaim_pages = pg_cam_reclaim->page_reclaim.per_reclaim;
+	once_reclaim_time_up = pg_cam_reclaim->page_reclaim.once_reclaim_time_up;
 	spin_unlock(&pg_cam_reclaim->page_reclaim.reclaim_lock);
 
-	reclaim_need = sysmeminfo_process(force_reclaim_type,
-				reclaim_pages, real_reclaim,
-				pg_cam_reclaim->page_reclaim.total_reclaim_pages,
-				pg_cam_reclaim->debug);
+	reclaim_need = sysmeminfo_process(force_reclaim_type, reclaim_pages, real_reclaim, pg_cam_reclaim->page_reclaim.total_reclaim_pages, pg_cam_reclaim->debug);
 	if (reclaim_need == 0)
 		return;
 
 	for (pages = 0; pages < nr_want_reclaim_pages; pages += real_reclaim) {
+
 		real_reclaim = 0;
 
 		spin_lock(&pg_cam_reclaim->page_reclaim.reclaim_lock);
@@ -161,25 +145,19 @@ static inline void do_reclaim(int force_reclaim_type)
 		start_time_ns = ktime_get_ns();
 
 		if (force_reclaim_type == 1)
-			trace_printk("tracing_mark_write: B|%d|do_file_reclaim\n",
-				     current->tgid);
+			trace_printk("tracing_mark_write: B|%d|do_file_reclaim\n", current->tgid);
 		else
-			trace_printk("tracing_mark_write: B|%d|do_anon_reclaim\n",
-				     current->tgid);
+			trace_printk("tracing_mark_write: B|%d|do_anon_reclaim\n", current->tgid);
 
-		real_reclaim = cam_reclaim_global(per_want_reclaim_pages,
-						  force_reclaim_type);
+		real_reclaim = cam_reclaim_global(per_want_reclaim_pages, force_reclaim_type);
 		trace_printk("tracing_mark_write: E\n");
 
-		reclaim_need = sysmeminfo_process(force_reclaim_type,
-						  reclaim_pages, real_reclaim,
-			pg_cam_reclaim->page_reclaim.total_reclaim_pages,
-			pg_cam_reclaim->debug);
+		reclaim_need = sysmeminfo_process(force_reclaim_type, reclaim_pages, real_reclaim, pg_cam_reclaim->page_reclaim.total_reclaim_pages, pg_cam_reclaim->debug);
 		if (reclaim_need == 0)
 			break;
 
 		reclaim_pages += real_reclaim;
-		spent_time += ktime_get_ns() - start_time_ns;
+		spent_time +=  ktime_get_ns() - start_time_ns;
 		if (reclaim_pages > nr_want_reclaim_pages)
 			break;
 
@@ -198,14 +176,17 @@ static inline void do_reclaim(int force_reclaim_type)
 	pg_cam_reclaim->need_reclaim = false;
 	spin_unlock(&pg_cam_reclaim->page_reclaim.reclaim_lock);
 	if (pg_cam_reclaim->debug)
-		pr_info("reclaim event_type %d spent_time %llu ns nr_want_reclaim_pages %lu per_want_reclaim_pages %lu reclaim_pages %llu once_reclaim_time_up %lu\n",
-			event_type, spent_time, nr_want_reclaim_pages,
-			per_want_reclaim_pages, reclaim_pages,
+		pr_info("reclaim event_type %d spent_time %llu ns"
+			" nr_want_reclaim_pages %lu per_want_reclaim_pages %lu reclaim_pages %llu"
+			" once_reclaim_time_up %lu\n",
+			event_type, spent_time,
+			nr_want_reclaim_pages, per_want_reclaim_pages, reclaim_pages,
 			once_reclaim_time_up);
 }
 
 static inline int cam_reclaim_thread_wakeup(void)
 {
+
 	if (!pg_cam_reclaim->switch_on)
 		return RET_OK;
 
@@ -224,22 +205,23 @@ static void cam_reclaim_thread_affinity(struct task_struct *task)
 	cpu_bitmap[0] = 15;
 	newmask = to_cpumask(cpu_bitmap);
 
-#if (KERNEL_VERSION(5, 4, 0) <= LINUX_VERSION_CODE)
+#if(LINUX_VERSION_CODE >= KERNEL_VERSION(5,4,0))
 	if (!cpumask_equal(newmask, &task->cpus_mask)) {
 #else
 	if (!cpumask_equal(newmask, &task->cpus_allowed)) {
 #endif
 		cpumask_t cpumask_temp;
-
 		cpumask_and(&cpumask_temp, newmask, cpu_online_mask);
 
-		if (cpumask_weight(&cpumask_temp) == 0)
+		if (0 == cpumask_weight(&cpumask_temp))
 			return;
 
 		rc = sched_setaffinity(task->pid, newmask);
 		if (rc != 0)
 			pr_err("cam_reclaim sched_setaffinity() failed");
 	}
+
+	return;
 }
 
 static int cam_reclaim_thread(void *unused)
@@ -254,8 +236,7 @@ static int cam_reclaim_thread(void *unused)
 
 		cam_reclaim_thread_affinity(tsk);
 		wait_event_freezable(pg_cam_reclaim->wait,
-				     pg_cam_reclaim->need_reclaim ||
-					     kthread_should_stop());
+			pg_cam_reclaim->need_reclaim || kthread_should_stop());
 
 		do_reclaim(1);
 		do_reclaim(3);
@@ -271,8 +252,7 @@ static int cam_reclaim_thread_start(void)
 	if (pg_cam_reclaim->task)
 		return -EPERM;
 
-	pg_cam_reclaim->task =
-		kthread_run(cam_reclaim_thread, NULL, "cam_reclaim");
+	pg_cam_reclaim->task = kthread_run(cam_reclaim_thread, NULL, "cam_reclaim");
 	if (IS_ERR(pg_cam_reclaim->task)) {
 		pr_err("failed to start pg_cam_reclaim thread\n");
 		return RET_FAIL;
@@ -291,8 +271,8 @@ static void cam_reclaim_thread_stop(void)
 	pg_cam_reclaim->task = NULL;
 }
 
-static ssize_t stat_show(struct kobject *kobj, struct kobj_attribute *attr,
-			 char *buf)
+static ssize_t stat_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
 {
 	u64 total_spent_time;
 	u64 total_reclaim_pages;
@@ -305,34 +285,34 @@ static ssize_t stat_show(struct kobject *kobj, struct kobj_attribute *attr,
 	spin_unlock(&pg_cam_reclaim->page_reclaim.reclaim_lock);
 
 	return scnprintf(buf, PAGE_SIZE,
-			 "total_reclaim_pages: %llu\n"
-			 "total_reclaim_times: %llu\n"
-			 "total_spent_time: %llu\n",
-			 total_reclaim_pages, total_reclaim_times,
-			 total_spent_time);
+		"total_reclaim_pages: %llu\n"
+		"total_reclaim_times: %llu\n"
+		"total_spent_time: %llu\n",
+		total_reclaim_pages,
+		total_reclaim_times,
+		total_spent_time);
 }
 
-static ssize_t enable_show(struct kobject *kobj, struct kobj_attribute *attr,
-			   char *buf)
+static ssize_t enable_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
 {
 	return scnprintf(buf, PAGE_SIZE, "%u\n", pg_cam_reclaim->switch_on);
 }
 
-static ssize_t event_show(struct kobject *kobj, struct kobj_attribute *attr,
-			  char *buf)
+static ssize_t event_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
 {
-	return scnprintf(buf, PAGE_SIZE, "%d\n",
-			 pg_cam_reclaim->page_reclaim.event_type);
+	return scnprintf(buf, PAGE_SIZE, "%d\n", pg_cam_reclaim->page_reclaim.event_type);
 }
 
-static ssize_t debug_show(struct kobject *kobj, struct kobj_attribute *attr,
-			  char *buf)
+static ssize_t debug_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
 {
 	return scnprintf(buf, PAGE_SIZE, "%u\n", pg_cam_reclaim->debug);
 }
 
-static ssize_t config_show(struct kobject *kobj, struct kobj_attribute *attr,
-			   char *buf)
+static ssize_t config_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
 {
 	int ret;
 	int reclaim_swappiness;
@@ -349,33 +329,38 @@ static ssize_t config_show(struct kobject *kobj, struct kobj_attribute *attr,
 	reclaim_anonprivate = pg_cam_reclaim->page_reclaim.reclaim_anonprivate;
 	reclaim_type = pg_cam_reclaim->page_reclaim.reclaim_type;
 	nr_reclaim = pg_cam_reclaim->page_reclaim.nr_reclaim;
-	per_reclaim = pg_cam_reclaim->page_reclaim.per_reclaim;
+        per_reclaim = pg_cam_reclaim->page_reclaim.per_reclaim;
 	anon_up_threshold = pg_cam_reclaim->page_reclaim.anon_up_threshold;
 	file_up_threshold = pg_cam_reclaim->page_reclaim.file_up_threshold;
-	once_reclaim_time_up =
-		pg_cam_reclaim->page_reclaim.once_reclaim_time_up;
+	once_reclaim_time_up = pg_cam_reclaim->page_reclaim.once_reclaim_time_up;
 	totalram = pg_cam_reclaim->sysinfo.totalram;
 	spin_unlock(&pg_cam_reclaim->page_reclaim.reclaim_lock);
 
 	ret = snprintf(buf, PAGE_SIZE,
-		       "swappiness %d\n"
-		       "anonprivate %d\n"
-		       "reclaim_type %d\n"
-		       "nr_reclaim %lu\n"
-		       "per_reclaim %lu\n"
-		       "anon_up %lu\n"
-		       "file_up %lu\n"
-		       "once_reclaim_time_up %lu\n"
-		       "totalram %llu\n",
-		       reclaim_swappiness, reclaim_anonprivate, reclaim_type,
-		       nr_reclaim, per_reclaim, anon_up_threshold,
-		       file_up_threshold, once_reclaim_time_up, totalram);
+		"swappiness %d\n"
+		"anonprivate %d\n"
+		"reclaim_type %d\n"
+		"nr_reclaim %lu\n"
+                "per_reclaim %lu\n"
+		"anon_up %lu\n"
+		"file_up %lu\n"
+		"once_reclaim_time_up %lu\n"
+		"totalram %llu\n",
+		reclaim_swappiness,
+		reclaim_anonprivate,
+		reclaim_type,
+		nr_reclaim,
+		per_reclaim,
+		anon_up_threshold,
+		file_up_threshold,
+		once_reclaim_time_up,
+		totalram);
 
 	return ret;
 }
 
-static ssize_t enable_store(struct kobject *kobj, struct kobj_attribute *attr,
-			    const char *buf, size_t len)
+static ssize_t enable_store(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t len)
 {
 	int enable;
 	int ret;
@@ -384,16 +369,18 @@ static ssize_t enable_store(struct kobject *kobj, struct kobj_attribute *attr,
 	if (ret)
 		return ret;
 
-	if (enable)
+	if (enable) {
 		pg_cam_reclaim->switch_on = true;
-	else
+
+	} else {
 		pg_cam_reclaim->switch_on = false;
+	}
 
 	return len;
 }
 
-static ssize_t event_store(struct kobject *kobj, struct kobj_attribute *attr,
-			   const char *buf, size_t len)
+static ssize_t event_store(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t len)
 {
 	unsigned long event;
 	int ret;
@@ -412,8 +399,8 @@ static ssize_t event_store(struct kobject *kobj, struct kobj_attribute *attr,
 	return len;
 }
 
-static ssize_t debug_store(struct kobject *kobj, struct kobj_attribute *attr,
-			   const char *buf, size_t len)
+static ssize_t debug_store(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t len)
 {
 	int enable;
 	int ret;
@@ -430,8 +417,9 @@ static ssize_t debug_store(struct kobject *kobj, struct kobj_attribute *attr,
 	return len;
 }
 
-static ssize_t config_store(struct kobject *kobj, struct kobj_attribute *attr,
-			    const char *buf, size_t len)
+
+static ssize_t config_store(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t len)
 {
 	int reclaim_swappiness;
 	int reclaim_anonprivate;
@@ -441,10 +429,15 @@ static ssize_t config_store(struct kobject *kobj, struct kobj_attribute *attr,
 	unsigned long file_up_threshold;
 	unsigned long once_reclaim_time_up;
 
-	if (sscanf(buf, "%d %d %d %lu %lu %lu %lu %lu", &reclaim_swappiness,
-		   &reclaim_anonprivate, &reclaim_type, &nr_reclaim,
-		   &per_reclaim, &anon_up_threshold, &file_up_threshold,
-		   &once_reclaim_time_up) != 8) {
+	if (sscanf(buf, "%d %d %d %lu %lu %lu %lu %lu",
+			&reclaim_swappiness,
+			&reclaim_anonprivate,
+			&reclaim_type,
+			&nr_reclaim,
+			&per_reclaim,
+			&anon_up_threshold,
+			&file_up_threshold,
+			&once_reclaim_time_up) != 8) {
 		return -EINVAL;
 	}
 
@@ -456,8 +449,7 @@ static ssize_t config_store(struct kobject *kobj, struct kobj_attribute *attr,
 	pg_cam_reclaim->page_reclaim.per_reclaim = per_reclaim;
 	pg_cam_reclaim->page_reclaim.anon_up_threshold = anon_up_threshold;
 	pg_cam_reclaim->page_reclaim.file_up_threshold = file_up_threshold;
-	pg_cam_reclaim->page_reclaim.once_reclaim_time_up =
-		once_reclaim_time_up;
+	pg_cam_reclaim->page_reclaim.once_reclaim_time_up = once_reclaim_time_up;
 	spin_unlock(&pg_cam_reclaim->page_reclaim.reclaim_lock);
 
 	return len;
@@ -470,8 +462,12 @@ static CAM_RECLAIM_ATTR(config, CAM_RECLAIM_MODE_RW, config_show, config_store);
 static CAM_RECLAIM_ATTR(stat, CAM_RECLAIM_MODE_RO, stat_show, NULL);
 
 static struct attribute *cam_reclaim_attrs[] = {
-	&kobj_attr_enable.attr, &kobj_attr_event.attr, &kobj_attr_debug.attr,
-	&kobj_attr_config.attr, &kobj_attr_stat.attr,  NULL,
+	&kobj_attr_enable.attr,
+	&kobj_attr_event.attr,
+	&kobj_attr_debug.attr,
+	&kobj_attr_config.attr,
+	&kobj_attr_stat.attr,
+	NULL,
 };
 
 static struct attribute_group cam_reclaim_attr_group = {
@@ -482,7 +478,6 @@ static struct kobject *cam_reclaim_sysfs_create(void)
 {
 	int err;
 	struct kobject *kobj = NULL;
-
 	kobj = kobject_create_and_add("cam_reclaim", kernel_kobj);
 	if (!kobj) {
 		pr_err("failed to create mi reclaim node.\n");
@@ -497,7 +492,7 @@ static struct kobject *cam_reclaim_sysfs_create(void)
 	return kobj;
 }
 
-static void cam_reclaim_sysfs_destroy(struct kobject *kobj)
+static void cam_reclaim_sysfs_destory(struct kobject *kobj)
 {
 	if (!kobj)
 		return;
@@ -507,7 +502,6 @@ static void cam_reclaim_sysfs_destroy(struct kobject *kobj)
 static void cam_reclaim_setup(void)
 {
 	struct sysinfo i;
-
 	pg_cam_reclaim = &g_cam_reclaim;
 
 	si_meminfo(&i);
@@ -519,8 +513,7 @@ static void cam_reclaim_setup(void)
 	pg_cam_reclaim->page_reclaim.reclaim_type = 0;
 	pg_cam_reclaim->page_reclaim.nr_reclaim = DEFAULT_ONCE_RECLAIM_PAGES;
 	pg_cam_reclaim->page_reclaim.per_reclaim = 400000;
-	pg_cam_reclaim->page_reclaim.once_reclaim_time_up =
-		BACK_HOME_RECLAIM_TIME_UP;
+	pg_cam_reclaim->page_reclaim.once_reclaim_time_up = BACK_HOME_RECLAIM_TIME_UP;
 	pg_cam_reclaim->page_reclaim.anon_up_threshold = 0;
 	pg_cam_reclaim->page_reclaim.file_up_threshold = 0;
 	pg_cam_reclaim->page_reclaim.event_type = CANCEL_ST;
@@ -550,7 +543,7 @@ failed_to_create_sysfs:
 
 static void __exit cam_reclaim_exit(void)
 {
-	cam_reclaim_sysfs_destroy(pg_cam_reclaim->kobj);
+	cam_reclaim_sysfs_destory(pg_cam_reclaim->kobj);
 	pg_cam_reclaim->kobj = NULL;
 
 	cam_reclaim_thread_stop();
