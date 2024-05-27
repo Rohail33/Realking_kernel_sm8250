@@ -1,10 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0-or-later */
 /*
  * drivers/input/tablet/wacom_wac.h
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
  */
 #ifndef WACOM_WAC_H
 #define WACOM_WAC_H
@@ -19,7 +15,6 @@
 #define WACOM_NAME_MAX		64
 #define WACOM_MAX_REMOTES	5
 #define WACOM_STATUS_UNKNOWN	255
-#define WACOM_REMOTE_BATTERY_TIMEOUT	21000000000ll
 
 /* packet length for individual models */
 #define WACOM_PKGLEN_BBFUN	 9
@@ -100,6 +95,26 @@
 #define WACOM_DEVICETYPE_WL_MONITOR     0x0008
 #define WACOM_DEVICETYPE_DIRECT         0x0010
 
+#ifndef HID_DG_BATTERYSTRENGTH
+#define HID_DG_BATTERYSTRENGTH          (HID_UP_DIGITIZER | 0x3B)
+#endif
+
+#ifndef HID_DG_TILT_X
+#define HID_DG_TILT_X                   (HID_UP_DIGITIZER | 0x3D)
+#endif
+
+#ifndef HID_DG_TILT_Y
+#define HID_DG_TILT_Y                   (HID_UP_DIGITIZER | 0x3E)
+#endif
+
+#ifndef HID_DG_TWIST
+#define HID_DG_TWIST                    (HID_UP_DIGITIZER | 0x41)
+#endif
+
+#ifndef BTN_STYLUS3
+#define BTN_STYLUS3                     0x149
+#endif
+
 #define WACOM_POWER_SUPPLY_STATUS_AUTO  -1
 
 #define WACOM_HID_UP_WACOMDIGITIZER     0xff0d0000
@@ -160,6 +175,7 @@
 #define WACOM_HID_WT_SERIALNUMBER       (WACOM_HID_UP_WACOMTOUCH | 0x5b)
 #define WACOM_HID_WT_X                  (WACOM_HID_UP_WACOMTOUCH | 0x130)
 #define WACOM_HID_WT_Y                  (WACOM_HID_UP_WACOMTOUCH | 0x131)
+#define WACOM_HID_WT_REPORT_VALID       (WACOM_HID_UP_WACOMTOUCH | 0x1d0)
 
 #define WACOM_BATTERY_USAGE(f)	(((f)->hid == HID_DG_BATTERYSTRENGTH) || \
 				 ((f)->hid == WACOM_HID_WD_BATTERY_CHARGING) || \
@@ -216,6 +232,7 @@ enum {
 	INTUOSPM,
 	INTUOSPL,
 	INTUOSP2_BT,
+	INTUOSP2S_BT,
 	INTUOSHT3_BT,
 	WACOM_21UX2,
 	WACOM_22HD,
@@ -245,7 +262,6 @@ enum {
 	MTTPC,
 	MTTPC_B,
 	HID_GENERIC,
-	BOOTLOADER,
 	MAX_TYPE
 };
 
@@ -304,7 +320,7 @@ struct hid_data {
 	bool tipswitch;
 	bool barrelswitch;
 	bool barrelswitch2;
-	bool confidence;
+	bool serialhi;
 	int x;
 	int y;
 	int pressure;
@@ -341,6 +357,7 @@ struct wacom_wac {
 	int tool[2];
 	int id[2];
 	__u64 serial[2];
+	bool probe_complete;
 	bool reporting_data;
 	struct wacom_features features;
 	struct wacom_shared *shared;
@@ -356,6 +373,7 @@ struct wacom_wac {
 	int mode_value;
 	struct hid_data hid_data;
 	bool has_mute_touch_switch;
+	bool is_soft_touch_switch;
 	bool has_mode_change;
 	bool is_direct_mode;
 	bool is_invalid_bt_frame;

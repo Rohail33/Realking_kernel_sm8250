@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-2.0-or-later */
 /*
  * drivers/input/tablet/wacom.h
  *
@@ -78,10 +79,6 @@
  */
 
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
  */
 #ifndef WACOM_H
 #define WACOM_H
@@ -94,18 +91,32 @@
 #include <linux/leds.h>
 #include <linux/usb/input.h>
 #include <linux/power_supply.h>
-#include <linux/timer.h>
 #include <asm/unaligned.h>
+#include <linux/version.h>
 
 /*
  * Version Information
  */
-#define DRIVER_VERSION "v2.00"
+#ifndef WACOM_VERSION_SUFFIX
+#define WACOM_VERSION_SUFFIX ""
+#endif
+#define DRIVER_VERSION "v2.00"WACOM_VERSION_SUFFIX
 #define DRIVER_AUTHOR "Vojtech Pavlik <vojtech@ucw.cz>"
 #define DRIVER_DESC "USB Wacom tablet driver"
 
 #define USB_VENDOR_ID_WACOM	0x056a
 #define USB_VENDOR_ID_LENOVO	0x17ef
+
+#ifndef fallthrough
+#  if defined __has_attribute
+#    if __has_attribute(__fallthrough__)
+#      define fallthrough                    __attribute__((__fallthrough__))
+#    endif
+#  endif
+#endif
+#ifndef fallthrough
+#  define fallthrough                    do {} while (0)  /* fallthrough */
+#endif
 
 enum wacom_worker {
 	WACOM_WORKER_WIRELESS,
@@ -156,7 +167,6 @@ struct wacom_remote {
 		struct input_dev *input;
 		bool registered;
 		struct wacom_battery battery;
-		ktime_t active_time;
 	} remotes[WACOM_MAX_REMOTES];
 };
 
@@ -172,7 +182,6 @@ struct wacom {
 	struct delayed_work init_work;
 	struct wacom_remote *remote;
 	struct work_struct mode_change_work;
-	struct timer_list idleprox_timer;
 	bool generic_has_leds;
 	struct wacom_leds {
 		struct wacom_group_leds *groups;
@@ -245,5 +254,4 @@ struct wacom_led *wacom_led_find(struct wacom *wacom, unsigned int group,
 struct wacom_led *wacom_led_next(struct wacom *wacom, struct wacom_led *cur);
 int wacom_equivalent_usage(int usage);
 int wacom_initialize_leds(struct wacom *wacom);
-void wacom_idleprox_timeout(struct timer_list *list);
 #endif
