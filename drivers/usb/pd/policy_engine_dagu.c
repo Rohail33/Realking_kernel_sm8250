@@ -22,7 +22,10 @@
 #include <linux/usb/usbpd.h>
 #include <linux/pmic-voter.h>
 #include "usbpd.h"
+
+#ifndef CONFIG_NO_PS_USB3
 #include "ps5169.h"
+#endif
 
 enum usbpd_state {
 	PE_UNKNOWN,
@@ -926,8 +929,11 @@ static int pd_select_pdo(struct usbpd *pd, int pdo_pos, int uv, int ua)
 	u32 pdo = pd->received_pdos[pdo_pos - 1];
 
 	type = PD_SRC_PDO_TYPE(pdo);
+	usbpd_err(&pd->dev, "%s: type:%d.\n", __func__, type);
+
 	if (type == PD_SRC_PDO_TYPE_FIXED) {
 		curr = max_current = PD_SRC_PDO_FIXED_MAX_CURR(pdo) * 10;
+		usbpd_err(&pd->dev, "%s: curr:%d.\n", __func__, curr);
 
 		/*
 		 * Check if the PDO has enough current, otherwise set the
@@ -941,8 +947,10 @@ static int pd_select_pdo(struct usbpd *pd, int pdo_pos, int uv, int ua)
 		pd->requested_voltage =
 			PD_SRC_PDO_FIXED_VOLTAGE(pdo) * 50 * 1000;
 		/* pd request uv will less than pd vbus max 9V for fixed pdos */
-		if (pd->requested_voltage > PD_VBUS_MAX_VOLTAGE_LIMIT)
+		if (pd->requested_voltage > PD_VBUS_MAX_VOLTAGE_LIMIT) {
+			usbpd_err(&pd->dev, "%s: requested_voltage:%d.\n", __func__, pd->requested_voltage);
 			return -ENOTSUPP;
+                }
 
 		/*
 		 * set maxium allowed current for fixed pdo to 2A if request
@@ -987,7 +995,9 @@ static int pd_select_pdo(struct usbpd *pd, int pdo_pos, int uv, int ua)
 
 	pd->requested_current = curr;
 	pd->requested_pdo = pdo_pos;
-
+  
+	usbpd_err(&pd->dev, "requested_pdo:%d, requested_current:%d.\n", pd->requested_pdo, 
+                  pd->requested_current);
 	if ((pd->requested_pdo == 1) && (pd->requested_current > 2500)) {
 		pd->requested_current = 2500;
 		usbpd_err(&pd->dev, "requested_pdo:1, force curr:%d.\n", pd->requested_current);
@@ -2752,6 +2762,7 @@ static void enter_state_hard_reset(struct usbpd *pd)
 	if (pd->current_pr == PR_SINK) {
 		if (pd->requested_current) {
 			val.intval = pd->requested_current = 0;
+			usbpd_err(&pd->dev, "set pd_voter 1\n");
 			power_supply_set_property(pd->usb_psy,
 				POWER_SUPPLY_PROP_PD_CURRENT_MAX, &val);
 		}
@@ -3022,6 +3033,8 @@ static void handle_state_snk_select_capability(struct usbpd *pd,
 			int mv = max(pd->requested_voltage,
 					pd->current_voltage) / 1000;
 			val.intval = (2500000 / mv) * 1000;
+			usbpd_err(&pd->dev, "set pd_voter 2\n");
+			usbpd_err(&pd->dev, "pd->requested_voltage:%d, pd->current_voltage:%d\n", pd->requested_voltage, pd->current_voltage);
 			power_supply_set_property(pd->usb_psy,
 				POWER_SUPPLY_PROP_PD_CURRENT_MAX, &val);
 		} else {
@@ -3032,6 +3045,8 @@ static void handle_state_snk_select_capability(struct usbpd *pd,
 				pd->requested_current < val.intval) {
 				val.intval =
 					pd->requested_current * 1000;
+				usbpd_err(&pd->dev, "set pd_voter 3\n");
+				usbpd_err(&pd->dev, "pd->requested_current:%d\n", pd->requested_current);
 				power_supply_set_property(pd->usb_psy,
 				     POWER_SUPPLY_PROP_PD_CURRENT_MAX,
 				     &val);
@@ -3076,6 +3091,8 @@ static void handle_state_snk_transition_sink(struct usbpd *pd,
 
 		/* resume charging */
 		val.intval = pd->requested_current * 1000; /* mA->uA */
+		usbpd_err(&pd->dev, "set pd_voter 4\n");
+		usbpd_err(&pd->dev, "pd->requested_current:%d\n", pd->requested_current);
 		power_supply_set_property(pd->usb_psy,
 				POWER_SUPPLY_PROP_PD_CURRENT_MAX, &val);
 
@@ -3461,6 +3478,8 @@ static void enter_state_prs_snk_src_transition_to_off(struct usbpd *pd)
 	set_power_role(pd, pd->current_pr);
 
 	val.intval = pd->requested_current = 0; /* suspend charging */
+	usbpd_err(&pd->dev, "set pd_voter 5\n");
+	usbpd_err(&pd->dev, "pd->requested_current:%d\n", pd->requested_current);
 	power_supply_set_property(pd->usb_psy,
 			POWER_SUPPLY_PROP_PD_CURRENT_MAX, &val);
 
@@ -3813,6 +3832,7 @@ static void handle_disconnect(struct usbpd *pd)
 	if (pd->has_dp) {
 		pd->has_dp = false;
 		has_dp_flag = false;
+		usbpd_info(&pd->dev, "has_dp: false.\n");
 
 		/* Set to USB only mode when cable disconnected */
 		extcon_blocking_sync(pd->extcon, EXTCON_DISP_DP, 0);
@@ -3822,6 +3842,12 @@ static void handle_disconnect(struct usbpd *pd)
 			power_supply_set_property(pd->usb_psy,
 					POWER_SUPPLY_PROP_HAS_DP, &pval);
 		}
+	}
+
+	if (pd->ps_psy) {
+		pval.intval = 0;
+		power_supply_set_property(pd->ps_psy,
+				POWER_SUPPLY_PROP_PS_EN, &pval);
 	}
 }
 
@@ -3833,6 +3859,7 @@ static void handle_hard_reset(struct usbpd *pd)
 
 	if (pd->requested_current) {
 		val.intval = pd->requested_current = 0;
+		usbpd_err(&pd->dev, "set pd_voter 6\n");
 		power_supply_set_property(pd->usb_psy,
 				POWER_SUPPLY_PROP_PD_CURRENT_MAX, &val);
 	}
