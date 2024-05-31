@@ -282,15 +282,15 @@ struct wacom_features {
 	int device_type;
 	int x_phy;
 	int y_phy;
-	unsigned unit;
+	unsigned int unit;
 	int unitExpo;
 	int x_fuzz;
 	int y_fuzz;
 	int pressure_fuzz;
 	int distance_fuzz;
 	int tilt_fuzz;
-	unsigned quirks;
-	unsigned touch_max;
+	unsigned int quirks;
+	unsigned int touch_max;
 	int oVid;
 	int oPid;
 	int pktlen;
@@ -302,7 +302,7 @@ struct wacom_shared {
 	bool stylus_in_proximity;
 	bool touch_down;
 	/* for wireless device to access USB interfaces */
-	unsigned touch_max;
+	unsigned int touch_max;
 	int type;
 	struct input_dev *touch_input;
 	struct hid_device *pen;
