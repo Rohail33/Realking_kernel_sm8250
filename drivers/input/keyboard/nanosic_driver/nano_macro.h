@@ -268,7 +268,7 @@ struct xiaomi_keyboard_data {
 
 static struct xiaomi_keyboard_data *mdata;
 
-__attribute__((unused)) static xiaomi_keyboard_init(struct nano_i2c_client* i2c_client);
+__attribute__((unused)) static int xiaomi_keyboard_init(struct nano_i2c_client* i2c_client);
 __attribute__((unused)) static void keyboard_resume_work(struct work_struct *work);
 __attribute__((unused)) static void keyboard_suspend_work(struct work_struct *work);
 __attribute__((unused)) static int xiaomi_keyboard_pm_suspend(struct device *dev);
