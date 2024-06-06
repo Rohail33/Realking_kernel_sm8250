@@ -40,7 +40,7 @@
 #endif
 
 #ifndef abs
-#define abs(x) ((x) >0? (x) : -(x))
+#define abs(x) ((x) > 0 ? (x) : -(x))
 #endif
 
 enum print_reason {
@@ -57,7 +57,7 @@ enum reason {
 };
 static int debug_mask = PR_OEM;
 module_param_named(debug_mask, debug_mask, int, 0600);
-static struct dual_fg_info *global_dual_fg_info = NULL;
+static struct dual_fg_info *global_dual_fg_info;
 struct dual_fg_chip {
 	struct device *dev;
 	char *model_name;
@@ -206,7 +206,7 @@ static void fg_check_I2C_status(struct dual_fg_chip *bq);
 static void dual_fg_check_fg_matser_psy(struct dual_fg_chip *bq);
 static void dual_fg_check_fg_slave_psy(struct dual_fg_chip *bq);
 static void dual_fg_check_batt_psy(struct dual_fg_chip *bq);
-static int bq_battery_soc_smooth_tracking_new(struct dual_fg_chip *bq,int soc);
+static int bq_battery_soc_smooth_tracking_new(struct dual_fg_chip *bq, int soc);
 
 static int fg_set_fastcharge_mode(struct dual_fg_chip *bq, bool enable);
 static int fg_get_property(struct power_supply *psy,
@@ -229,12 +229,12 @@ static int fg_master_set_disable(bool disable)
 		if (global_dual_fg_info->fg_master_disable_gpio)
 			gpio_set_value(
 				global_dual_fg_info->fg_master_disable_gpio, 1);
-		bq_dbg(PR_OEM, "fg_master_disable_gpio= %d \n", 1);
+		bq_dbg(PR_OEM, "fg_master_disable_gpio= %d\n", 1);
 	} else {
 		if (global_dual_fg_info->fg_master_disable_gpio)
 			gpio_set_value(
 				global_dual_fg_info->fg_master_disable_gpio, 0);
-		bq_dbg(PR_OEM, "fg_master_disable_gpio= %d \n", 0);
+		bq_dbg(PR_OEM, "fg_master_disable_gpio= %d\n", 0);
 	}
 	return 0;
 }
@@ -245,12 +245,12 @@ static int fg_slave_set_disable(bool disable)
 		if (global_dual_fg_info->fg_slave_disable_gpio)
 			gpio_set_value(
 				global_dual_fg_info->fg_slave_disable_gpio, 1);
-		bq_dbg(PR_OEM, "fg_slave_disable_gpio= %d \n", 1);
+		bq_dbg(PR_OEM, "fg_slave_disable_gpio= %d\n", 1);
 	} else {
 		if (global_dual_fg_info->fg_slave_disable_gpio)
 			gpio_set_value(
 				global_dual_fg_info->fg_slave_disable_gpio, 0);
-		bq_dbg(PR_OEM, "fg_slave_disable_gpio= %d \n", 0);
+		bq_dbg(PR_OEM, "fg_slave_disable_gpio= %d\n", 0);
 	}
 	return 0;
 }
@@ -271,7 +271,7 @@ int Dual_Fg_Check_Chg_Fg_Status_And_Disable_Chg_Path(struct dual_fg_chip *bq)
 
 	batt_psy = power_supply_get_by_name("battery");
 	if (!batt_psy) {
-		pr_err("battery not found ,so cannot disable fg master or slave \n");
+		pr_err("battery not found ,so cannot disable fg master or slave\n");
 		return 0;
 	}
 	rc = power_supply_get_property(batt_psy, POWER_SUPPLY_PROP_CHARGE_TYPE,
@@ -285,14 +285,14 @@ int Dual_Fg_Check_Chg_Fg_Status_And_Disable_Chg_Path(struct dual_fg_chip *bq)
 	rc = power_supply_get_property(global_dual_fg_info->gl_fg_master_psy,
 				       POWER_SUPPLY_PROP_CAPACITY_RAW, &pval);
 	if (rc < 0) {
-		bq_dbg(PR_OEM, "failed get master fg SOC \n");
+		bq_dbg(PR_OEM, "failed get master fg SOC\n");
 		return -EINVAL;
 	}
 	fg_master_soc = pval.intval;
 	rc = power_supply_get_property(global_dual_fg_info->gl_fg_slave_psy,
 				       POWER_SUPPLY_PROP_CAPACITY_RAW, &pval);
 	if (rc < 0) {
-		bq_dbg(PR_OEM, "failed get slave fg SOC \n");
+		bq_dbg(PR_OEM, "failed get slave fg SOC\n");
 		return -EINVAL;
 	}
 	fg_slave_soc = pval.intval;
@@ -300,14 +300,14 @@ int Dual_Fg_Check_Chg_Fg_Status_And_Disable_Chg_Path(struct dual_fg_chip *bq)
 	rc = power_supply_get_property(global_dual_fg_info->gl_fg_master_psy,
 				       POWER_SUPPLY_PROP_VOLTAGE_NOW, &pval);
 	if (rc < 0) {
-		bq_dbg(PR_OEM, "failed get master fg volt \n");
+		bq_dbg(PR_OEM, "failed get master fg volt\n");
 		return -EINVAL;
 	}
 	fg_master_volt = pval.intval;
 	rc = power_supply_get_property(global_dual_fg_info->gl_fg_slave_psy,
 				       POWER_SUPPLY_PROP_VOLTAGE_NOW, &pval);
 	if (rc < 0) {
-		bq_dbg(PR_OEM, "failed get slave fg volt \n");
+		bq_dbg(PR_OEM, "failed get slave fg volt\n");
 		return -EINVAL;
 	}
 	fg_slave_volt = pval.intval;
@@ -315,25 +315,24 @@ int Dual_Fg_Check_Chg_Fg_Status_And_Disable_Chg_Path(struct dual_fg_chip *bq)
 	rc = power_supply_get_property(global_dual_fg_info->gl_fg_master_psy,
 				       POWER_SUPPLY_PROP_CURRENT_NOW, &pval);
 	if (rc < 0) {
-		bq_dbg(PR_OEM, "failed get master fg volt \n");
+		bq_dbg(PR_OEM, "failed get master fg volt\n");
 		return -EINVAL;
 	}
 	fg_master_curr = pval.intval;
 	rc = power_supply_get_property(global_dual_fg_info->gl_fg_slave_psy,
 				       POWER_SUPPLY_PROP_CURRENT_NOW, &pval);
 	if (rc < 0) {
-		bq_dbg(PR_OEM, "failed get slave fg volt \n");
+		bq_dbg(PR_OEM, "failed get slave fg volt\n");
 		return -EINVAL;
 	}
 	fg_slave_curr = pval.intval;
 
 	temp = fg_read_temperature(bq);
 
-	if (!bq->fv_votable) {
+	if (!bq->fv_votable)
 		bq->fv_votable = find_votable("FV");
-	}
 	effective_fv_client = strcmp(get_effective_client(bq->fv_votable), SMART_BATTERY_FV);
-	//bq_dbg(PR_OEM, "gpio master volt: %d,slave volt: %d, effective_fv_client:%d, bq->fast_mode:%d \n", fg_master_volt,
+	//bq_dbg(PR_OEM, "gpio master volt: %d,slave volt: %d, effective_fv_client:%d, bq->fast_mode:%d\n", fg_master_volt,
 					//fg_slave_volt, effective_fv_client, bq->fast_mode);
 	//bq_dbg(PR_OEM, "gpio master curr: %d,temp: %d\n", fg_master_curr, temp);
 	/* fg master or slave  */
@@ -368,6 +367,7 @@ int Dual_Fg_Check_Chg_Fg_Status_And_Disable_Chg_Path(struct dual_fg_chip *bq)
 int Dual_Fg_Reset_Batt_Ctrl_gpio_default(void)
 {
 	int fg_master_gpio, fg_slave_gpio;
+
 	fg_master_gpio =
 		gpio_get_value(global_dual_fg_info->fg_master_disable_gpio);
 	fg_slave_gpio =
@@ -544,19 +544,19 @@ static void fg_check_dual_current(struct dual_fg_chip *bq)
 {
 	int step_curr, curr_max, div, thres, diff_step;
 	int batt_curr_master = 0, batt_curr_slave = 0;
-	static int oc_count = 0,last_curr = 0,offset_Curr = 0;
+	static int oc_count = 0, last_curr = 0, offset_Curr;
 
 	batt_curr_master = bq->batt_curr_m;
 	batt_curr_slave = bq->batt_curr_s;
 
-	if(!bq->fcc_votable)
+	if (!bq->fcc_votable)
 		bq->fcc_votable = find_votable("FCC");
 	step_curr = get_client_vote(bq->fcc_votable, STEP_CHG_VOTER);
-	if(step_curr <= 0)
+	if (step_curr <= 0)
 		return;
 
-	if(step_curr != last_curr) {
-		bq_dbg(PR_OEM,"the step current:%d,last_curr: %d\n",step_curr,last_curr);
+	if (step_curr != last_curr) {
+		bq_dbg(PR_OEM, "the step current:%d,last_curr: %d\n", step_curr, last_curr);
 		last_curr = step_curr;
 		oc_count = 0;
 		diff_step = step_curr;
@@ -565,22 +565,22 @@ static void fg_check_dual_current(struct dual_fg_chip *bq)
 
 	thres = (step_curr == 12400000) ? 7000000 : step_curr/2;
 	curr_max = abs(MIN(batt_curr_master, batt_curr_slave));
-	if(curr_max >= thres) {
+	if (curr_max >= thres) {
 		oc_count++;
 		offset_Curr = (offset_Curr > (curr_max - step_curr/2)) ? offset_Curr : (curr_max - step_curr/2);
 	}
-	bq_dbg(PR_OEM,"oc_count:%d, before currmax:%d, half curr:%d.\n",oc_count, curr_max, thres);
+	bq_dbg(PR_OEM, "oc_count:%d, before currmax:%d, half curr:%d.\n", oc_count, curr_max, thres);
 
-	if(oc_count >= 4) {
+	if (oc_count >= 4) {
 		oc_count = 0;
 		div = offset_Curr / 50000;
-		if((offset_Curr % 50000) == 0)
+		if ((offset_Curr % 50000) == 0)
 			offset_Curr = div * 50000;
 		else
 			offset_Curr = (div+1) * 50000;
 		diff_step -= offset_Curr * 2;
 		vote(bq->fcc_votable, STEP_CHG_LIMIT_VOTER, true, diff_step);
-		bq_dbg(PR_OEM,"need down offset:%d, curr max:%d, div:%d, the diff current:%d\n", offset_Curr, curr_max, div, diff_step);
+		bq_dbg(PR_OEM, "need down offset:%d, curr max:%d, div:%d, the diff current:%d\n", offset_Curr, curr_max, div, diff_step);
 	}
 
 }
@@ -655,7 +655,7 @@ static int fg_get_DesignedCapcity(struct dual_fg_chip *bq)
 	rc = power_supply_get_property(
 		bq->fg_master_psy, POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN, &pval);
 	if (rc < 0) {
-		bq_dbg(PR_OEM, "failed get master fg charge full design \n");
+		bq_dbg(PR_OEM, "failed get master fg charge full design\n");
 		return -EINVAL;
 	}
 	DesignedCapa_master = pval.intval;
@@ -813,7 +813,7 @@ static int fg_read_system_soc(struct dual_fg_chip *bq)
 	// add report 100% ahead of time function
 	bq->raw_soc = fg_get_raw_soc(bq);
 
-	soc = bq_battery_soc_smooth_tracking_new(bq,soc);
+	soc = bq_battery_soc_smooth_tracking_new(bq, soc);
 
 	return soc;
 }
@@ -830,18 +830,18 @@ struct dual_ffc_smooth dual_ffc_dischg_smooth[FFC_SMOOTH_LEN_DUAL] = {
 	{600,   72000},
 	{1000,  50000},
 };
-static int bq_battery_soc_smooth_tracking_new(struct dual_fg_chip *bq,int soc)
+static int bq_battery_soc_smooth_tracking_new(struct dual_fg_chip *bq, int soc)
 {
 	int rc;
-	static int system_soc,last_system_soc;
-	int status = 0,temp;
-	int unit_time = 10000, delta_time = 0,soc_delta = 0;
+	static int system_soc, last_system_soc;
+	int status = 0, temp;
+	int unit_time = 10000, delta_time = 0, soc_delta = 0;
 	int change_delta = 0;
 	static ktime_t last_change_time = -1;
 	int soc_changed = 0;
-	int batt_ma = 0,i;
+	int batt_ma = 0, i;
 
-	static int ibat_pos_count = 0;
+	static int ibat_pos_count;
 	struct timespec64 time;
 	ktime_t tmp_time = 0;
 	union power_supply_propval pval = {
@@ -851,67 +851,66 @@ static int bq_battery_soc_smooth_tracking_new(struct dual_fg_chip *bq,int soc)
 	tmp_time = ktime_get_boottime();
 	time = ktime_to_timespec64(tmp_time);
 
-	rc = fg_read_current(bq,&batt_ma);
+	rc = fg_read_current(bq, &batt_ma);
 	temp = fg_read_temperature(bq);
 
-	if((batt_ma > 0) && (ibat_pos_count < 10))
+	if ((batt_ma > 0) && (ibat_pos_count < 10))
 		ibat_pos_count++;
-	else if(batt_ma <= 0)
+	else if (batt_ma <= 0)
 		ibat_pos_count = 0;
 
 	if (bq->batt_psy) {
 		rc = power_supply_get_property(bq->batt_psy,
 				POWER_SUPPLY_PROP_STATUS, &pval);
-		if(rc < 0) {
-			bq_dbg(PR_OEM,"Failed get battery status.\n");
+		if (rc < 0) {
+			bq_dbg(PR_OEM, "Failed get battery status.\n");
 			return -EINVAL;
 		}
 		status = pval.intval;
 	}
 
 	// Map soc value according to raw_soc
-	if(bq->raw_soc > HW_REPORT_FULL_SOC)
+	if (bq->raw_soc > HW_REPORT_FULL_SOC)
 		system_soc = 100;
 	else {
 		system_soc = ((bq->raw_soc + SOC_PROPORTION_C) / SOC_PROPORTION);
-		if(system_soc > 99)
+		if (system_soc > 99)
 			system_soc = 99;
 	}
 
 	// Get the initial value for the first time
-	if(last_change_time == -1) {
+	if (last_change_time == -1) {
 		last_change_time = ktime_get();
-		if(system_soc != 0)
+		if (system_soc != 0)
 			last_system_soc = system_soc;
 		else
 			last_system_soc = soc;
-
 	}
 
 	if ((status == POWER_SUPPLY_STATUS_DISCHARGING || status == POWER_SUPPLY_STATUS_NOT_CHARGING)
 		&& !bq->batt_rm && temp < 150 && last_system_soc >= 1) {
 
-			for(i = FFC_SMOOTH_LEN_DUAL-1; i >= 0; i--) {
-				if(batt_ma > dual_ffc_dischg_smooth[i].curr_lim) {
-					unit_time = dual_ffc_dischg_smooth[i].time;
-					break;
-				}
+		for (i = FFC_SMOOTH_LEN_DUAL-1; i >= 0; i--) {
+			if (batt_ma > dual_ffc_dischg_smooth[i].curr_lim) {
+				unit_time = dual_ffc_dischg_smooth[i].time;
+				break;
 			}
-		bq_dbg(PR_OEM,"enter low temperature smooth unit_time=%d batt_ma_now=%d\n", unit_time, batt_ma);
+		}
+		bq_dbg(PR_OEM, "enter low temperature smooth unit_time=%d batt_ma_now=%d\n", unit_time, batt_ma);
 	}
 
 	// If the soc jump, will smooth one cap every 10S
 	soc_delta = abs(system_soc - last_system_soc);
-	if(soc_delta >= 1 || (bq->batt_volt < 3300 && system_soc > 0) ||(unit_time != 10000 && soc_delta == 1)) {
+	if (soc_delta >= 1 || (bq->batt_volt < 3300 && system_soc > 0) || (unit_time != 10000 && soc_delta == 1)) {
 		calc_delta_time(last_change_time, &change_delta);
 		delta_time = change_delta / unit_time;
-		if(delta_time < 0) {
+		if (delta_time < 0) {
 			last_change_time = ktime_get();
 			delta_time = 0;
 		}
 
-		soc_changed = min(1,delta_time);
-		if(soc_changed) {
+		soc_changed = min(1, delta_time);
+		if (soc_changed) {
 			if ((status == POWER_SUPPLY_STATUS_CHARGING) && (system_soc > last_system_soc))
 				system_soc = last_system_soc + soc_changed;
 			else if (status == POWER_SUPPLY_STATUS_DISCHARGING && system_soc < last_system_soc)
@@ -919,11 +918,11 @@ static int bq_battery_soc_smooth_tracking_new(struct dual_fg_chip *bq,int soc)
 		} else {
 			system_soc = last_system_soc;
 		}
-		bq_dbg(PR_OEM,"system soc=%d,last system soc: %d,delta time: %d,soc_changed:%d,unit_time:%d,soc_delta:%d\n",
-			system_soc,last_system_soc,delta_time,soc_changed,unit_time,soc_delta);
+		bq_dbg(PR_OEM, "system soc=%d,last system soc: %d,delta time: %d,soc_changed:%d,unit_time:%d,soc_delta:%d\n",
+			system_soc, last_system_soc, delta_time, soc_changed, unit_time, soc_delta);
 	}
 
-	if(system_soc < last_system_soc)
+	if (system_soc < last_system_soc)
 		system_soc = last_system_soc - 1;
 
 	// Avoid mismatches between charging status and soc changes
@@ -936,19 +935,18 @@ static int bq_battery_soc_smooth_tracking_new(struct dual_fg_chip *bq,int soc)
 		last_system_soc = system_soc;
 	}
 
-	if(system_soc > 100)
-		system_soc =100;
-	if(system_soc < 0)
-		system_soc =0;
+	if (system_soc > 100)
+		system_soc = 100;
+	if (system_soc < 0)
+		system_soc = 0;
 
 	if ((system_soc == 0) && ((bq->batt_volt >= 3400) || ((time.tv_sec <= 10)))) {
 		system_soc = 1;
-		bq_dbg(PR_OEM,"uisoc::hold 1 when volt > 3400mv. \n");
+		bq_dbg(PR_OEM, "uisoc::hold 1 when volt > 3400mv.\n");
 	}
 
-	if(bq->last_soc != system_soc){
+	if (bq->last_soc != system_soc)
 		bq->last_soc = system_soc;
-	}
 
 	return system_soc;
 }
@@ -980,10 +978,10 @@ static int fg_get_raw_soc(struct dual_fg_chip *bq)
 	raw_soc = (rate_of_master * raw_soc_master +
 		   rate_of_slave * raw_soc_slave + 50) /
 		  100;
-	
+
 	bq->raw_soc_m = raw_soc_master;
 	bq->raw_soc_s = raw_soc_slave;
-    return raw_soc;
+	return raw_soc;
 }
 static int fg_read_rm(struct dual_fg_chip *bq)
 {
@@ -1072,13 +1070,13 @@ static int fg_get_soc_decimal(struct dual_fg_chip *bq)
 static int fg_get_soc_decimal_rate(struct dual_fg_chip *bq)
 {
 	int soc, i;
+
 	if (bq->dec_rate_len <= 0)
 		return 0;
 	soc = fg_read_system_soc(bq);
 	for (i = 0; i < bq->dec_rate_len; i += 2) {
-		if (soc < bq->dec_rate_seq[i]) {
+		if (soc < bq->dec_rate_seq[i])
 			return bq->dec_rate_seq[i - 1];
-		}
 	}
 	return bq->dec_rate_seq[bq->dec_rate_len - 1];
 }
@@ -1253,7 +1251,7 @@ static int fg_get_VoltageMax(struct dual_fg_chip *bq)
 
 	if (!bq->fv_votable)
 		bq->fv_votable = find_votable("FV");
-	bq_dbg(PR_OEM, "dual_gauge voltage max:%d,effective_fv:%d\n", volt_max,get_effective_result(bq->fv_votable));
+	bq_dbg(PR_OEM, "dual_gauge voltage max:%d,effective_fv:%d\n", volt_max, get_effective_result(bq->fv_votable));
 	return volt_max;
 }
 
@@ -1359,6 +1357,7 @@ static void fg_check_I2C_status(struct dual_fg_chip *bq)
 	};
 	int rc;
 	const char *master_model_name, *slave_model_name;
+
 	if (!bq->fg_slave_psy || !bq->fg_master_psy)
 		return;
 	rc = power_supply_get_property(bq->fg_master_psy,
@@ -1459,7 +1458,7 @@ static int fg_get_property(struct power_supply *psy,
 					val->intval = 1;
 				} else {
 					bq->shutdown_delay = false;
-					bq_dbg(PR_OEM, "shutdown_delay_cancel:%d, shutdown vbat_uv_2::%d\n",shutdown_delay_cancel,vbat_mv);
+					bq_dbg(PR_OEM, "shutdown_delay_cancel:%d, shutdown vbat_uv_2::%d\n", shutdown_delay_cancel, vbat_mv);
 					if (vbat_mv > SHUTDOWN_DELAY_VOL + 50)
 						val->intval = 1;
 				}
@@ -1587,9 +1586,8 @@ static int fg_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT_MAX:
 		if (bq->constant_charge_current_max != 0)
 			val->intval = bq->constant_charge_current_max;
-		else {
+		else
 			val->intval = fg_get_constant_charge_CurrentMax(bq);
-		}
 		break;
 	case POWER_SUPPLY_PROP_FASTCHARGE_MODE:
 		if (bq->old_hw) {
@@ -1694,6 +1692,7 @@ static int fg_prop_is_writeable(struct power_supply *psy,
 static int fg_psy_register(struct dual_fg_chip *bq)
 {
 	struct power_supply_config fg_psy_cfg = {};
+
 	bq->fg_psy_d.name = "bms";
 	bq->fg_psy_d.type = POWER_SUPPLY_TYPE_BMS;
 	bq->fg_psy_d.properties = fg_props;
@@ -1728,8 +1727,8 @@ static void fg_monitor_workfunc(struct work_struct *work)
 static void fg_update_status(struct dual_fg_chip *bq)
 {
 	static int last_st, last_soc, last_temp;
-	int vbus=0,vph=0;
-	int rc=0;
+	int vbus = 0, vph = 0;
+	int rc = 0;
 	union power_supply_propval prop = {
 		0,
 	};
@@ -1750,19 +1749,18 @@ static void fg_update_status(struct dual_fg_chip *bq)
 
 	bq_dbg(PR_OEM, "SOC:%d,Volt:%d,Cur:%d,Temp:%d,RM:%d,FC:%d,FAST:%d,Raw_soc:%d,Charging status:%d",
 	       bq->batt_soc, bq->batt_volt, bq->batt_curr, bq->batt_temp,
-	       bq->batt_rm, bq->batt_fcc, bq->fast_mode,bq->raw_soc,bq->batt_st);
+	       bq->batt_rm, bq->batt_fcc, bq->fast_mode, bq->raw_soc, bq->batt_st);
 
-	bq_dbg(PR_OEM,"Print master info. Volt_m:%d, Curr_m:%d, Temp_m:%d, Raw_soc_m:%d\n",
-		bq->batt_volt_m,bq->batt_curr_m,bq->batt_temp_m,bq->raw_soc_m);
+	bq_dbg(PR_OEM, "Print master info. Volt_m:%d, Curr_m:%d, Temp_m:%d, Raw_soc_m:%d\n",
+		bq->batt_volt_m, bq->batt_curr_m, bq->batt_temp_m, bq->raw_soc_m);
 
-	bq_dbg(PR_OEM,"Print slave info. Volt_s:%d, Curr_s:%d, Temp_s:%d, Raw_soc_s:%d\n",
-		bq->batt_volt_s,bq->batt_curr_s,bq->batt_temp_s,bq->raw_soc_s);
+	bq_dbg(PR_OEM, "Print slave info. Volt_s:%d, Curr_s:%d, Temp_s:%d, Raw_soc_s:%d\n",
+		bq->batt_volt_s, bq->batt_curr_s, bq->batt_temp_s, bq->raw_soc_s);
 
 	if (!bq->usb_psy) {
 		bq->usb_psy = power_supply_get_by_name("usb");
-		if (!bq->usb_psy) {
+		if (!bq->usb_psy)
 			return;
-		}
 	}
 	rc = power_supply_get_property(bq->usb_psy,
 				       POWER_SUPPLY_PROP_VOLTAGE_VPH, &prop);
@@ -1770,7 +1768,7 @@ static void fg_update_status(struct dual_fg_chip *bq)
 	rc = power_supply_get_property(bq->usb_psy,
 				       POWER_SUPPLY_PROP_VOLTAGE_NOW, &prop);
 	vbus = prop.intval;
-	bq_dbg(PR_OEM,"Print Vbus:%d, Vph:%d\n",vbus,vph);
+	bq_dbg(PR_OEM, "Print Vbus:%d, Vph:%d\n", vbus, vph);
 	if ((last_soc != bq->batt_soc) || (last_temp != bq->batt_temp) ||
 	    (last_st != bq->batt_st)) {
 		if (bq->fg_psy)
@@ -1790,9 +1788,8 @@ static int fg_update_charge_full(struct dual_fg_chip *bq)
 
 	if (!bq->batt_psy) {
 		bq->batt_psy = power_supply_get_by_name("battery");
-		if (!bq->batt_psy) {
+		if (!bq->batt_psy)
 			return 0;
-		}
 	}
 
 	rc = power_supply_get_property(bq->batt_psy,
@@ -1888,7 +1885,7 @@ static int bq_parse_dt(struct dual_fg_chip *bq)
 		node, "fg-master-disable-gpio", 0, &flags);
 	if ((!gpio_is_valid(global_dual_fg_info->fg_master_disable_gpio))) {
 		bq_dbg(PR_OEM,
-		       "Failed to read node of fg-master-disable-gpio \n");
+		       "Failed to read node of fg-master-disable-gpio\n");
 
 	} else {
 		ret = gpio_request(global_dual_fg_info->fg_master_disable_gpio,
@@ -1912,7 +1909,7 @@ static int bq_parse_dt(struct dual_fg_chip *bq)
 		node, "fg-slave-disable-gpio", 0, &flags);
 	if ((!gpio_is_valid(global_dual_fg_info->fg_slave_disable_gpio))) {
 		bq_dbg(PR_OEM,
-		       "Failed to read node of fg-slave-disable-gpio \n");
+		       "Failed to read node of fg-slave-disable-gpio\n");
 
 	} else {
 		ret = gpio_request(global_dual_fg_info->fg_slave_disable_gpio,
@@ -2001,6 +1998,7 @@ static int dual_fuelgauge_probe(struct platform_device *pdev)
 static int dual_fuelgauge_remove(struct platform_device *pdev)
 {
 	struct dual_fg_chip *bq = platform_get_drvdata(pdev);
+
 	mutex_destroy(&bq->data_lock);
 	fg_psy_unregister(bq);
 	return 0;

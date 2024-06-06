@@ -38,20 +38,20 @@
 #define RX_MAX_TEMP 84
 
 // interrupts foward definition
-#define RX_INT_LDO_ON 0x0001
-#define RX_INT_FAST_CHARGE 0x0002
-#define RX_INT_AUTHEN_FINISH 0x0004
-#define RX_INT_RENEGO_DONE 0x0008
-#define RX_INT_ALARM_SUCCESS 0x0010
-#define RX_INT_ALARM_FAIL 0x0020
-#define RX_INT_OOB_GOOD 0x0040
-#define RX_INT_RPP 0x0080
-#define RX_INT_TRANSPARENT_SUCCESS 0x0100
-#define RX_INT_TRANSPARENT_FAIL 0x0200
-#define RX_INT_FACTORY_TEST 0x0400
-#define RX_INT_OCP_OTP_ALARM 0x1000
-#define RX_INT_POWER_OFF 0x4000
-#define RX_INT_POWER_ON 0x8000
+#define RX_INT_LDO_ON                   0x0001
+#define RX_INT_FAST_CHARGE              0x0002
+#define RX_INT_AUTHEN_FINISH            0x0004
+#define RX_INT_RENEGO_DONE              0x0008
+#define RX_INT_ALARM_SUCCESS            0x0010
+#define RX_INT_ALARM_FAIL               0x0020
+#define RX_INT_OOB_GOOD                 0x0040
+#define RX_INT_RPP                      0x0080
+#define RX_INT_TRANSPARENT_SUCCESS      0x0100
+#define RX_INT_TRANSPARENT_FAIL         0x0200
+#define RX_INT_FACTORY_TEST             0x0400
+#define RX_INT_OCP_OTP_ALARM            0x1000
+#define RX_INT_POWER_OFF                0x4000
+#define RX_INT_POWER_ON                 0x8000
 
 // interrupts reverse definition
 //#define RTX_INT_CEP_TIMEOUT             0x0004
@@ -62,16 +62,17 @@
 //#define RTX_INT_REVERSE_TEST_DONE       0x0080
 //#define RTX_INT_FOD                     0x0100
 
-#define RTX_INT_EPT (1 << 0)
-#define RTX_INT_START_DPING (1 << 1)
-#define INT_GET_SS (1 << 2)
-#define INT_GET_ID (1 << 3)
-#define RTX_INT_GET_CFG (1 << 4)
-#define INT_GET_PPP (1 << 5)
-#define INT_GET_DPING (1 << 6)
-#define INT_INIT_TX (1 << 7)
-#define INT_GET_BLE_ADDR (1 << 8)
-#define FW_VERSION 0x11
+#define RTX_INT_EPT                     (1 << 0)
+#define RTX_INT_START_DPING              (1 << 1)
+#define INT_GET_SS						(1 << 2)
+#define INT_GET_ID						(1 << 3)
+#define RTX_INT_GET_CFG                 (1 << 4)
+#define INT_GET_PPP						(1 << 5)
+#define INT_GET_DPING					(1 << 6)
+#define INT_INIT_TX						(1 << 7)
+#define INT_GET_BLE_ADDR				(1 << 8)
+#define FW_VERSION  0x11
+
 
 //factory test cmd
 #define FACTORY_TEST_CMD 0x1F
@@ -105,23 +106,23 @@
 #define ABS_CEP_VALUE 1
 #define MAC_LEN 6
 
-#define nuvolta_err(fmt, ...)                                                  \
-	do {                                                                   \
-		if (log_level >= 0)                                            \
-			printk(KERN_ERR "[NUVOLTA_1665] " fmt, ##__VA_ARGS__); \
-	} while (0)
+#define nuvolta_err(fmt, ...)							\
+do {										\
+	if (log_level >= 0)							\
+		printk(KERN_ERR "[NUVOLTA_1665] " fmt, ##__VA_ARGS__);	\
+} while (0)
 
-#define nuvolta_info(fmt, ...)                                                 \
-	do {                                                                   \
-		if (log_level >= 1)                                            \
-			printk(KERN_ERR "[NUVOLTA_1665] " fmt, ##__VA_ARGS__); \
-	} while (0)
+#define nuvolta_info(fmt, ...)							\
+do {										\
+	if (log_level >= 1)							\
+		printk(KERN_INFO "[NUVOLTA_1665] " fmt, ##__VA_ARGS__);	\
+} while (0)
 
-#define nuvolta_dbg(fmt, ...)                                                  \
-	do {                                                                   \
-		if (log_level >= 2)                                            \
-			printk(KERN_ERR "[NUVOLTA_1665] " fmt, ##__VA_ARGS__); \
-	} while (0)
+#define nuvolta_dbg(fmt, ...)							\
+do {										\
+	if (log_level >= 2)							\
+		printk(KERN_DEBUG "[NUVOLTA_1665] " fmt, ##__VA_ARGS__);	\
+} while (0)
 
 enum FW_UPDATE_CMD {
 	FW_UPDATE_NONE,
@@ -252,7 +253,6 @@ struct nuvolta_1665_chg {
 	struct delayed_work reverse_sent_state_work;
 	struct delayed_work reverse_chg_work;
 	struct delayed_work probe_fw_download_work;
-	struct delayed_work pen_check_work;
 	// lock
 	struct mutex wireless_chg_int_lock;
 	struct mutex reverse_op_lock;

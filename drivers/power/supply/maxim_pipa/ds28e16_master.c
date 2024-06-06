@@ -45,10 +45,6 @@ struct ds28e16_data {
 	int version;
 	int cycle_count;
 	bool batt_verified;
-#ifdef	CONFIG_FACTORY_BUILD
-	bool factory_enable;
-#endif
-
 	struct delayed_work	battery_verify_work;
 	struct power_supply *verify_psy;
 	struct power_supply_desc verify_psy_d;
@@ -69,7 +65,7 @@ unsigned char S_secret[32] = {
 unsigned char challenge[32] = {0x00};
 int auth_ANON = 1;
 int auth_BDCONST = 1;
-int pagenumber = 0;
+int pagenumber;
 
 // maxim define
 int tm = 1;
@@ -80,49 +76,53 @@ unsigned char last_result_byte = RESULT_SUCCESS;
 unsigned char MANID[2] = {0x00};
 
 // mi add
-unsigned char flag_mi_romid = 0;
-unsigned char flag_mi_status = 0;
-unsigned char flag_mi_page0_data = 0;
-unsigned char flag_mi_page1_data = 0;
-unsigned char flag_mi_counter = 0;
-unsigned char flag_mi_auth_result = 0;
+unsigned char flag_mi_romid;
+unsigned char flag_mi_status;
+unsigned char flag_mi_page0_data;
+unsigned char flag_mi_page1_data;
+unsigned char flag_mi_counter;
+unsigned char flag_mi_auth_result;
 unsigned char mi_romid[8] = {0x00};
 unsigned char mi_status[8] = {0x00};
 unsigned char mi_page0_data[16] = {0x00};
 unsigned char mi_page1_data[16] = {0x00};
 unsigned char mi_counter[16] = {0x00};
-int mi_auth_result = 0x00;
+int mi_auth_result;
 static bool batt_verified_result_from_uefi;
 static bool batt_chip_ok_result_from_uefi;
 
 static void set_sched_affinity_to_current(void)
 {
-    long ret;
-    int current_cpu;
+	long ret;
+	int current_cpu;
 
-    preempt_disable();
-    current_cpu = smp_processor_id();
-    ret = sched_setaffinity(CURRENT_DS28E16_TASK, cpumask_of(current_cpu));
-    preempt_enable();
-    if(ret) {
-        pr_info("Setting cpu affinity to current cpu failed(%ld) in %s.\n", ret, __func__);
-    } else {
-        pr_info("Setting cpu affinity to current cpu(%d) in %s.\n", current_cpu, __func__);
-    }
+	preempt_disable();
+	current_cpu = smp_processor_id();
+	ret = sched_setaffinity(CURRENT_DS28E16_TASK, cpumask_of(current_cpu));
+	preempt_enable();
+
+	if (ret)
+		ds_dbg("Setting cpu affinity to current cpu failed(%ld) in %s.\n",
+		       ret, __func__);
+	else
+		ds_dbg("Setting cpu affinity to current cpu(%d) in %s.\n",
+		       current_cpu, __func__);
 }
 
 static void set_sched_affinity_to_all(void)
 {
-    long ret;
-    cpumask_t dstp;
+	long ret;
+	cpumask_t dstp;
 
-    cpumask_setall(&dstp);
-    ret = sched_setaffinity(CURRENT_DS28E16_TASK, &dstp);
-    if(ret) {
-        pr_info("Setting cpu affinity to all valid cpus failed(%ld) in %s.\n", ret, __func__);
-    } else {
-        pr_info("Setting cpu affinity to all valid cpus in %s.\n", __func__);
-    }
+	cpumask_setall(&dstp);
+	ret = sched_setaffinity(CURRENT_DS28E16_TASK, &dstp);
+
+	if (ret)
+		ds_dbg("Setting cpu affinity to all valid cpus failed(%ld) in %s.\n",
+		       ret, __func__);
+	else
+		ds_dbg("Setting cpu affinity to all valid cpus in %s.\n",
+		       __func__);
 }
 
 unsigned char crc_low_first(unsigned char *ptr, unsigned char len)
@@ -160,7 +160,7 @@ short Read_RomID(unsigned char *RomID)
 
 	ds_dbg("Ready to write 0x33 to maxim IC!\n");
 	write_byte(CMD_READ_ROM);
-	Delay_us(10);
+	udelay(10);
 	for (i = 0; i < 8; i++)
 		RomID[i] = read_byte();
 
@@ -189,9 +189,9 @@ static int ds28el16_Read_RomID_retry(unsigned char *RomID)
 
 	set_sched_affinity_to_current();
 	for (i = 0; i < GET_ROM_ID_RETRY; i++) {
-		ds_info("read rom id communication start %d...\n", i);
+		ds_dbg("read rom id communication start %d...\n", i);
 
-		if (Read_RomID(RomID) == DS_TRUE){
+		if (Read_RomID(RomID) == DS_TRUE) {
 			set_sched_affinity_to_all();
 			return DS_TRUE;
 		}
@@ -206,7 +206,7 @@ static int ds28el16_get_page_status_retry(unsigned char *data)
 
 	set_sched_affinity_to_current();
 	for (i = 0; i < GET_BLOCK_STATUS_RETRY; i++) {
-		ds_info("read page status communication start... %d\n", i);
+		ds_dbg("read page status communication start... %d\n", i);
 
 		if (DS28E16_cmd_readStatus(data) == DS_TRUE) {
 			set_sched_affinity_to_all();
@@ -343,7 +343,7 @@ unsigned char *read_buf, int *read_len, int write_len)
 	// check for strong pull-up
 	if (delay_ms > 0) {
 		write_byte(CMD_RELEASE_BYTE);
-		Delay_us(1000*delay_ms);
+		udelay(1000*delay_ms);
 	}
 
 	read_byte();
@@ -971,7 +971,6 @@ static int ds28el16_do_authentication(struct ds28e16_data *data)
 {
 	int result = 0, i;
 
-	ds_log("%s enter\n", __func__);
 
 	set_sched_affinity_to_current();
 	for (i = 0; i < GET_VERIFY_RETRY; i++) {
@@ -1022,9 +1021,6 @@ static int verify_get_property(struct power_supply *psy, enum power_supply_prope
 	unsigned char pagedata[16] = {0x00};
 	unsigned char buf[50];
 	int ret;
-#ifdef	CONFIG_FACTORY_BUILD
-	static bool chip_ok_flag;
-#endif
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_VERIFY_MODEL_NAME:
@@ -1036,7 +1032,7 @@ static int verify_get_property(struct power_supply *psy, enum power_supply_prope
 		break;
 	case POWER_SUPPLY_PROP_AUTHEN_RESULT:
 		if (batt_verified_result_from_uefi) {
-                        val->intval = true;
+			val->intval = true;
 			ds_info("batt_verified_result_from_uefi is true\n");
 			break;
 		}
@@ -1058,13 +1054,6 @@ static int verify_get_property(struct power_supply *psy, enum power_supply_prope
 			return -EAGAIN;
 		break;
 	case POWER_SUPPLY_PROP_CHIP_OK:
-#ifdef CONFIG_FACTORY_BUILD
-		if (batt_chip_ok_result_from_uefi) {
-			val->intval = true;
-			ds_info("batt_chip_ok_result_from_uefi is true already\n");
-			break;
-		}
-#endif
 		ret = Read_RomID(mi_romid);
 		if (ret == ERROR_NO_DEVICE) {
 			ret = Read_RomID(mi_romid);
@@ -1083,23 +1072,10 @@ static int verify_get_property(struct power_supply *psy, enum power_supply_prope
 		ds_err("get chip_ok read RomID = %02x,%02x,%02x,%02x,%02x,%02x,%02x,%02x\n",
 				mi_romid[0], mi_romid[1], mi_romid[2], mi_romid[3],
 				mi_romid[4], mi_romid[5], mi_romid[6], mi_romid[7]);
-#ifdef CONFIG_FACTORY_BUILD
-		ds_err("CONFIG_FACTORY_BUILD, chip_ok_flag=%d.\n", chip_ok_flag);
-		if ((mi_romid[0] == 0x9f) && (mi_romid[6] == 0x04) && ((mi_romid[5] & 0xf0) == 0xf0)) {
-			val->intval = true;
-			if (data->factory_enable)
-				chip_ok_flag = true;
-		} else if (chip_ok_flag) {
-			val->intval = true;
-		} else {
-			val->intval = false;
-		}
-#else
 		if ((mi_romid[0] == 0x9f) && (mi_romid[6] == 0x04) && ((mi_romid[5] & 0xf0) == 0xf0))
 			val->intval = true;
 		else
 			val->intval = false;
-#endif
 		break;
 	case POWER_SUPPLY_PROP_DS_STATUS:
 		ret = DS28E16_cmd_readStatus(buf);
@@ -1265,16 +1241,11 @@ static int ds28e16_parse_dt(struct device *dev,
 	else if (error != -EINVAL)
 		pdata->version = val;
 
-#ifdef	CONFIG_FACTORY_BUILD
-	pdata->factory_enable = of_property_read_bool(np,
-			"mi,factory-enable");
-#endif
-
 	return 0;
 }
 
 // read data from file
-static ssize_t ds28e16_ds_Auth_Result_status_read(struct device *dev,
+static ssize_t ds28e16_ds_Auth_Result_show(struct device *dev,
 struct device_attribute *attr, char *buf)
 {
 	int result;
@@ -1304,7 +1275,7 @@ struct device_attribute *attr, char *buf)
 			"Authenticate failed : other reason.\n");
 }
 
-static ssize_t ds28e16_ds_romid_status_read(struct device *dev,
+static ssize_t ds28e16_ds_romid_show(struct device *dev,
 struct device_attribute *attr, char *buf)
 {
 	short status;
@@ -1323,7 +1294,7 @@ struct device_attribute *attr, char *buf)
 		ds_dbg("RomID = %02x,%02x,%02x,%02x,%02x,%02x,%02x,%02x\n",
 		RomID[0], RomID[1], RomID[2], RomID[3],
 		RomID[4], RomID[5], RomID[6], RomID[7]);
-		Delay_us(1000);
+		udelay(1000);
 	}
 	ds_log("test done\nsuccess time : %d\n", count);
 	return scnprintf(buf, PAGE_SIZE,
@@ -1332,7 +1303,7 @@ struct device_attribute *attr, char *buf)
 	RomID[4], RomID[5], RomID[6], RomID[7]);
 }
 
-static ssize_t ds28e16_ds_pagenumber_status_read(struct device *dev,
+static ssize_t ds28e16_ds_pagenumber_show(struct device *dev,
 struct device_attribute *attr, char *buf)
 {
 	return scnprintf(buf, PAGE_SIZE, "%02x\n", pagenumber);
@@ -1355,7 +1326,7 @@ const char *buf, size_t count)
 	return count;
 }
 
-static ssize_t ds28e16_ds_pagedata_status_read(struct device *dev,
+static ssize_t ds28e16_ds_pagedata_show(struct device *dev,
 struct device_attribute *attr, char *buf)
 {
 	int result;
@@ -1376,7 +1347,7 @@ struct device_attribute *attr, char *buf)
 		pagedata[4], pagedata[5], pagedata[6], pagedata[7],
 		pagedata[8], pagedata[9], pagedata[10], pagedata[11],
 		pagedata[12], pagedata[13], pagedata[14], pagedata[15]);
-		Delay_us(1000);
+		udelay(1000);
 	}
 	ds_log("test done\nsuccess time : %d\n", count);
 	return scnprintf(buf, PAGE_SIZE,
@@ -1416,7 +1387,7 @@ const char *buf, size_t count)
 	return count;
 }
 
-static ssize_t ds28e16_ds_time_status_read(struct device *dev,
+static ssize_t ds28e16_ds_time_show(struct device *dev,
 struct device_attribute *attr, char *buf)
 {
 	return scnprintf(buf, PAGE_SIZE, "%d\n", attr_trytimes);
@@ -1439,7 +1410,7 @@ const char *buf, size_t count)
 	return count;
 }
 
-static ssize_t ds28e16_ds_session_seed_status_read(struct device *dev,
+static ssize_t ds28e16_ds_session_seed_show(struct device *dev,
 struct device_attribute *attr, char *buf)
 {
 	return scnprintf(buf, PAGE_SIZE,
@@ -1475,7 +1446,7 @@ const char *buf, size_t count)
 	return count;
 }
 
-static ssize_t ds28e16_ds_challenge_status_read(struct device *dev,
+static ssize_t ds28e16_ds_challenge_show(struct device *dev,
 struct device_attribute *attr, char *buf)
 {
 	return scnprintf(buf, PAGE_SIZE,
@@ -1509,7 +1480,7 @@ const char *buf, size_t count)
 	return count;
 }
 
-static ssize_t ds28e16_ds_S_secret_status_read(struct device *dev,
+static ssize_t ds28e16_ds_S_secret_show(struct device *dev,
 struct device_attribute *attr, char *buf)
 {
 	return scnprintf(buf, PAGE_SIZE,
@@ -1543,7 +1514,7 @@ const char *buf, size_t count)
 	return count;
 }
 
-static ssize_t ds28e16_ds_auth_ANON_status_read(struct device *dev,
+static ssize_t ds28e16_ds_auth_ANON_show(struct device *dev,
 struct device_attribute *attr, char *buf)
 {
 	return scnprintf(buf, PAGE_SIZE, "%02x\n", auth_ANON);
@@ -1559,7 +1530,7 @@ const char *buf, size_t count)
 	return count;
 }
 
-static ssize_t ds28e16_ds_auth_BDCONST_status_read(struct device *dev,
+static ssize_t ds28e16_ds_auth_BDCONST_show(struct device *dev,
 struct device_attribute *attr, char *buf)
 {
 	return scnprintf(buf, PAGE_SIZE, "%02x\n", auth_BDCONST);
@@ -1575,7 +1546,7 @@ const char *buf, size_t count)
 	return count;
 }
 
-static ssize_t ds28e16_ds_readstatus_status_read(struct device *dev,
+static ssize_t ds28e16_ds_readstatus_show(struct device *dev,
 struct device_attribute *attr, char *buf)
 {
 	int result;
@@ -1597,7 +1568,7 @@ struct device_attribute *attr, char *buf)
 		status[4], status[5], status[6], status[7],
 		status[8], status[9], status[10], status[11],
 		status[12], status[13], status[14], status[15]);
-		Delay_us(1000);
+		udelay(1000);
 	}
 	ds_log("test done\nsuccess time : %d\n", count);
 	return scnprintf(buf, PAGE_SIZE,
@@ -1609,35 +1580,35 @@ struct device_attribute *attr, char *buf)
 }
 
 static DEVICE_ATTR(ds_readstatus, S_IRUGO,
-		ds28e16_ds_readstatus_status_read, NULL);
+		ds28e16_ds_readstatus_show, NULL);
 static DEVICE_ATTR(ds_romid, S_IRUGO,
-		ds28e16_ds_romid_status_read, NULL);
+		ds28e16_ds_romid_show, NULL);
 static DEVICE_ATTR(ds_pagenumber, S_IRUGO | S_IWUSR | S_IWGRP,
-		ds28e16_ds_pagenumber_status_read,
+		ds28e16_ds_pagenumber_show,
 		ds28e16_ds_pagenumber_store);
 static DEVICE_ATTR(ds_pagedata, S_IRUGO | S_IWUSR | S_IWGRP,
-		ds28e16_ds_pagedata_status_read,
+		ds28e16_ds_pagedata_show,
 		ds28e16_ds_pagedata_store);
 static DEVICE_ATTR(ds_time, S_IRUGO | S_IWUSR | S_IWGRP,
-		ds28e16_ds_time_status_read,
+		ds28e16_ds_time_show,
 		ds28e16_ds_time_store);
 static DEVICE_ATTR(ds_session_seed, S_IRUGO | S_IWUSR | S_IWGRP,
-		ds28e16_ds_session_seed_status_read,
+		ds28e16_ds_session_seed_show,
 		ds28e16_ds_session_seed_store);
 static DEVICE_ATTR(ds_challenge, S_IRUGO | S_IWUSR | S_IWGRP,
-		ds28e16_ds_challenge_status_read,
+		ds28e16_ds_challenge_show,
 		ds28e16_ds_challenge_store);
 static DEVICE_ATTR(ds_S_secret, S_IRUGO | S_IWUSR | S_IWGRP,
-		ds28e16_ds_S_secret_status_read,
+		ds28e16_ds_S_secret_show,
 		ds28e16_ds_S_secret_store);
 static DEVICE_ATTR(ds_auth_ANON, S_IRUGO | S_IWUSR | S_IWGRP,
-		ds28e16_ds_auth_ANON_status_read,
+		ds28e16_ds_auth_ANON_show,
 		ds28e16_ds_auth_ANON_store);
 static DEVICE_ATTR(ds_auth_BDCONST, S_IRUGO | S_IWUSR | S_IWGRP,
-		ds28e16_ds_auth_BDCONST_status_read,
+		ds28e16_ds_auth_BDCONST_show,
 		ds28e16_ds_auth_BDCONST_store);
 static DEVICE_ATTR(ds_Auth_Result, S_IRUGO,
-		ds28e16_ds_Auth_Result_status_read, NULL);
+		ds28e16_ds_Auth_Result_show, NULL);
 
 static struct attribute *ds_attributes[] = {
 	&dev_attr_ds_readstatus.attr,
@@ -1667,7 +1638,6 @@ static void battery_verify(struct work_struct *work)
 	struct ds28e16_data *data = container_of(work, struct ds28e16_data,
 							battery_verify_work.work);
 
-	ds_log("%s enter\n", __func__);
 	for (i = 0; i < GET_VERIFY_RETRY; i++) {
 		result = AuthenticateDS28E16(auth_ANON, auth_BDCONST, 0,
 			pagenumber, challenge, session_seed, S_secret);
@@ -1677,7 +1647,7 @@ static void battery_verify(struct work_struct *work)
 
 	if (result == DS_TRUE) {
 		data->batt_verified = 1;
-		ds_info("%s batt_verified = 1 \n", __func__);
+		ds_info("%s batt_verified = 1\n", __func__);
 	} else {
 		data->batt_verified = 0;
 		if (count < VERIFY_MAX_COUNT) {
@@ -1696,7 +1666,6 @@ static int ds28e16_probe(struct platform_device *pdev)
 	int retval = 0;
 	struct ds28e16_data *ds28e16_data;
 
-	ds_log("%s entry.", __func__);
 	ds_dbg("platform_device is %s", pdev->name);
 	if (strcmp(pdev->name, "soc:maxim_ds28e16") != 0)
 		return -ENODEV;
@@ -1804,29 +1773,27 @@ static struct platform_driver ds28e16_driver = {
 
 static int __init ds28e16_init(void)
 {
-	ds_log("%s entry.", __func__);
 
 	return platform_driver_register(&ds28e16_driver);
 }
 
 static void __exit ds28e16_exit(void)
 {
-	ds_log("%s entry.", __func__);
 	platform_driver_unregister(&ds28e16_driver);
 }
 
 static int __init early_parse_batt_verified_result(char *p)
 {
-	if (*p == '1') {
+	if (*p == '1')
 		batt_verified_result_from_uefi = true;
-	} else {
+	else
 		batt_verified_result_from_uefi = false;
-	}
-	if (*(p+1) == '1') {
+
+	if (*(p+1) == '1')
 		batt_chip_ok_result_from_uefi = true;
-	} else {
+	else
 		batt_chip_ok_result_from_uefi = false;
-	}
+
 	return 0;
 }
 early_param("androidboot.batt_verified_result", early_parse_batt_verified_result);

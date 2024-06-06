@@ -282,7 +282,7 @@ enum apdo_max_power {
 	APDO_MAX_33W = 33,   // most 33W project use 33w pps charger
 	APDO_MAX_40W = 40,   // only F1X use 40w pps charger
 	APDO_MAX_50W = 50,   // only j1(cmi project) use 50W pps(device support maxium 50w)
-	APDO_MAX_55W =55, // K2 K9B use 55w pps charger
+	APDO_MAX_55W = 55, // K2 K9B use 55w pps charger
 	APDO_MAX_65W = 65, //we have 65w pps which for j1(cmi), and also used for 120w(67w works in 65w)
 	APDO_MAX_67W = 67, //most useage now for dual charge pumps projects such as L3 L1 L1A L18
 	APDO_MAX_100W = 100, // Zimi car quick charger have 100w pps
@@ -590,7 +590,7 @@ struct smb_charger {
 	u32			sdam_base;
 	bool			pd_not_supported;
 	bool			batt_verified;
-        int                     fake_shipmode;
+	int                     fake_shipmode;
 	/* locks */
 	struct mutex		smb_lock;
 	struct mutex		ps_change_lock;
@@ -629,7 +629,7 @@ struct smb_charger {
 
 	/* notifiers */
 	struct notifier_block	nb;
-        struct  notifier_block reboot_notifier;
+	struct  notifier_block reboot_notifier;
 	/* parallel charging */
 	struct parallel_params	pl;
 	int smartBatVal;
@@ -758,21 +758,21 @@ struct smb_charger {
 	int			dc_temp_level;
 	int			dc_thermal_levels;
 	int			pps_thermal_level;
-	int 		*thermal_mitigation_dcp;
-	int 		*thermal_mitigation_qc2;
-	int 		*thermal_mitigation_pd_base;
-	int 		*thermal_mitigation_icl;
-	int 		*thermal_fcc_qc3_normal;
-	int 		*thermal_fcc_qc3_cp;
-	int 		*thermal_fcc_qc3_classb_cp;
-	int 		*thermal_fcc_pps_cp;
-	int 		*thermal_mitigation_dc;
-	int 		*thermal_mitigation_voice;
-	int 		*thermal_mitigation_epp;
-	int 		*thermal_mitigation_bpp_qc3;
-	int 		*thermal_mitigation_bpp_qc2;
-	int 		*thermal_mitigation_bpp;
-	int 		*thermal_mitigation_dc_20W;
+	int		*thermal_mitigation_dcp;
+	int		*thermal_mitigation_qc2;
+	int		*thermal_mitigation_pd_base;
+	int		*thermal_mitigation_icl;
+	int		*thermal_fcc_qc3_normal;
+	int		*thermal_fcc_qc3_cp;
+	int		*thermal_fcc_qc3_classb_cp;
+	int		*thermal_fcc_pps_cp;
+	int		*thermal_mitigation_dc;
+	int		*thermal_mitigation_voice;
+	int		*thermal_mitigation_epp;
+	int		*thermal_mitigation_bpp_qc3;
+	int		*thermal_mitigation_bpp_qc2;
+	int		*thermal_mitigation_bpp;
+	int		*thermal_mitigation_dc_20W;
 	int			*thermal_mitigation;
 	int			dcp_icl_ua;
 	int			fake_capacity;

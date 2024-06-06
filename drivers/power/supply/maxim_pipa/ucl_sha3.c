@@ -231,7 +231,7 @@ int ucl_sha3_finish(unsigned char *digest, ucl_sha3_ctx_t *ctx)
 
 	// SHA3 version
 	ctx->s[ctx->wordIndex] ^= (ctx->saved ^ ((unsigned long long) ((unsigned long long) (0x02 | (1 << 2)) << ((ctx->byteIndex) * 8))));
-	ctx->s[(int)SHA3_SPONGE_WORDS - ctx->capacityWords - 1] ^= (unsigned long long)0x8000000000000000UL;
+	ctx->s[(int)SHA3_SPONGE_WORDS - ctx->capacityWords - 1] ^= 0x8000000000000000ULL;
 	kcf(ctx->s);
 
 	if (digest == NULL)

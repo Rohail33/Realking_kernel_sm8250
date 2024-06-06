@@ -153,7 +153,7 @@ do {											\
 		printk(KERN_ERR "[bq2597x-SLAVE]:%s:" fmt, __func__, ##__VA_ARGS__);	\
 	else										\
 		printk(KERN_ERR "[bq2597x-STANDALONE]:%s:" fmt, __func__, ##__VA_ARGS__);\
-} while (0);
+} while (0)
 
 #define bq_info(fmt, ...)								\
 do {											\
@@ -163,7 +163,7 @@ do {											\
 		printk(KERN_INFO "[bq2597x-SLAVE]:%s:" fmt, __func__, ##__VA_ARGS__);	\
 	else										\
 		printk(KERN_INFO "[bq2597x-STANDALONE]:%s:" fmt, __func__, ##__VA_ARGS__);\
-} while (0);
+} while (0)
 
 #define bq_dbg(fmt, ...)								\
 do {											\
@@ -173,7 +173,7 @@ do {											\
 		printk(KERN_DEBUG "[bq2597x-SLAVE]:%s:" fmt, __func__, ##__VA_ARGS__);	\
 	else										\
 		printk(KERN_DEBUG "[bq2597x-STANDALONE]:%s:" fmt, __func__, ##__VA_ARGS__);\
-} while (0);
+} while (0)
 
 enum hvdcp3_type {
 	HVDCP3_NONE = 0,
@@ -1108,10 +1108,8 @@ static int bq2597x_get_adc_data(struct bq2597x *bq, int channel,  int *result)
 		*result = t;
 		/* vbat need calibration read by NU2105 */
 		if (channel == ADC_VBAT) {
-			kernel_neon_begin();
-			t = t * (1 + 1.803 * 0.001);
+			t = t * (NU2105_SCALE_FACTOR + NU2105_CALIBRATION_FACTOR) / NU2105_SCALE_FACTOR;
 			*result = t;
-			kernel_neon_end();
 		}
 	} else {
 		ret = bq2597x_read_word(bq, ADC_REG_BASE + (channel << 1), &val);
@@ -1122,11 +1120,8 @@ static int bq2597x_get_adc_data(struct bq2597x *bq, int channel,  int *result)
 		t |= (val >> 8) & 0xFF;
 		*result = t;
 
-		if (bq->chip_vendor == SC8551) {
-			kernel_neon_begin();
+		if (bq->chip_vendor == SC8551)
 			*result = (int)(t * sc8551_adc_lsb[channel]);
-			kernel_neon_end();
-		}
 	}
 
 	return 0;
@@ -1448,7 +1443,7 @@ static int bq2597x_get_work_mode(struct bq2597x *bq, int *mode)
 	else
 		*mode = BQ25970_ROLE_STDALONE;
 
-	bq_info("work mode:%s\n", *mode == BQ25970_ROLE_STDALONE ? "Standalone" :
+	bq_info("work mode: %s\n", *mode == BQ25970_ROLE_STDALONE ? "Standalone" :
 			(*mode == BQ25970_ROLE_SLAVE ? "Slave" : "Master"));
 	return ret;
 }
@@ -1463,7 +1458,7 @@ static int bq2597x_detect_device(struct bq2597x *bq)
 		bq->part_no = (data & BQ2597X_DEV_ID_MASK);
 		bq->part_no >>= BQ2597X_DEV_ID_SHIFT;
 
-		bq_info("detect device:%d\n", data);
+		bq_info("detect device: %d\n", data);
 		if (data == SC8551_DEVICE_ID || data == SC8551A_DEVICE_ID)
 			bq->chip_vendor = SC8551;
 		else if (data == NU2105_DEVICE_ID)
@@ -1640,7 +1635,6 @@ static int bq2597x_parse_dt(struct bq2597x *bq, struct device *dev)
 		return ret;
 	}*/
 
-    bq_info("Verity dtsi: %d\n",bq->cfg->ac_ovp_th);
 	return 0;
 }
 
@@ -1761,7 +1755,7 @@ static int bq2597x_set_bus_protection(struct bq2597x *bq, int hvdcp3_type)
 	/* just return now, to do later */
 	//return 0;
 
-	pr_err("hvdcp3_type: %d\n", hvdcp3_type);
+	bq_info("%s: hvdcp3_type: %d\n", __func__, hvdcp3_type);
 	if (hvdcp3_type == HVDCP3_CLASSA_18W) {
 		bq2597x_set_busovp_th(bq, BUS_OVP_FOR_QC);
 		bq2597x_set_busovp_alarm_th(bq, BUS_OVP_ALARM_FOR_QC);
@@ -1895,7 +1889,7 @@ static int bq2597x_init_device(struct bq2597x *bq)
 	bq2597x_enable_wdt(bq, false);
 	bq2597x_set_ss_timeout(bq, 1500);
 	bq2597x_set_ibus_ucp_thr(bq, 300);
-	bq2597x_enable_ucp(bq,1);
+	bq2597x_enable_ucp(bq, 1);
 	bq2597x_set_sense_resistor(bq, bq->cfg->sense_r_mohm);
 
 	bq2597x_init_protection(bq);
@@ -1903,9 +1897,9 @@ static int bq2597x_init_device(struct bq2597x *bq)
 	bq2597x_init_int_src(bq);
 
 	ret = bq2597x_read_byte(bq, BQ2597X_REG_13, &val);
-	bq_err("Bq device ID = 0x%02X\n", val);
+	bq_info("Bq device ID = 0x%02X\n", val);
 	if (!ret && val == BQ25968_DEV_ID) {
-		bq_err("Bq device ID = 0x%02X\n", val);
+		bq_err("Invalid Bq device ID = 0x%02X\n", val);
 		return 0;
 	}
 
@@ -1924,7 +1918,7 @@ static int bq2597x_set_present(struct bq2597x *bq, bool present)
 	return 0;
 }
 
-static ssize_t bq2597x_show_registers(struct device *dev,
+static ssize_t registers_show(struct device *dev,
 				struct device_attribute *attr, char *buf)
 {
 	struct bq2597x *bq = dev_get_drvdata(dev);
@@ -1949,7 +1943,7 @@ static ssize_t bq2597x_show_registers(struct device *dev,
 	return idx;
 }
 
-static ssize_t bq2597x_store_register(struct device *dev,
+static ssize_t registers_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct bq2597x *bq = dev_get_drvdata(dev);
@@ -1964,13 +1958,13 @@ static ssize_t bq2597x_store_register(struct device *dev,
 	return count;
 }
 
-static DEVICE_ATTR(registers, 0660, bq2597x_show_registers, bq2597x_store_register);
+static DEVICE_ATTR_RW(registers);
 
 #ifdef CONFIG_DUAL_BQ2597X
-static ssize_t bq2597x_show_diff_ti_bus_current(struct device *dev,struct device_attribute *attr,char *buf)
+static ssize_t diff_ti_bus_current_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct bq2597x *bq = dev_get_drvdata(dev);
-	static struct power_supply *bq2597x_slave = NULL;
+	static struct power_supply *bq2597x_slave;
 	int diff_ti_bus_current = -1;
 	int ti_bus_current_master = 0;
 	int ti_bus_current_slave = 0;
@@ -1980,19 +1974,19 @@ static ssize_t bq2597x_show_diff_ti_bus_current(struct device *dev,struct device
 	union power_supply_propval pval = {
 		0,
 	};
-	if(bq->dev_role == BQ25970_ROLE_MASTER){
+	if (bq->dev_role == BQ25970_ROLE_MASTER) {
 		/*get bq2597x_slave ti_bus_current*/
-		if(!bq2597x_slave){
+		if (!bq2597x_slave) {
 			bq2597x_slave = power_supply_get_by_name("bq2597x-slave");
-			if(!bq2597x_slave){
-				bq_dbg("failed get bq2597x-slave \n");
+			if (!bq2597x_slave) {
+				bq_dbg("failed get bq2597x-slave\n");
 				return 0;
 			}
-			bq_dbg("success get bq2597x-slave \n");
+			bq_dbg("success get bq2597x-slave\n");
 		}
-		rc = power_supply_get_property(bq2597x_slave,POWER_SUPPLY_PROP_TI_BUS_CURRENT,&pval);
+		rc = power_supply_get_property(bq2597x_slave, POWER_SUPPLY_PROP_TI_BUS_CURRENT, &pval);
 		if (rc < 0) {
-			bq_dbg("failed get bq2597x-slave ti_bus_current \n");
+			bq_dbg("failed get bq2597x-slave ti_bus_current\n");
 			return -EINVAL;
 		}
 		ti_bus_current_slave = pval.intval;
@@ -2003,7 +1997,7 @@ static ssize_t bq2597x_show_diff_ti_bus_current(struct device *dev,struct device
 		else
 			ti_bus_current_master = bq->ibus_curr;
 		/* get diff_ti_bus_current = ti_bus_current_master - ti_bus_current_slave */
-		if(ti_bus_current_master > ti_bus_current_slave)
+		if (ti_bus_current_master > ti_bus_current_slave)
 			diff_ti_bus_current = ti_bus_current_master - ti_bus_current_slave;
 		else
 			diff_ti_bus_current = ti_bus_current_slave - ti_bus_current_master;
@@ -2013,7 +2007,7 @@ static ssize_t bq2597x_show_diff_ti_bus_current(struct device *dev,struct device
 	len = snprintf(buf, 1024, "%d\n", diff_ti_bus_current);
 	return len;
 }
-static DEVICE_ATTR(diff_ti_bus_current,0660,bq2597x_show_diff_ti_bus_current,NULL);
+static DEVICE_ATTR_RO(diff_ti_bus_current);
 #endif
 static struct attribute *bq2597x_attributes[] = {
 	&dev_attr_registers.attr,
@@ -2395,7 +2389,6 @@ static void bq2597x_check_fault_status(struct bq2597x *bq)
 	mutex_unlock(&bq->data_lock);
 }
 
-
 static int bq2597x_check_vbus_error_status(struct bq2597x *bq)
 {
 	int ret;
@@ -2530,10 +2523,10 @@ static int try_to_find_i2c_regess(struct bq2597x *bq)
 					bq->client->addr, ori_reg);
 			//ln8000_soft_reset(info);
 			return 1;
-		} else {
-			bq_err("can't access regess(0x%02x)(ori=0x%02x).\n",
-					bq->client->addr, ori_reg);
 		}
+
+		bq_err("can't access regess(0x%02x)(ori=0x%02x).\n",
+				bq->client->addr, ori_reg);
 	}
 
 	bq->client->addr = ori_reg;
@@ -2554,7 +2547,7 @@ static int bq2597x_charger_probe(struct i2c_client *client,
 {
 	struct bq2597x *bq;
 	int ret;
-    bq_err("enter cp successfully-cxl");
+
 	bq = devm_kzalloc(&client->dev, sizeof(struct bq2597x), GFP_KERNEL);
 	if (!bq)
 		return -ENOMEM;
@@ -2671,7 +2664,7 @@ static int bq2597x_suspend(struct device *dev)
 	bq->resume_completed = false;
 	mutex_unlock(&bq->irq_complete);
 	bq2597x_enable_adc(bq, false);
-	bq_err("Suspend successfully!");
+	bq_info("Suspend successfully!");
 
 	return 0;
 }
@@ -2705,7 +2698,7 @@ static int bq2597x_resume(struct device *dev)
 	}
 	bq2597x_enable_adc(bq, true);
 	power_supply_changed(bq->fc2_psy);
-	bq_err("Resume successfully!");
+	bq_info("Resume successfully!");
 
 	return 0;
 }
@@ -2769,4 +2762,3 @@ module_i2c_driver(bq2597x_charger_driver);
 MODULE_DESCRIPTION("TI BQ2597x Charger Driver");
 MODULE_LICENSE("GPL v2");
 MODULE_AUTHOR("Texas Instruments");
-

@@ -36,21 +36,18 @@
 
 static int log_level = 1;
 static struct nuvolta_1665_chg *g_chip;
-static struct wls_fw_parameters g_wls_fw_data = { 0 };
+static struct wls_fw_parameters g_wls_fw_data = {0};
 static int last_valid_pen_soc = -1;
-static int pen_soc_count = 0;
+static int pen_soc_count;
 static u8 sram_buffer[256];
-static int curr_count = 0;
+static int curr_count;
 
-static int nuvolta_1665_set_enable_mode(struct nuvolta_1665_chg *chip,
-					bool enable);
-static int nuvolta_1665_set_reverse_chg_mode(struct nuvolta_1665_chg *chip,
-					     int enable);
+static int nuvolta_1665_set_enable_mode(struct nuvolta_1665_chg *chip, bool enable);
+static int nuvolta_1665_set_reverse_chg_mode(struct nuvolta_1665_chg *chip, int enable);
 static int tx_info_update(struct nuvolta_1665_chg *chip, u8 *buff);
 static int fw_crc_chk(struct nuvolta_1665_chg *chip);
 static int read_fw_version(struct nuvolta_1665_chg *chip, u8 *version);
-static int nuvolta_1665_download_fw(struct nuvolta_1665_chg *chip,
-				    bool power_on, bool force);
+static int nuvolta_1665_download_fw(struct nuvolta_1665_chg *chip, bool power_on, bool force);
 static int nuvolta_1665_get_reverse_soc(struct nuvolta_1665_chg *chip);
 
 static struct regmap_config nuvolta_1665_regmap_config = {
@@ -60,234 +57,324 @@ static struct regmap_config nuvolta_1665_regmap_config = {
 };
 
 static struct params_t fod_params_l2_50W[] = {
-	{ .gain = 0, .offset = 13 }, { .gain = 0, .offset = 9 },
-	{ .gain = 0, .offset = 9 },  { .gain = 0, .offset = 8 },
-	{ .gain = 0, .offset = 10 }, { .gain = 0, .offset = 10 },
-	{ .gain = 0, .offset = 15 }, { .gain = 0, .offset = 16 },
-	{ .gain = 3, .offset = 7 },  { .gain = 3, .offset = 5 },
-	{ .gain = 1, .offset = 5 }
+	{.gain = 0,    .offset = 13},
+	{.gain = 0,    .offset = 9},
+	{.gain = 0,    .offset = 9},
+	{.gain = 0,    .offset = 8},
+	{.gain = 0,    .offset = 10},
+	{.gain = 0,    .offset = 10},
+	{.gain = 0,    .offset = 15},
+	{.gain = 0,    .offset = 16},
+	{.gain = 3,    .offset = 7},
+	{.gain = 3,    .offset = 5},
+	{.gain = 1,    .offset = 5}
 };
 
 static struct params_t fod_params_k1_80W_27V[] = {
-	{ .gain = 0, .offset = 30 }, { .gain = 0, .offset = 24 },
-	{ .gain = 0, .offset = 23 }, { .gain = 0, .offset = 38 },
-	{ .gain = 0, .offset = 23 }, { .gain = 0, .offset = 20 },
-	{ .gain = 0, .offset = 14 }, { .gain = 0, .offset = 14 },
-	{ .gain = 0, .offset = 17 }, { .gain = 0, .offset = 13 },
-	{ .gain = 0, .offset = 13 }
+	{.gain = 0,   .offset = 30},
+	{.gain = 0, .offset = 24},
+	{.gain = 0,    .offset = 23},
+	{.gain = 0,    .offset = 38},
+	{.gain = 0,    .offset = 23},
+	{.gain = 0,    .offset = 20},
+	{.gain = 0,    .offset = 14},
+	{.gain = 0,    .offset = 14},
+	{.gain = 0,    .offset = 17},
+	{.gain = 0,    .offset = 13},
+	{.gain = 0,    .offset = 13}
 };
 
 static struct params_t fod_params_k1_80W[] = {
-	{ .gain = 0, .offset = 15 }, { .gain = 0, .offset = 6 },
-	{ .gain = 0, .offset = 7 },  { .gain = 0, .offset = 15 },
-	{ .gain = 0, .offset = 20 }, { .gain = 0, .offset = 29 },
-	{ .gain = 0, .offset = 32 }, { .gain = 3, .offset = 19 },
-	{ .gain = 5, .offset = 17 }, { .gain = 7, .offset = 5 },
-	{ .gain = 7, .offset = 5 }
+	{.gain = 0,    .offset = 15},
+	{.gain = 0,    .offset = 6},
+	{.gain = 0,    .offset = 7},
+	{.gain = 0,    .offset = 15},
+	{.gain = 0,    .offset = 20},
+	{.gain = 0,    .offset = 29},
+	{.gain = 0,    .offset = 32},
+	{.gain = 3,    .offset = 19},
+	{.gain = 5,    .offset = 17},
+	{.gain = 7,    .offset = 5},
+	{.gain = 7,    .offset = 5}
 };
 
 static struct params_t fod_params_k8_100W[] = {
-	{ .gain = 0, .offset = 15 }, { .gain = 0, .offset = 6 },
-	{ .gain = 0, .offset = 7 },  { .gain = 0, .offset = 11 },
-	{ .gain = 0, .offset = 17 }, { .gain = 0, .offset = 23 },
-	{ .gain = 0, .offset = 30 }, { .gain = 4, .offset = 18 },
-	{ .gain = 5, .offset = 17 }, { .gain = 7, .offset = 6 },
-	{ .gain = 7, .offset = 1 }
+	{.gain = 0,    .offset = 15},
+	{.gain = 0,    .offset = 6},
+	{.gain = 0,    .offset = 7},
+	{.gain = 0,    .offset = 11},
+	{.gain = 0,    .offset = 17},
+	{.gain = 0,    .offset = 23},
+	{.gain = 0,    .offset = 30},
+	{.gain = 4,    .offset = 18},
+	{.gain = 5,    .offset = 17},
+	{.gain = 7,    .offset = 6},
+	{.gain = 7,    .offset = 1}
 };
 
 static struct params_t fod_params_moving_20W[] = {
-	{ .gain = 0, .offset = 9 }, { .gain = 0, .offset = 1 },
-	{ .gain = 0, .offset = 2 }, { .gain = 0, .offset = 1 },
-	{ .gain = 0, .offset = 5 }, { .gain = 0, .offset = 0 },
-	{ .gain = 0, .offset = 0 }, { .gain = 0, .offset = 0 },
-	{ .gain = 0, .offset = 0 }, { .gain = 0, .offset = 0 },
-	{ .gain = 0, .offset = 0 }
+	{.gain = 0,    .offset = 9},
+	{.gain = 0,    .offset = 1},
+	{.gain = 0,    .offset = 2},
+	{.gain = 0,    .offset = 1},
+	{.gain = 0,    .offset = 5},
+	{.gain = 0,    .offset = 0},
+	{.gain = 0,    .offset = 0},
+	{.gain = 0,    .offset = 0},
+	{.gain = 0,    .offset = 0},
+	{.gain = 0,    .offset = 0},
+	{.gain = 0,    .offset = 0}
 };
 
 static struct params_t fod_params_j1s_55W[] = {
-	{ .gain = 0, .offset = 11 }, { .gain = 0, .offset = 11 },
-	{ .gain = 0, .offset = 8 },  { .gain = 0, .offset = 10 },
-	{ .gain = 0, .offset = 8 },  { .gain = 0, .offset = 11 },
-	{ .gain = 0, .offset = 11 }, { .gain = 0, .offset = 15 },
-	{ .gain = 0, .offset = 22 }, { .gain = 0, .offset = 15 },
-	{ .gain = 0, .offset = 12 }
+	{.gain = 0,    .offset = 11},
+	{.gain = 0,    .offset = 11},
+	{.gain = 0,    .offset = 8},
+	{.gain = 0,    .offset = 10},
+	{.gain = 0,    .offset = 8},
+	{.gain = 0,    .offset = 11},
+	{.gain = 0,    .offset = 11},
+	{.gain = 0,    .offset = 15},
+	{.gain = 0,    .offset = 22},
+	{.gain = 0,    .offset = 15},
+	{.gain = 0,    .offset = 12}
 };
 
 static struct params_t fod_params_white_stand_30W[] = {
-	{ .gain = 0, .offset = 13 }, { .gain = 0, .offset = 10 },
-	{ .gain = 0, .offset = 9 },  { .gain = 0, .offset = 11 },
-	{ .gain = 0, .offset = 17 }, { .gain = 0, .offset = 19 },
-	{ .gain = 0, .offset = 22 }, { .gain = 0, .offset = 22 },
-	{ .gain = 0, .offset = 22 }, { .gain = 0, .offset = 10 },
-	{ .gain = 0, .offset = 10 }
+	{.gain = 0,    .offset = 13},
+	{.gain = 0,    .offset = 10},
+	{.gain = 0,    .offset = 9},
+	{.gain = 0,    .offset = 11},
+	{.gain = 0,    .offset = 17},
+	{.gain = 0,    .offset = 19},
+	{.gain = 0,    .offset = 22},
+	{.gain = 0,    .offset = 22},
+	{.gain = 0,    .offset = 22},
+	{.gain = 0,    .offset = 10},
+	{.gain = 0,    .offset = 10}
 };
 
 static struct params_t fod_params_bluetooth_30W[] = {
-	{ .gain = 0, .offset = 8 },  { .gain = 0, .offset = 11 },
-	{ .gain = 0, .offset = 11 }, { .gain = 0, .offset = 14 },
-	{ .gain = 0, .offset = 22 }, { .gain = 0, .offset = 27 },
-	{ .gain = 0, .offset = 28 }, { .gain = 0, .offset = 28 },
-	{ .gain = 0, .offset = 10 }, { .gain = 0, .offset = 10 },
-	{ .gain = 0, .offset = 10 }
+	{.gain = 0,    .offset = 8},
+	{.gain = 0,    .offset = 11},
+	{.gain = 0,    .offset = 11},
+	{.gain = 0,    .offset = 14},
+	{.gain = 0,    .offset = 22},
+	{.gain = 0,    .offset = 27},
+	{.gain = 0,    .offset = 28},
+	{.gain = 0,    .offset = 28},
+	{.gain = 0,    .offset = 10},
+	{.gain = 0,    .offset = 10},
+	{.gain = 0,    .offset = 10}
 };
 
 static struct params_t fod_params_zimi_20W[] = {
-	{ .gain = 0, .offset = 8 },  { .gain = 0, .offset = 10 },
-	{ .gain = 0, .offset = 12 }, { .gain = 0, .offset = 14 },
-	{ .gain = 0, .offset = 16 }, { .gain = 0, .offset = 18 },
-	{ .gain = 0, .offset = 0 },  { .gain = 0, .offset = 0 },
-	{ .gain = 0, .offset = 0 },  { .gain = 0, .offset = 0 },
-	{ .gain = 0, .offset = 0 }
+	{.gain = 0,    .offset = 8},
+	{.gain = 0,    .offset = 10},
+	{.gain = 0,    .offset = 12},
+	{.gain = 0,    .offset = 14},
+	{.gain = 0,    .offset = 16},
+	{.gain = 0,    .offset = 18},
+	{.gain = 0,    .offset = 0},
+	{.gain = 0,    .offset = 0},
+	{.gain = 0,    .offset = 0},
+	{.gain = 0,    .offset = 0},
+	{.gain = 0,    .offset = 0}
 };
 
 static struct params_t fod_params_white_20W[] = {
-	{ .gain = 0, .offset = 14 }, { .gain = 0, .offset = 10 },
-	{ .gain = 0, .offset = 13 }, { .gain = 0, .offset = 18 },
-	{ .gain = 0, .offset = 20 }, { .gain = 0, .offset = 21 },
-	{ .gain = 0, .offset = 21 }, { .gain = 0, .offset = 10 },
-	{ .gain = 0, .offset = 0 },  { .gain = 0, .offset = 0 },
-	{ .gain = 0, .offset = 0 }
+	{.gain = 0,    .offset = 14},
+	{.gain = 0,    .offset = 10},
+	{.gain = 0,    .offset = 13},
+	{.gain = 0,    .offset = 18},
+	{.gain = 0,    .offset = 20},
+	{.gain = 0,    .offset = 21},
+	{.gain = 0,    .offset = 21},
+	{.gain = 0,    .offset = 10},
+	{.gain = 0,    .offset = 0},
+	{.gain = 0,    .offset = 0},
+	{.gain = 0,    .offset = 0}
 };
 
 static struct params_t fod_params_power_bank_30W[] = {
-	{ .gain = 0, .offset = 2 },  { .gain = 0, .offset = 0 },
-	{ .gain = 0, .offset = 0 },  { .gain = 0, .offset = 3 },
-	{ .gain = 0, .offset = 13 }, { .gain = 0, .offset = 23 },
-	{ .gain = 0, .offset = 30 }, { .gain = 0, .offset = 0 },
-	{ .gain = 0, .offset = 0 },  { .gain = 0, .offset = 0 },
-	{ .gain = 0, .offset = 0 }
+	{.gain = 0,    .offset = 2},
+	{.gain = 0,    .offset = 0},
+	{.gain = 0,    .offset = 0},
+	{.gain = 0,    .offset = 3},
+	{.gain = 0,    .offset = 13},
+	{.gain = 0,    .offset = 23},
+	{.gain = 0,    .offset = 30},
+	{.gain = 0,    .offset = 0},
+	{.gain = 0,    .offset = 0},
+	{.gain = 0,    .offset = 0},
+	{.gain = 0,    .offset = 0}
 };
 
 static struct params_t fod_params_zimi_car_20W[] = {
-	{ .gain = 0, .offset = 15 }, { .gain = 0, .offset = 15 },
-	{ .gain = 0, .offset = 16 }, { .gain = 0, .offset = 22 },
-	{ .gain = 0, .offset = 15 }, { .gain = 0, .offset = 0 },
-	{ .gain = 0, .offset = 0 },  { .gain = 0, .offset = 0 },
-	{ .gain = 0, .offset = 0 },  { .gain = 0, .offset = 0 },
-	{ .gain = 0, .offset = 0 }
+	{.gain = 0,    .offset = 15},
+	{.gain = 0,    .offset = 15},
+	{.gain = 0,    .offset = 16},
+	{.gain = 0,    .offset = 22},
+	{.gain = 0,    .offset = 15},
+	{.gain = 0,    .offset = 0},
+	{.gain = 0,    .offset = 0},
+	{.gain = 0,    .offset = 0},
+	{.gain = 0,    .offset = 0},
+	{.gain = 0,    .offset = 0},
+	{.gain = 0,    .offset = 0}
 };
 
 static struct params_t fod_params_multcoil_20W[] = {
-	{ .gain = 0, .offset = 8 },  { .gain = 0, .offset = 6 },
-	{ .gain = 0, .offset = 8 },  { .gain = 0, .offset = 10 },
-	{ .gain = 0, .offset = 12 }, { .gain = 0, .offset = 14 },
-	{ .gain = 0, .offset = 0 },  { .gain = 0, .offset = 0 },
-	{ .gain = 0, .offset = 0 },  { .gain = 0, .offset = 0 },
-	{ .gain = 0, .offset = 0 }
+	{.gain = 0,    .offset = 8},
+	{.gain = 0,    .offset = 6},
+	{.gain = 0,    .offset = 8},
+	{.gain = 0,    .offset = 10},
+	{.gain = 0,    .offset = 12},
+	{.gain = 0,    .offset = 14},
+	{.gain = 0,    .offset = 0},
+	{.gain = 0,    .offset = 0},
+	{.gain = 0,    .offset = 0},
+	{.gain = 0,    .offset = 0},
+	{.gain = 0,    .offset = 0}
 };
 
 static struct params_t fod_params_bpp_plus[] = {
-	{ .gain = 0, .offset = 10 }, { .gain = 0, .offset = 10 },
-	{ .gain = 0, .offset = 11 }, { .gain = 0, .offset = 12 },
-	{ .gain = 0, .offset = 12 },
+	{.gain = 0,    .offset = 10},
+	{.gain = 0,    .offset = 10},
+	{.gain = 0,    .offset = 11},
+	{.gain = 0,    .offset = 12},
+	{.gain = 0,    .offset = 12},
 };
 
 static struct params_t fod_params_default[] = {
-	{ .gain = 0, .offset = 15 }, { .gain = 0, .offset = 15 },
-	{ .gain = 0, .offset = 16 }, { .gain = 0, .offset = 22 },
-	{ .gain = 0, .offset = 22 }, { .gain = 0, .offset = 29 },
-	{ .gain = 0, .offset = 32 }, { .gain = 4, .offset = 18 },
-	{ .gain = 5, .offset = 17 }, { .gain = 7, .offset = 6 },
-	{ .gain = 7, .offset = 5 }
+	{.gain = 0,    .offset = 15},
+	{.gain = 0,    .offset = 15},
+	{.gain = 0,    .offset = 16},
+	{.gain = 0,    .offset = 22},
+	{.gain = 0,    .offset = 22},
+	{.gain = 0,    .offset = 29},
+	{.gain = 0,    .offset = 32},
+	{.gain = 4,    .offset = 18},
+	{.gain = 5,    .offset = 17},
+	{.gain = 7,    .offset = 6},
+	{.gain = 7,    .offset = 5}
 };
 
 //bpp plus, no care UUID
 static struct fod_params_t fuda1651_bpp_plus_fod_param = {
 	.type = FOD_PARAM_BPP_PLUS,
-	.length = sizeof(fod_params_bpp_plus) / sizeof(fod_params_bpp_plus[0]),
-	.uuid = { 0x00, 0x00, 0x00, 0x00 },
+	.length = ARRAY_SIZE(fod_params_bpp_plus),
+	.uuid = {0x00, 0x00, 0x00, 0x00},
 	.params = fod_params_bpp_plus
 };
 
 //default fod, no care UUID
 static struct fod_params_t fuda1651_fod_param_default = {
 	.type = FOD_PARAM_20V,
-	.length = sizeof(fod_params_default) / sizeof(fod_params_default[0]),
-	.uuid = { 0x00, 0x00, 0x00, 0x00 },
+	.length = ARRAY_SIZE(fod_params_default),
+	.uuid = {0x00, 0x00, 0x00, 0x00},
 	.params = fod_params_default
 };
 
 static struct fod_params_t fuda1651_fod_params[] = {
-	{ //l2_50w
-	  .type = FOD_PARAM_20V,
-	  .length = sizeof(fod_params_l2_50W) / sizeof(fod_params_l2_50W[0]),
-	  .uuid = { 0x09, 0x01, 0x09, 0x01 },
-	  .params = fod_params_l2_50W },
-	{ //k1_80w 20V
-	  .type = FOD_PARAM_20V,
-	  .length = sizeof(fod_params_k1_80W) / sizeof(fod_params_k1_80W[0]),
-	  .uuid = { 0x09, 0x01, 0x09, 0x04 },
-	  .params = fod_params_k1_80W },
-	{ //k1_80w 27V
-	  .type = FOD_PARAM_27V,
-	  .length = sizeof(fod_params_k1_80W_27V) /
-		    sizeof(fod_params_k1_80W_27V[0]),
-	  .uuid = { 0x09, 0x01, 0x09, 0x04 },
-	  .params = fod_params_k1_80W_27V },
-	{ //k8_100w 20V
-	  .type = FOD_PARAM_20V,
-	  .length = sizeof(fod_params_k8_100W) / sizeof(fod_params_k8_100W[0]),
-	  .uuid = { 0x09, 0x01, 0x09, 0x0C },
-	  .params = fod_params_k8_100W },
-	{ //j1s_55w
-	  .type = FOD_PARAM_20V,
-	  .length = sizeof(fod_params_j1s_55W) / sizeof(fod_params_j1s_55W[0]),
-	  .uuid = { 0x09, 0x01, 0x01, 0x0b },
-	  .params = fod_params_j1s_55W },
-	{ //white_stand_30w
-	  .type = FOD_PARAM_20V,
-	  .length = sizeof(fod_params_white_stand_30W) /
-		    sizeof(fod_params_white_stand_30W[0]),
-	  .uuid = { 0x09, 0x01, 0x04, 0x07 },
-	  .params = fod_params_white_stand_30W },
-	{ //bluetooth_30w
-	  .type = FOD_PARAM_20V,
-	  .length = sizeof(fod_params_bluetooth_30W) /
-		    sizeof(fod_params_bluetooth_30W[0]),
-	  .uuid = { 0x09, 0x08, 0x06, 0x07 },
-	  .params = fod_params_bluetooth_30W },
-	{ //moving_20w
-	  .type = FOD_PARAM_20V,
-	  .length = sizeof(fod_params_moving_20W) /
-		    sizeof(fod_params_moving_20W[0]),
-	  .uuid = { 0x09, 0x01, 0x05, 0x06 },
-	  .params = fod_params_moving_20W },
-	{ //zimi_black_20w
-	  .type = FOD_PARAM_20V,
-	  .length =
-		  sizeof(fod_params_zimi_20W) / sizeof(fod_params_zimi_20W[0]),
-	  .uuid = { 0x09, 0x08, 0x01, 0x08 },
-	  .params = fod_params_zimi_20W },
-	{ //white_20W
-	  .type = FOD_PARAM_20V,
-	  .length = sizeof(fod_params_white_20W) /
-		    sizeof(fod_params_white_20W[0]),
-	  .uuid = { 0x06, 0x01, 0x01, 0x01 },
-	  .params = fod_params_white_20W },
-	{ //power_bank_20w_30W
-	  .type = FOD_PARAM_20V,
-	  .length = sizeof(fod_params_power_bank_30W) /
-		    sizeof(fod_params_power_bank_30W[0]),
-	  .uuid = { 0x07, 0x03, 0x08, 0x01 },
-	  .params = fod_params_power_bank_30W },
-	{ //zimi_car_20w
-	  .type = FOD_PARAM_20V,
-	  .length = sizeof(fod_params_zimi_car_20W) /
-		    sizeof(fod_params_zimi_car_20W[0]),
-	  .uuid = { 0x06, 0x02, 0x08, 0x01 },
-	  .params = fod_params_zimi_car_20W },
-	{ //multcoil tx 20w
-	  .type = FOD_PARAM_20V,
-	  .length = sizeof(fod_params_multcoil_20W) /
-		    sizeof(fod_params_multcoil_20W[0]),
-	  .uuid = { 0x0c, 0x09, 0x09, 0x06 },
-	  .params = fod_params_multcoil_20W },
-	{ //multcoil tx 20w
-	  .type = FOD_PARAM_20V,
-	  .length = sizeof(fod_params_multcoil_20W) /
-		    sizeof(fod_params_multcoil_20W[0]),
-	  .uuid = { 0x0c, 0x09, 0x09, 0x08 },
-	  .params = fod_params_multcoil_20W }
+	{
+		//l2_50w
+		.type = FOD_PARAM_20V,
+		.length = ARRAY_SIZE(fod_params_l2_50W),
+		.uuid = {0x09, 0x01, 0x09, 0x01},
+		.params = fod_params_l2_50W
+	},
+	{
+		//k1_80w 20V
+		.type = FOD_PARAM_20V,
+		.length = ARRAY_SIZE(fod_params_k1_80W),
+		.uuid = {0x09, 0x01, 0x09, 0x04},
+		.params = fod_params_k1_80W
+	},
+	{
+		//k1_80w 27V
+		.type = FOD_PARAM_27V,
+		.length = ARRAY_SIZE(fod_params_k1_80W_27V),
+		.uuid = {0x09, 0x01, 0x09, 0x04},
+		.params = fod_params_k1_80W_27V
+	},
+	{
+		//k8_100w 20V
+		.type = FOD_PARAM_20V,
+		.length = ARRAY_SIZE(fod_params_k8_100W),
+		.uuid = {0x09, 0x01, 0x09, 0x0C},
+		.params = fod_params_k8_100W
+	},
+	{
+		//j1s_55w
+		.type = FOD_PARAM_20V,
+		.length = ARRAY_SIZE(fod_params_j1s_55W),
+		.uuid = {0x09, 0x01, 0x01, 0x0b},
+		.params = fod_params_j1s_55W
+	},
+	{
+		//white_stand_30w
+		.type = FOD_PARAM_20V,
+		.length = ARRAY_SIZE(fod_params_white_stand_30W),
+		.uuid = {0x09, 0x01, 0x04, 0x07},
+		.params = fod_params_white_stand_30W
+	},
+	{
+		//bluetooth_30w
+		.type = FOD_PARAM_20V,
+		.length = ARRAY_SIZE(fod_params_bluetooth_30W),
+		.uuid = {0x09, 0x08, 0x06, 0x07},
+		.params = fod_params_bluetooth_30W
+	},
+	{
+		//moving_20w
+		.type = FOD_PARAM_20V,
+		.length = ARRAY_SIZE(fod_params_moving_20W),
+		.uuid = {0x09, 0x01, 0x05, 0x06},
+		.params = fod_params_moving_20W
+	},
+	{
+		//zimi_black_20w
+		.type = FOD_PARAM_20V,
+		.length = ARRAY_SIZE(fod_params_zimi_20W),
+		.uuid = {0x09, 0x08, 0x01, 0x08},
+		.params = fod_params_zimi_20W
+	},
+	{
+		//white_20W
+		.type = FOD_PARAM_20V,
+		.length = ARRAY_SIZE(fod_params_white_20W),
+		.uuid = {0x06, 0x01, 0x01, 0x01},
+		.params = fod_params_white_20W
+	},
+	{
+		//power_bank_20w_30W
+		.type = FOD_PARAM_20V,
+		.length = ARRAY_SIZE(fod_params_power_bank_30W),
+		.uuid = {0x07, 0x03, 0x08, 0x01},
+		.params = fod_params_power_bank_30W
+	},
+	{
+		//zimi_car_20w
+		.type = FOD_PARAM_20V,
+		.length = ARRAY_SIZE(fod_params_zimi_car_20W),
+		.uuid = {0x06, 0x02, 0x08, 0x01},
+		.params = fod_params_zimi_car_20W
+	},
+	{
+		//multcoil tx 20w
+		.type = FOD_PARAM_20V,
+		.length = ARRAY_SIZE(fod_params_multcoil_20W),
+		.uuid = {0x0c, 0x09, 0x09, 0x06},
+		.params = fod_params_multcoil_20W
+	},
+	{
+		//multcoil tx 20w
+		.type = FOD_PARAM_20V,
+		.length = ARRAY_SIZE(fod_params_multcoil_20W),
+		.uuid = {0x0c, 0x09, 0x09, 0x08},
+		.params = fod_params_multcoil_20W
+	}
 };
 
 struct delayed_work *pen_notifier_work;
@@ -296,37 +383,46 @@ static BLOCKING_NOTIFIER_HEAD(pen_charge_state_notifier_list);
 
 static void pen_charge_notifier_work(struct work_struct *work)
 {
-	struct nuvolta_1665_chg *chip = container_of(
-		work, struct nuvolta_1665_chg, pen_notifier_work.work);
+	struct nuvolta_1665_chg *chip = container_of(work,
+							struct nuvolta_1665_chg,
+							pen_notifier_work.work);
 	blocking_notifier_call_chain(&pen_charge_state_notifier_list,
-				     chip->pen_val, chip->pen_v);
-	return;
+								chip->pen_val,
+								chip->pen_v);
 }
 
 int pen_charge_state_notifier_register_client(struct notifier_block *nb)
 {
-	return blocking_notifier_chain_register(&pen_charge_state_notifier_list,
-						nb);
+	return blocking_notifier_chain_register(&pen_charge_state_notifier_list, nb);
 }
 EXPORT_SYMBOL(pen_charge_state_notifier_register_client);
 
 int pen_charge_state_notifier_unregister_client(struct notifier_block *nb)
 {
-	return blocking_notifier_chain_unregister(
-		&pen_charge_state_notifier_list, nb);
+	return blocking_notifier_chain_unregister(&pen_charge_state_notifier_list, nb);
 }
 EXPORT_SYMBOL(pen_charge_state_notifier_unregister_client);
 
-void pen_charge_state_notifier_call_chain(unsigned long val)
+void pen_charge_state_notifier_call_chain(unsigned long val, void *v)
 {
-	struct nuvolta_1665_chg *chip = container_of(
-		pen_notifier_work, struct nuvolta_1665_chg, pen_notifier_work);
-
-	chip->pen_v = NULL;
+	struct nuvolta_1665_chg *chip = container_of(pen_notifier_work,
+							struct nuvolta_1665_chg,
+							pen_notifier_work);
 	chip->pen_val = val;
+	chip->pen_v = v;
 	schedule_delayed_work(&chip->pen_notifier_work, msecs_to_jiffies(0));
 }
 EXPORT_SYMBOL(pen_charge_state_notifier_call_chain);
+
+static void pen_charge_state_notifier_call_chain_booting(unsigned long val, void *v)
+{
+	struct nuvolta_1665_chg *chip = container_of(pen_notifier_work,
+							struct nuvolta_1665_chg,
+							pen_notifier_work);
+	chip->pen_val = val;
+	chip->pen_v = v;
+	schedule_delayed_work(&chip->pen_notifier_work, msecs_to_jiffies(2000));
+}
 
 static int rx1665_read(struct nuvolta_1665_chg *chip, u8 *val, u16 addr)
 {
@@ -342,8 +438,7 @@ static int rx1665_read(struct nuvolta_1665_chg *chip, u8 *val, u16 addr)
 	return rc;
 }
 
-static int rx1665_read_buffer(struct nuvolta_1665_chg *chip, u8 *buf, u16 addr,
-			      int size)
+static int rx1665_read_buffer(struct nuvolta_1665_chg *chip, u8 *buf, u16 addr, int size)
 {
 	int rc = 0;
 
@@ -369,8 +464,7 @@ static int rx1665_write(struct nuvolta_1665_chg *chip, u8 val, u16 addr)
 	return rc;
 }
 
-static int rx1665_write_buffer(struct nuvolta_1665_chg *chip, u8 *buf, u16 addr,
-			       int size)
+static int rx1665_write_buffer(struct nuvolta_1665_chg *chip, u8 *buf, u16 addr, int size)
 {
 	int rc = 0;
 
@@ -388,9 +482,7 @@ static int rx1665_write_buffer(struct nuvolta_1665_chg *chip, u8 *buf, u16 addr,
 void nu1665_sent_pen_mac(struct nuvolta_1665_chg *chip)
 {
 	int64_t ble_mac = 0;
-	union power_supply_propval val = {
-		0,
-	};
+	union power_supply_propval val = { 0, };
 
 	memcpy(&ble_mac, chip->pen_mac_data, MAC_LEN);
 	val.int64val = ble_mac;
@@ -412,17 +504,18 @@ static int fuda_trx_get_ble_mac(struct nuvolta_1665_chg *chip)
 		return rc;
 	}
 	for (i = 0; i < MAC_LEN; i++)
-		chip->pen_mac_data[i] = sram_buffer[i + 36];
+		chip->pen_mac_data[i] = sram_buffer[i+36];
 	//kmem_copy(mac_buf, &sram_buffer[36], 6);
 
 	nuvolta_info("mac addr of pen: 0x%x:0x%x:0x%x:0x%x:0x%x:0x%x\n",
-		     sram_buffer[36], sram_buffer[37], sram_buffer[38],
-		     sram_buffer[39], sram_buffer[40], sram_buffer[41]);
+		sram_buffer[36], sram_buffer[37], sram_buffer[38], sram_buffer[39],
+		sram_buffer[40], sram_buffer[41]);
 
 	rc = nuvolta_1665_get_reverse_soc(chip);
 	nu1665_sent_pen_mac(chip);
 
 	return rc;
+
 }
 
 static bool nuvolta_1665_check_cmd_free(struct nuvolta_1665_chg *chip, u16 reg)
@@ -449,8 +542,7 @@ static bool nuvolta_1665_check_rx_ready(struct nuvolta_1665_chg *chip)
 	return nuvolta_1665_check_cmd_free(chip, 0x0025);
 }
 
-static int nuvolta_1665_start_tx_function(struct nuvolta_1665_chg *chip,
-					  bool en)
+static int nuvolta_1665_start_tx_function(struct nuvolta_1665_chg *chip, bool en)
 {
 	int ret = 0;
 	//u8 mode = RX_MODE;
@@ -460,9 +552,7 @@ static int nuvolta_1665_start_tx_function(struct nuvolta_1665_chg *chip,
 		if (en) {
 			ret = rx1665_write(chip, 0x01, TRX_MODE_EN);
 			if (ret >= 0) {
-				nuvolta_info(
-					"ic work on rtx mode,start reverse charging,ret:%d\n",
-					ret);
+				nuvolta_info("ic work on rtx mode,start reverse charging,ret:%d\n", ret);
 				chip->is_reverse_mode = 1;
 				return 1;
 			}
@@ -479,24 +569,22 @@ static int nuvolta_1665_start_tx_function(struct nuvolta_1665_chg *chip,
 
 #define REVERSE_GPIO_STATE_UNSET 0
 #define REVERSE_GPIO_STATE_START 1
-#define REVERSE_GPIO_STATE_END 2
+#define REVERSE_GPIO_STATE_END     2
 static int nu1665_set_reverse_gpio_state(struct nuvolta_1665_chg *chip,
-					 int enable)
+					   int enable)
 {
-	union power_supply_propval reverse_val = {
-		0,
-	};
+	union power_supply_propval reverse_val = { 0, };
 
 	if (!chip->wireless_psy)
 		chip->wireless_psy = power_supply_get_by_name("wireless");
 
 	if (chip->wireless_psy) {
-		nuvolta_dbg("set_reverse_gpio_state\n", reverse_val.intval);
-		if (enable) {
+		nuvolta_dbg("set_reverse_gpio_state\n",
+			reverse_val.intval);
+		if (enable)
 			reverse_val.intval = REVERSE_GPIO_STATE_START;
-		} else {
+		else
 			reverse_val.intval = REVERSE_GPIO_STATE_END;
-		}
 
 		power_supply_set_property(chip->wireless_psy,
 					  POWER_SUPPLY_PROP_REVERSE_GPIO_STATE,
@@ -507,12 +595,14 @@ static int nu1665_set_reverse_gpio_state(struct nuvolta_1665_chg *chip,
 		return -EINVAL;
 	}
 	return 0;
+
 }
 
 static int rx_set_reverse_boost_enable_gpio(struct nuvolta_1665_chg *chip,
 					    int enable)
 {
 	int ret = 0;
+
 	if (gpio_is_valid(chip->reverse_boost_gpio)) {
 		ret = gpio_request(chip->reverse_boost_gpio,
 				   "reverse-boost-enable-gpio");
@@ -536,13 +626,11 @@ static int rx_set_reverse_boost_enable_gpio(struct nuvolta_1665_chg *chip,
 	return ret;
 }
 
-static int nuvolta_1665_set_reverse_gpio(struct nuvolta_1665_chg *chip,
-					 int enable)
+static int nuvolta_1665_set_reverse_gpio(struct nuvolta_1665_chg *chip, int enable)
 {
 	int ret = 0;
-	union power_supply_propval val = {
-		0,
-	};
+	union power_supply_propval val = { 0, };
+
 	if (!chip->wireless_psy)
 		chip->wireless_psy = power_supply_get_by_name("wireless");
 
@@ -556,37 +644,34 @@ static int nuvolta_1665_set_reverse_gpio(struct nuvolta_1665_chg *chip,
 	if (gpio_is_valid(chip->tx_on_gpio)) {
 		if (!enable) {
 			nu1665_set_reverse_gpio_state(chip, enable);
-			power_supply_set_property(
-				chip->wireless_psy,
-				POWER_SUPPLY_PROP_SW_DISABLE_DC_EN, &val);
+			power_supply_set_property(chip->wireless_psy,
+						POWER_SUPPLY_PROP_SW_DISABLE_DC_EN,
+						&val);
 			rx_set_reverse_boost_enable_gpio(chip, enable);
 			msleep(100);
 		}
 
-		ret = gpio_request(chip->tx_on_gpio, "tx-on-gpio");
-		if (ret) {
-			nuvolta_err("%s: unable to request tx_on gpio\n",
-				    __func__);
-		}
+		ret = gpio_request(chip->tx_on_gpio,
+				"tx-on-gpio");
+		if (ret)
+			nuvolta_err("%s: unable to request tx_on gpio\n", __func__);
+
 		ret = gpio_direction_output(chip->tx_on_gpio, enable);
-		if (ret) {
-			nuvolta_err("%s: cannot set direction for tx_on gpio\n",
-				    __func__);
-		}
+		if (ret)
+			nuvolta_err("%s: cannot set direction for tx_on gpio\n", __func__);
 
 		ret = gpio_get_value(chip->tx_on_gpio);
 		nuvolta_info("txon gpio: %d\n", ret);
 		nuvolta_err("%s-2 chip->tx_on_gpio:%d, gpio is valid:%d,\n",
-			    __func__, chip->tx_on_gpio,
-			    gpio_is_valid(chip->tx_on_gpio));
+		__func__, chip->tx_on_gpio, gpio_is_valid(chip->tx_on_gpio));
 		gpio_free(chip->tx_on_gpio);
 		if (enable) {
 			msleep(100);
 			rx_set_reverse_boost_enable_gpio(chip, enable);
 			nu1665_set_reverse_gpio_state(chip, enable);
-			power_supply_set_property(
-				chip->wireless_psy,
-				POWER_SUPPLY_PROP_SW_DISABLE_DC_EN, &val);
+			power_supply_set_property(chip->wireless_psy,
+						  POWER_SUPPLY_PROP_SW_DISABLE_DC_EN,
+						  &val);
 		}
 	} else
 		nuvolta_err("%s: unable to set tx_on gpio\n", __func__);
@@ -594,9 +679,8 @@ static int nuvolta_1665_set_reverse_gpio(struct nuvolta_1665_chg *chip,
 	chip->wireless_psy = power_supply_get_by_name("wireless");
 	if (!chip->wireless_psy)
 		nuvolta_err("no wireless_psy,return\n");
-	else {
+	else
 		power_supply_changed(chip->wireless_psy);
-	}
 
 	return ret;
 }
@@ -653,13 +737,10 @@ static int nuvolta_1665_set_reverse_pmic_boost(struct nuvolta_1665_chg *chip, in
 }
 */
 
-static int nuvolta_1665_set_reverse_chg_mode(struct nuvolta_1665_chg *chip,
-					     int enable)
+static int nuvolta_1665_set_reverse_chg_mode(struct nuvolta_1665_chg *chip, int enable)
 {
 	int rc = 0;
-	union power_supply_propval wk_val = {
-		0,
-	};
+	union power_supply_propval wk_val = { 0, };
 
 	chip->wireless_psy = power_supply_get_by_name("wireless");
 	if (!chip->wireless_psy) {
@@ -674,9 +755,8 @@ static int nuvolta_1665_set_reverse_chg_mode(struct nuvolta_1665_chg *chip,
 		goto out;
 	}
 
-	if (chip->fw_update) {
+	if (chip->fw_update)
 		goto out;
-	}
 
 	nuvolta_1665_set_reverse_gpio(chip, enable);
 
@@ -690,24 +770,21 @@ static int nuvolta_1665_set_reverse_chg_mode(struct nuvolta_1665_chg *chip,
 		if (rc) {
 			if (chip->wireless_psy) {
 				wk_val.intval = 1;
-				power_supply_set_property(
-					chip->wireless_psy,
-					POWER_SUPPLY_PROP_WIRELESS_WAKELOCK,
-					&wk_val);
+				power_supply_set_property(chip->wireless_psy,
+							POWER_SUPPLY_PROP_WIRELESS_WAKELOCK,
+							&wk_val);
 			}
-			alarm_start_relative(
-				&chip->reverse_dping_alarm,
+			alarm_start_relative(&chip->reverse_dping_alarm,
 				ms_to_ktime(REVERSE_DPING_CHECK_DELAY_MS));
 		}
-
 	} else {
 		chip->is_boost_mode = 0;
 		nuvolta_info("disable reverse charging\n");
 		if (chip->wireless_psy) {
 			wk_val.intval = 0;
-			power_supply_set_property(
-				chip->wireless_psy,
-				POWER_SUPPLY_PROP_WIRELESS_WAKELOCK, &wk_val);
+			power_supply_set_property(chip->wireless_psy,
+						POWER_SUPPLY_PROP_WIRELESS_WAKELOCK,
+						&wk_val);
 		}
 		chip->reverse_chg_en = false;
 		chip->alarm_flag = false;
@@ -720,8 +797,7 @@ static int nuvolta_1665_set_reverse_chg_mode(struct nuvolta_1665_chg *chip,
 		cancel_delayed_work(&chip->reverse_chg_state_work);
 		cancel_delayed_work(&chip->reverse_dping_state_work);
 		cancel_delayed_work(&chip->reverse_chg_work);
-		cancel_delayed_work(&chip->pen_check_work);
-		/* reset pen mac addr */
+				/* reset pen mac addr */
 		memset(chip->pen_mac_data, 0x0, sizeof(chip->pen_mac_data));
 		nu1665_sent_pen_mac(chip);
 
@@ -735,14 +811,11 @@ static int nuvolta_1665_set_reverse_chg_mode(struct nuvolta_1665_chg *chip,
 		pm_relax(chip->dev);
 	}
 
-	schedule_delayed_work(&chip->pen_check_work, msecs_to_jiffies(1500));
-
 out:
 	return 0;
 }
 
-static void nuvolta_1665_set_fod(struct nuvolta_1665_chg *chip,
-				 struct fod_params_t *params_base)
+static void nuvolta_1665_set_fod(struct nuvolta_1665_chg *chip, struct fod_params_t *params_base)
 {
 	u8 params_offset;
 	u32 buffer_length;
@@ -753,7 +826,7 @@ static void nuvolta_1665_set_fod(struct nuvolta_1665_chg *chip,
 
 	nuvolta_info("%s type: %d\n", __func__, params_base->type);
 	for (i = 0; i < 11; ++i) {
-		nuvolta_info("nuvolta_1665_set_fod params[%d]: %d, %d", i,
+		nuvolta_info("%s: params[%d]: %d, %d", __func__, i,
 			     params_base->params[i].gain,
 			     params_base->params[i].offset);
 	}
@@ -781,18 +854,13 @@ static void nuvolta_1665_set_fod(struct nuvolta_1665_chg *chip,
 	if (ret < 0)
 		return;
 
-	ret = rx1665_write(chip, buffer_length,
-			   0x0004); //params length:max 10 one time
+	ret = rx1665_write(chip, buffer_length, 0x0004); //params length:max 10 one time
 	if (ret < 0)
 		return;
 
-	memcpy((void *)params_buffer,
-	       (const void *)&params_base->params[params_offset],
-	       buffer_length);
+	memcpy((void *)params_buffer, (const void *)&params_base->params[params_offset], buffer_length);
 
-	ret = rx1665_write_buffer(
-		chip, (u8 *)params_buffer, 0x0005,
-		buffer_length); //params length:max 10 one time
+	ret = rx1665_write_buffer(chip, (u8 *)params_buffer, 0x0005, buffer_length); //params length:max 10 one time
 	if (ret < 0)
 		return;
 
@@ -809,18 +877,13 @@ static void nuvolta_1665_set_fod(struct nuvolta_1665_chg *chip,
 	if (ret < 0)
 		return;
 
-	ret = rx1665_write(chip, buffer_length,
-			   0x0004); //params length:max 10 one time
+	ret = rx1665_write(chip, buffer_length, 0x0004); //params length:max 10 one time
 	if (ret < 0)
 		return;
 
-	memcpy((void *)params_buffer,
-	       (const void *)&params_base->params[params_offset],
-	       buffer_length);
+	memcpy((void *)params_buffer, (const void *)&params_base->params[params_offset], buffer_length);
 
-	ret = rx1665_write_buffer(
-		chip, (u8 *)params_buffer, 0x0005,
-		buffer_length); //params length:max 10 one time
+	ret = rx1665_write_buffer(chip, (u8 *)params_buffer, 0x0005, buffer_length); //params length:max 10 one time
 	if (ret < 0)
 		return;
 
@@ -841,18 +904,13 @@ static void nuvolta_1665_set_fod(struct nuvolta_1665_chg *chip,
 	if (ret < 0)
 		return;
 
-	ret = rx1665_write(chip, buffer_length,
-			   0x0004); //params length:max 10 one time
+	ret = rx1665_write(chip, buffer_length, 0x0004); //params length:max 10 one time
 	if (ret < 0)
 		return;
 
-	memcpy((void *)params_buffer,
-	       (const void *)&params_base->params[params_offset],
-	       buffer_length);
+	memcpy((void *)params_buffer, (const void *)&params_base->params[params_offset], buffer_length);
 
-	ret = rx1665_write_buffer(
-		chip, (u8 *)params_buffer, 0x0005,
-		buffer_length); //params length:max 10 one time
+	ret = rx1665_write_buffer(chip, (u8 *)params_buffer, 0x0005, buffer_length); //params length:max 10 one time
 	if (ret < 0)
 		return;
 
@@ -861,19 +919,15 @@ static void nuvolta_1665_set_fod(struct nuvolta_1665_chg *chip,
 		return;
 
 	msleep(20); //wait rx save for params
-	return;
 }
 
-static void nuvolta_1665_set_bpp_plus_fod(struct nuvolta_1665_chg *chip,
-					  struct fod_params_t *params_base)
+static void nuvolta_1665_set_bpp_plus_fod(struct nuvolta_1665_chg *chip, struct fod_params_t *params_base)
 {
 	u8 params_offset;
 	u32 buffer_length;
 	struct params_t params_buffer[5];
 	bool status = true;
 	int ret = 0;
-
-	nuvolta_info("%s\n", __func__);
 
 	params_offset = 0;
 	buffer_length = sizeof(struct params_t) * 5;
@@ -898,18 +952,13 @@ static void nuvolta_1665_set_bpp_plus_fod(struct nuvolta_1665_chg *chip,
 	if (ret < 0)
 		return;
 
-	ret = rx1665_write(chip, buffer_length,
-			   0x0004); //params length:max 10 one time
+	ret = rx1665_write(chip, buffer_length, 0x0004); //params length:max 10 one time
 	if (ret < 0)
 		return;
 
-	memcpy((void *)params_buffer,
-	       (const void *)&params_base->params[params_offset],
-	       buffer_length);
+	memcpy((void *)params_buffer, (const void *)&params_base->params[params_offset], buffer_length);
 
-	ret = rx1665_write_buffer(
-		chip, (u8 *)params_buffer, 0x0005,
-		buffer_length); //params length:max 10 one time
+	ret = rx1665_write_buffer(chip, (u8 *)params_buffer, 0x0005, buffer_length); //params length:max 10 one time
 	if (ret < 0)
 		return;
 
@@ -918,8 +967,6 @@ static void nuvolta_1665_set_bpp_plus_fod(struct nuvolta_1665_chg *chip,
 		return;
 
 	msleep(20); //wait rx save for params
-
-	return;
 }
 
 static void nuvolta_1665_set_fod_params(struct nuvolta_1665_chg *chip)
@@ -927,9 +974,7 @@ static void nuvolta_1665_set_fod_params(struct nuvolta_1665_chg *chip)
 	int i = 0, j = 0;
 	bool found = true;
 
-	for (i = 0;
-	     i < sizeof(fuda1651_fod_params) / sizeof(fuda1651_fod_params[0]);
-	     i++) {
+	for (i = 0; i < ARRAY_SIZE(fuda1651_fod_params); i++) {
 		found = true;
 		for (j = 0; j < 4; j++) {
 			if (chip->uuid[j] != fuda1651_fod_params[i].uuid[j]) {
@@ -939,23 +984,19 @@ static void nuvolta_1665_set_fod_params(struct nuvolta_1665_chg *chip)
 		}
 		/* found fod by uuid */
 		if (found) {
-			nuvolta_info("%s uuid: 0x%x,0x%x,0x%x,0x%x\n", __func__,
-				     chip->uuid[0], chip->uuid[1],
-				     chip->uuid[2], chip->uuid[3]);
+			nuvolta_info("%s uuid: 0x%x,0x%x,0x%x,0x%x\n", __func__, chip->uuid[0],
+				chip->uuid[1], chip->uuid[2], chip->uuid[3]);
 			if (NULL != fuda1651_fod_params[i].params)
-				nuvolta_1665_set_fod(chip,
-						     &fuda1651_fod_params[i]);
+				nuvolta_1665_set_fod(chip, &fuda1651_fod_params[i]);
 			return;
 		}
 	}
 
-	if (((chip->adapter_type == ADAPTER_QC3) ||
-	     (chip->adapter_type == ADAPTER_PD)) &&
-	    (!chip->epp)) {
+	if (((chip->adapter_type == ADAPTER_QC3) || (chip->adapter_type == ADAPTER_PD))
+		&& (!chip->epp)) {
 		found = true;
 		nuvolta_info("%s bpp plus\n", __func__);
-		nuvolta_1665_set_bpp_plus_fod(chip,
-					      &fuda1651_bpp_plus_fod_param);
+		nuvolta_1665_set_bpp_plus_fod(chip, &fuda1651_bpp_plus_fod_param);
 	} else if (chip->adapter_type >= ADAPTER_XIAOMI_QC3) {
 		found = true;
 		nuvolta_info("%s epp+ default\n", __func__);
@@ -963,12 +1004,8 @@ static void nuvolta_1665_set_fod_params(struct nuvolta_1665_chg *chip)
 	}
 
 	if (!found)
-		nuvolta_info(
-			"%s can not found fod params, uuid: 0x%x,0x%x,0x%x,0x%x\n",
-			__func__, chip->uuid[0], chip->uuid[1], chip->uuid[2],
-			chip->uuid[3]);
-
-	return;
+		nuvolta_info("%s can not found fod params, uuid: 0x%x,0x%x,0x%x,0x%x\n", __func__,
+			chip->uuid[0], chip->uuid[1], chip->uuid[2], chip->uuid[3]);
 }
 
 /*
@@ -986,7 +1023,7 @@ static int nuvolta_1665_set_adapter_voltage(struct nuvolta_1665_chg *chip, int v
 
 	status = nuvolta_1665_check_rx_ready(chip);
 	if (!status)
-		return -1;	
+		return -1;
 
 	ret = rx1665_write(chip, 0x69, 0x0000);
 	if (ret < 0)
@@ -1083,7 +1120,7 @@ static int nuvolta_1665_get_trx_cep(struct nuvolta_1665_chg * chip, int *trx_cep
 	*trx_cep = read_buf[7];
 	nuvolta_info("get trx cep: %d\n", *trx_cep);
 
-	//reset trx cep 
+	//reset trx cep
 	ret = rx1665_write(chip, 0x21, 0x0000);
 	if (ret < 0)
 		return ret;
@@ -1118,17 +1155,15 @@ static int nuvolta_1665_set_vout(struct nuvolta_1665_chg *chip, int vout)
 			nuvolta_info("get cep failed : %d\n", ret);
 			return ret;
 		} else if (ABS(cep) > ABS_CEP_VALUE) {
-			nuvolta_info("[%s] vout: %d, cep: %d, not set vout\n",
-				     vout, cep);
+			nuvolta_info("[%s] vout: %d, cep: %d, not set vout\n", vout, cep);
 			return 0;
 		}
 	}
 
-	if (vout < 4000) {
+	if (vout < 4000)
 		vout = 6000;
-	} else if (vout > max_vol) {
+	else if (vout > max_vol)
 		vout = max_vol;
-	}
 
 	vout_h = (u8)(vout >> 8);
 	vout_l = (u8)(vout & 0xFF);
@@ -1322,8 +1357,7 @@ static int tx_info_update(struct nuvolta_1665_chg *chip, u8 *buff)
 	return ret;
 }
 
-static int nuvolta_1665_get_reverse_vout(struct nuvolta_1665_chg *chip,
-					 int *vout)
+static int nuvolta_1665_get_reverse_vout(struct nuvolta_1665_chg *chip, int *vout)
 {
 	int ret = 0;
 
@@ -1335,8 +1369,7 @@ static int nuvolta_1665_get_reverse_vout(struct nuvolta_1665_chg *chip,
 	return ret;
 }
 
-static int nuvolta_1665_get_reverse_iout(struct nuvolta_1665_chg *chip,
-					 int *iout)
+static int nuvolta_1665_get_reverse_iout(struct nuvolta_1665_chg *chip, int *iout)
 {
 	int ret = 0;
 
@@ -1345,9 +1378,9 @@ static int nuvolta_1665_get_reverse_iout(struct nuvolta_1665_chg *chip,
 	nuvolta_info("get tx reverse iout: %d\n", *iout);
 	chip->reverse_iout = *iout;
 
-	if (chip->reverse_iout > 500 || chip->reverse_iout < 50) {
+	if (chip->reverse_iout > 500 || chip->reverse_iout < 50)
 		curr_count++;
-	}
+
 	if (curr_count >= 5) {
 		curr_count = 0;
 		nuvolta_info("The pen position is out of the right place.\n");
@@ -1359,8 +1392,7 @@ static int nuvolta_1665_get_reverse_iout(struct nuvolta_1665_chg *chip,
 	return ret;
 }
 
-static int nuvolta_1665_get_reverse_temp(struct nuvolta_1665_chg *chip,
-					 int *temp)
+static int nuvolta_1665_get_reverse_temp(struct nuvolta_1665_chg *chip, int *temp)
 {
 	int ret = 0;
 
@@ -1387,20 +1419,18 @@ static int nuvolta_1665_get_reverse_soc(struct nuvolta_1665_chg *chip)
 			nuvolta_info("[reverse] soc is default 0xFF\n");
 			chip->reverse_pen_soc = 0xFF;
 			return ret;
-		} else {
-			nuvolta_info("[reverse] soc illegal: %d\n", soc);
-			return ret;
 		}
+		nuvolta_info("[reverse] soc illegal: %d\n", soc);
+		return ret;
 	}
 
 	chip->reverse_pen_soc = soc + 1;
 	if (chip->reverse_pen_soc > 100)
 		chip->reverse_pen_soc = 100;
-	nuvolta_info("get tx reverse raw_soc: %d, UI_soc:%d\n", soc,
-		     chip->reverse_pen_soc);
-	if (chip->wireless_psy) {
+	nuvolta_info("get tx reverse raw_soc: %d, UI_soc:%d\n", soc, chip->reverse_pen_soc);
+
+	if (chip->wireless_psy)
 		power_supply_changed(chip->wireless_psy);
-	}
 
 	if ((soc == 100) && (pen_soc_count < SOC_100_RETRY)) {
 		nuvolta_info("[reverse] soc is 100 count: %d\n", pen_soc_count);
@@ -1417,8 +1447,7 @@ static int nuvolta_1665_get_reverse_soc(struct nuvolta_1665_chg *chip)
 	}
 
 	if (pen_soc_count == SOC_100_RETRY) {
-		nuvolta_info(
-			"[reverse] soc is 100 exceed 6 times, disable reverse chg!\n");
+		nuvolta_info("[reverse] soc is 100 exceed 6 times, disable reverse chg!\n");
 		nuvolta_1665_set_reverse_chg_mode(chip, false);
 		chip->is_reverse_mode = 0;
 		chip->is_reverse_chg = 2;
@@ -1427,8 +1456,7 @@ static int nuvolta_1665_get_reverse_soc(struct nuvolta_1665_chg *chip)
 	}
 
 	if (soc_count >= 180) {
-		nuvolta_info(
-			"Happen pen lock, need disable/enable reverse chg!\n");
+		nuvolta_info("Happen pen lock, need disable/enable reverse chg!\n");
 		soc_count = 0;
 		ret = nuvolta_1665_set_reverse_chg_mode(chip, false);
 		chip->is_reverse_mode = 0;
@@ -1450,14 +1478,13 @@ static void nuvolta_1665_set_pmic_icl(struct nuvolta_1665_chg *chip, int mA)
 		nuvolta_err("no icl votable, don't set icl\n");
 
 	nuvolta_info("wls set pmic icl: %d\n", mA);
-	return;
 }
 
 static void nuvolta_1665_stepper_pmic_icl(struct nuvolta_1665_chg *chip,
-					  int start_icl, int end_icl,
-					  int step_ma, int ms)
+	int start_icl, int end_icl, int step_ma, int ms)
 {
 	int temp_icl = start_icl;
+
 	nuvolta_1665_set_pmic_icl(chip, temp_icl);
 
 	if (start_icl < end_icl) {
@@ -1478,7 +1505,6 @@ static void nuvolta_1665_stepper_pmic_icl(struct nuvolta_1665_chg *chip,
 	}
 
 	nuvolta_1665_set_pmic_icl(chip, end_icl);
-	return;
 }
 
 static void nuvolta_1665_set_pmic_ichg(struct nuvolta_1665_chg *chip, int mA)
@@ -1489,12 +1515,12 @@ static void nuvolta_1665_set_pmic_ichg(struct nuvolta_1665_chg *chip, int mA)
 		nuvolta_err("no fcc votable, don't set fcc\n");
 
 	nuvolta_info("wls set fcc: %d\n", mA);
-	return;
 }
 
 static int nuvolta_1665_get_fcc(struct nuvolta_1665_chg *chip)
 {
 	int effective_fcc = 0;
+
 	effective_fcc = get_effective_result(chip->fcc_votable);
 	nuvolta_info("wls get fcc: %d\n", effective_fcc);
 	return effective_fcc;
@@ -1504,38 +1530,29 @@ static void nuvolta_1665_epp_uuid_func(struct nuvolta_1665_chg *chip)
 {
 	u8 vendor = 0, module = 0, version = 0, power = 0;
 
-	vendor = chip->uuid[0];
-	module = chip->uuid[1];
+	vendor  = chip->uuid[0];
+	module  = chip->uuid[1];
 	version = chip->uuid[2];
-	power = chip->uuid[3];
-	nuvolta_info(
-		"epp uuid: vendor:0x%x, module:0x%x, version:0x%x, power:0x%x",
+	power   = chip->uuid[3];
+	nuvolta_info("epp uuid: vendor:0x%x, module:0x%x, version:0x%x, power:0x%x",
 		vendor, module, version, power);
 
-	if ((vendor == 0x9) && (module == 0x8) && (version == 0x6) &&
-	    (power == 0x7))
+	if ((vendor == 0x9) && (module == 0x8) && (version == 0x6) && (power == 0x7))
 		chip->is_music_tx = true;
 
-	if (((vendor == 0x9) && (module == 0x1) && (version == 0x5) &&
-	     (power == 0x6)) ||
-	    ((vendor == 0xc) && (module == 0x9) && (version == 0x9) &&
-	     (power == 0x8)) ||
-	    ((vendor == 0xc) && (module == 0x9) && (version == 0x9) &&
-	     (power == 0x6)))
+	if (((vendor == 0x9) && (module == 0x1) && (version == 0x5) && (power == 0x6))
+		|| ((vendor == 0xc) && (module == 0x9) && (version == 0x9) && (power == 0x8))
+		|| ((vendor == 0xc) && (module == 0x9) && (version == 0x9) && (power == 0x6)))
 		chip->is_plate_tx = true;
 
-	if (((vendor == 0x6) && (module == 0x2) && (version == 0x8) &&
-	     (power == 0x1)) ||
-	    ((vendor == 0x1) && (module == 0x8) && (version == 0x2) &&
-	     (power == 0x5)))
+	if (((vendor == 0x6) && (module == 0x2) && (version == 0x8) && (power == 0x1))
+		|| ((vendor == 0x1) && (module == 0x8) && (version == 0x2) && (power == 0x5)))
 		chip->is_car_tx = true;
 
-	if ((vendor == 0x1) && (module == 0x1) && (version == 0xE) &&
-	    (power == 0x1))
+	if ((vendor == 0x1) && (module == 0x1) && (version == 0xE) && (power == 0x1))
 		chip->is_train_tx = true;
 
-	if ((vendor == 0x9) && (module == 0x1) && (version == 0x9) &&
-	    (power == 0x1))
+	if ((vendor == 0x9) && (module == 0x1) && (version == 0x9) && (power == 0x1))
 		chip->is_standard_tx = true;
 
 	if ((chip->is_car_tx) && (chip->adapter_type >= ADAPTER_XIAOMI_QC3)) {
@@ -1545,19 +1562,16 @@ static void nuvolta_1665_epp_uuid_func(struct nuvolta_1665_chg *chip)
 
 	if (chip->is_music_tx)
 		chip->adapter_type = ADAPTER_VOICE_BOX;
-
-	return;
 }
 
 static int nuvolta_1665_send_transparent_data(struct nuvolta_1665_chg *chip,
-					      u8 *send_data, u8 length)
+	u8 *send_data, u8 length)
 {
 	int ret = 0;
 	bool status = true;
 	u8 i = 0;
 
-	nuvolta_info(
-		"[%s] send_data[0]:0x%x, send_data[1]:0x%x, send_data[2]:0x%x, length:%d\n",
+	nuvolta_info("[%s] send_data[0]:0x%x, send_data[1]:0x%x, send_data[2]:0x%x, length:%d\n",
 		send_data[0], send_data[1], send_data[2], length);
 
 	status = nuvolta_1665_check_rx_ready(chip);
@@ -1576,8 +1590,7 @@ static int nuvolta_1665_send_transparent_data(struct nuvolta_1665_chg *chip,
 		ret = rx1665_write(chip, send_data[i], (0x0002 + i));
 		if (ret < 0)
 			return ret;
-		nuvolta_info("[%s] send_data[%d] = 0x%x, reg:0x%x\n", __func__,
-			     i, send_data[i], (0x0002 + i));
+		nuvolta_info("[%s] send_data[%d] = 0x%x, reg:0x%x\n", __func__, i, send_data[i], (0x0002 + i));
 	}
 
 	ret = rx1665_write(chip, (length + 2), 0x0060);
@@ -1587,11 +1600,10 @@ static int nuvolta_1665_send_transparent_data(struct nuvolta_1665_chg *chip,
 	return ret;
 }
 
-static void nuvolta_1665_process_factory_cmd(struct nuvolta_1665_chg *chip,
-					     u8 cmd)
+static void nuvolta_1665_process_factory_cmd(struct nuvolta_1665_chg *chip, u8 cmd)
 {
 	int ret = 0;
-	u8 send_data[8] = { 0 };
+	u8 send_data[8] = {0};
 	u8 data_h = 0, data_l = 0;
 	u8 index = 0;
 	int rx_iout = 0, rx_vout = 0;
@@ -1609,13 +1621,11 @@ static void nuvolta_1665_process_factory_cmd(struct nuvolta_1665_chg *chip,
 		send_data[index++] = 0x12;
 		send_data[index++] = data_h;
 		send_data[index++] = data_l;
-		ret = nuvolta_1665_send_transparent_data(chip, send_data,
-							 index);
+		ret = nuvolta_1665_send_transparent_data(chip, send_data, index);
 		if (ret < 0)
-			nuvolta_err("[%s] send transparent data failed\n",
-				    __func__);
+			nuvolta_err("[%s] send transparent data failed\n", __func__);
 		nuvolta_info("[%s] rx_iout: 0x%x, 0x%x, iout = %d\n", __func__,
-			     data_h, data_l, rx_iout);
+			data_h, data_l, rx_iout);
 		break;
 	case FACTORY_TEST_CMD_RX_VOUT:
 		ret = nuvolta_1665_get_vout(chip, &rx_vout);
@@ -1629,13 +1639,11 @@ static void nuvolta_1665_process_factory_cmd(struct nuvolta_1665_chg *chip,
 		send_data[index++] = 0x13;
 		send_data[index++] = data_h;
 		send_data[index++] = data_l;
-		ret = nuvolta_1665_send_transparent_data(chip, send_data,
-							 index);
+		ret = nuvolta_1665_send_transparent_data(chip, send_data, index);
 		if (ret < 0)
-			nuvolta_err("[%s] send transparent data failed\n",
-				    __func__);
+			nuvolta_err("[%s] send transparent data failed\n", __func__);
 		nuvolta_info("[%s] rx_vout: 0x%x, 0x%x, iout = %d\n", __func__,
-			     data_h, data_l, rx_vout);
+			data_h, data_l, rx_vout);
 		break;
 	case FACTORY_TEST_CMD_RX_FW_ID:
 		index = 0;
@@ -1646,13 +1654,11 @@ static void nuvolta_1665_process_factory_cmd(struct nuvolta_1665_chg *chip,
 		send_data[index++] = 0x0;
 		send_data[index++] = g_wls_fw_data.fw_rx_id;
 		send_data[index++] = g_wls_fw_data.fw_tx_id;
-		ret = nuvolta_1665_send_transparent_data(chip, send_data,
-							 index);
+		ret = nuvolta_1665_send_transparent_data(chip, send_data, index);
 		if (ret < 0)
-			nuvolta_err("[%s] send transparent data failed\n",
-				    __func__);
+			nuvolta_err("[%s] send transparent data failed\n", __func__);
 		nuvolta_info("[%s] fw_version: 0x%x0x%x\n", __func__,
-			     g_wls_fw_data.fw_rx_id, g_wls_fw_data.fw_tx_id);
+			g_wls_fw_data.fw_rx_id, g_wls_fw_data.fw_tx_id);
 		break;
 	case FACTORY_TEST_CMD_RX_CHIP_ID:
 		index = 0;
@@ -1661,13 +1667,11 @@ static void nuvolta_1665_process_factory_cmd(struct nuvolta_1665_chg *chip,
 		send_data[index++] = 0x23;
 		send_data[index++] = 16;
 		send_data[index++] = 51;
-		ret = nuvolta_1665_send_transparent_data(chip, send_data,
-							 index);
+		ret = nuvolta_1665_send_transparent_data(chip, send_data, index);
 		if (ret < 0)
-			nuvolta_err("[%s] send transparent data failed\n",
-				    __func__);
+			nuvolta_err("[%s] send transparent data failed\n", __func__);
 		nuvolta_info("[%s] chip id: 0x%x0x%x\n", __func__,
-			     g_wls_fw_data.hw_id_h, g_wls_fw_data.hw_id_l);
+			g_wls_fw_data.hw_id_h, g_wls_fw_data.hw_id_l);
 		break;
 	case FACTORY_TEST_CMD_ADAPTER_TYPE:
 		index = 0;
@@ -1675,24 +1679,19 @@ static void nuvolta_1665_process_factory_cmd(struct nuvolta_1665_chg *chip,
 		send_data[index++] = 0x28;
 		send_data[index++] = 0x0b;
 		send_data[index++] = chip->adapter_type;
-		ret = nuvolta_1665_send_transparent_data(chip, send_data,
-							 index);
+		ret = nuvolta_1665_send_transparent_data(chip, send_data, index);
 		if (ret < 0)
-			nuvolta_err("[%s] send transparent data failed\n",
-				    __func__);
-		nuvolta_info("[%s] adapter type: %d\n", __func__,
-			     chip->adapter_type);
+			nuvolta_err("[%s] send transparent data failed\n", __func__);
+		nuvolta_info("[%s] adapter type: %d\n", __func__, chip->adapter_type);
 		break;
 	case FACTORY_TEST_CMD_REVERSE_REQ:
 		index = 0;
 		send_data[index++] = 0x02;
 		send_data[index++] = 0x18;
 		send_data[index++] = 0x30;
-		ret = nuvolta_1665_send_transparent_data(chip, send_data,
-							 index);
+		ret = nuvolta_1665_send_transparent_data(chip, send_data, index);
 		if (ret < 0)
-			nuvolta_err("[%s] send transparent data failed\n",
-				    __func__);
+			nuvolta_err("[%s] send transparent data failed\n", __func__);
 		chip->wait_for_reverse_test = true;
 		chip->wait_for_reverse_test_status = 1;
 		nuvolta_info("[%s] reverse charge start\n", __func__);
@@ -1701,12 +1700,10 @@ static void nuvolta_1665_process_factory_cmd(struct nuvolta_1665_chg *chip,
 		nuvolta_info("[%s] unknown cmd: %d\n", __func__, cmd);
 		break;
 	}
-
-	return;
 }
 
 static void nuvolta_1665_rcv_factory_test_cmd(struct nuvolta_1665_chg *chip,
-					      u8 *rev_data, u8 *length)
+	u8 *rev_data, u8 *length)
 {
 	int ret = 0;
 	bool status = true;
@@ -1737,8 +1734,6 @@ static void nuvolta_1665_rcv_factory_test_cmd(struct nuvolta_1665_chg *chip,
 		rev_data[i] = read_buf[57 + i];
 		nuvolta_info("%s data[%d] = 0x%x\n", __func__, i, rev_data[i]);
 	}
-
-	return;
 }
 
 static void nuvolta_1665_get_tx_manu_id(struct nuvolta_1665_chg *chip)
@@ -1768,15 +1763,13 @@ static void nuvolta_1665_get_tx_manu_id(struct nuvolta_1665_chg *chip)
 	chip->tx_manu_id_l = tx_manu_id_l;
 	chip->tx_manu_id_h = tx_manu_id_h;
 
-	nuvolta_info("tx manu id l: 0x%x, h: 0x%x\n", tx_manu_id_l,
-		     tx_manu_id_h);
-	return;
+	nuvolta_info("tx manu id l: 0x%x, h: 0x%x\n", tx_manu_id_l, tx_manu_id_h);
 }
 
 static u8 nuvolta_1665_get_rx_power_mode(struct nuvolta_1665_chg *chip)
 {
 	u8 power_mode = 0;
-	u8 read_buf[5] = { 0 };
+	u8 read_buf[5] = {0};
 	bool status = true;
 	int ret = 0;
 
@@ -1798,8 +1791,8 @@ static u8 nuvolta_1665_get_rx_power_mode(struct nuvolta_1665_chg *chip)
 
 	power_mode = read_buf[3];
 	nuvolta_info("rx power mode: %d\n", power_mode);
-	nuvolta_info("boot: 0x%x, rx: 0x%x, tx: 0x%x: %d\n", read_buf[0],
-		     read_buf[1], read_buf[2]);
+	nuvolta_info("boot: 0x%x, rx: 0x%x, tx: 0x%x: %d\n",
+		read_buf[0], read_buf[1], read_buf[2]);
 
 	return power_mode;
 }
@@ -1873,12 +1866,11 @@ static u8 nuvolta_1665_get_auth_value(struct nuvolta_1665_chg *chip)
 		chip->uuid[3] = read_buf[31];
 	}
 
-	nuvolta_info("[%s] tx_id_l: 0x%x, tx_id_h: 0x%x\n", __func__,
-		     chip->epp_tx_id_l, chip->epp_tx_id_h);
+	nuvolta_info("[%s] tx_id_l: 0x%x, tx_id_h: 0x%x\n",
+		__func__, chip->epp_tx_id_l, chip->epp_tx_id_h);
 	nuvolta_info("[%s] adapter type: %d\n", __func__, chip->adapter_type);
 	nuvolta_info("[%s] uuid: 0x%x, 0x%x, 0x%x, 0x%x\n", __func__,
-		     chip->uuid[0], chip->uuid[1], chip->uuid[2],
-		     chip->uuid[3]);
+		chip->uuid[0], chip->uuid[1], chip->uuid[2], chip->uuid[3]);
 	return auth_data;
 }
 
@@ -1908,7 +1900,6 @@ static void nuvolta_1665_power_off_err(struct nuvolta_1665_chg *chip)
 	 *sop:0x11 sleep:0x0B ovl:0x13 vup:0x14 rect_err:0x15
 	 */
 	nuvolta_info("[%s] power off err = 0x%x\n", __func__, err_code);
-	return;
 }
 
 static void nuvolta_1665_do_renego(struct nuvolta_1665_chg *chip, u8 max_power)
@@ -1937,13 +1928,12 @@ static void nuvolta_1665_do_renego(struct nuvolta_1665_chg *chip, u8 max_power)
 	ret = rx1665_write(chip, 0x03, 0x0060);
 	if (ret < 0)
 		return;
-	return;
 }
 
 static void nuvolta_1665_adapter_handle(struct nuvolta_1665_chg *chip)
 {
 	nuvolta_info("[%s] adapter: %d, epp: %d\n", __func__,
-		     chip->adapter_type, chip->epp);
+		chip->adapter_type, chip->epp);
 
 	if (!chip->fc_flag) {
 		switch (chip->adapter_type) {
@@ -1960,14 +1950,12 @@ static void nuvolta_1665_adapter_handle(struct nuvolta_1665_chg *chip)
 		case ADAPTER_PD:
 		case ADAPTER_AUTH_FAILED:
 			if (chip->epp) {
-				nuvolta_info(
-					"set icl in EPP for QC3/PD/FAIL adapter\n");
+				nuvolta_info("set icl in EPP for QC3/PD/FAIL adapter\n");
 				nuvolta_1665_set_pmic_icl(chip, 850);
 				nuvolta_1665_set_pmic_ichg(chip, 2000);
 				chip->pre_curr = 850;
 			} else {
-				nuvolta_info(
-					"set icl in BPP for QC3/PD/FAIL adapter\n");
+				nuvolta_info("set icl in BPP for QC3/PD/FAIL adapter\n");
 				nuvolta_1665_set_pmic_icl(chip, 750);
 				nuvolta_1665_set_pmic_ichg(chip, 1000);
 				chip->pre_curr = 750;
@@ -2032,12 +2020,11 @@ static void nuvolta_1665_adapter_handle(struct nuvolta_1665_chg *chip)
 		}
 	}
 
-	if (chip->wireless_psy) {
+	if (chip->wireless_psy)
 		power_supply_changed(chip->wireless_psy);
-	}
 
-	schedule_delayed_work(&chip->chg_monitor_work, msecs_to_jiffies(1000));
-	return;
+	schedule_delayed_work(&chip->chg_monitor_work,
+			msecs_to_jiffies(1000));
 }
 
 static void nuvolta_1665_start_renego(struct nuvolta_1665_chg *chip)
@@ -2058,7 +2045,6 @@ static void nuvolta_1665_start_renego(struct nuvolta_1665_chg *chip)
 
 	if (max_power > 0)
 		nuvolta_1665_do_renego(chip, max_power);
-	return;
 }
 
 /*
@@ -2122,8 +2108,9 @@ static int nuvolta_1665_enable_power_path(bool en)
 	}
 
 	val.intval = !en;
-	return power_supply_set_property(
-		chg_psy, POWER_SUPPLY_PROP_CHARGE_CONTROL_LIMIT, &val);
+	return power_supply_set_property(chg_psy,
+					 POWER_SUPPLY_PROP_CHARGE_CONTROL_LIMIT,
+					 &val);
 	return 0;
 }
 
@@ -2137,11 +2124,11 @@ static int nuvolta_1665_enable_bc12(struct nuvolta_1665_chg *chip, bool attach)
 	if (IS_ERR_OR_NULL(bc12_psy)) {
 		nuvolta_err("%s Couldn't get bc12_psy\n", __func__);
 		return ret;
-	} else {
-		prop.intval = attach;
-		return power_supply_set_property(
-			bc12_psy, POWER_SUPPLY_PROP_ONLINE, &prop);
 	}
+
+	prop.intval = attach;
+	return power_supply_set_property(bc12_psy,
+				 POWER_SUPPLY_PROP_ONLINE, &prop);
 }
 
 static void nuvolta_1665_clear_int(struct nuvolta_1665_chg *chip)
@@ -2161,15 +2148,14 @@ static void nuvolta_1665_clear_int(struct nuvolta_1665_chg *chip)
 	ret = rx1665_write(chip, 0x04, 0x0060);*/
 
 	nuvolta_info("[%s] ret: %d\n", __func__, ret);
-	return;
 }
+
 static void reverse_chg_sent_state_work(struct work_struct *work)
 {
-	struct nuvolta_1665_chg *chip = container_of(
-		work, struct nuvolta_1665_chg, reverse_sent_state_work.work);
-	union power_supply_propval val = {
-		0,
-	};
+	struct nuvolta_1665_chg *chip =
+	    container_of(work, struct nuvolta_1665_chg,
+			 reverse_sent_state_work.work);
+	union power_supply_propval val = { 0, };
 	int rc = 0;
 
 	if (chip->wireless_psy) {
@@ -2178,20 +2164,21 @@ static void reverse_chg_sent_state_work(struct work_struct *work)
 			nuvolta_1665_get_reverse_soc(chip);
 		}
 		val.intval = chip->is_reverse_chg;
-		power_supply_set_property(
-			chip->wireless_psy,
-			POWER_SUPPLY_PROP_REVERSE_PEN_CHG_STATE, &val);
+		power_supply_set_property(chip->wireless_psy,
+					  POWER_SUPPLY_PROP_REVERSE_PEN_CHG_STATE,
+					  &val);
 		power_supply_changed(chip->wireless_psy);
 		nuvolta_info("uevent: %d for reverse charging state\n",
-			     chip->is_reverse_chg);
+			 chip->is_reverse_chg);
 	} else
 		nuvolta_info("get wls property error\n");
 }
 
 static void reverse_chg_state_set_work(struct work_struct *work)
 {
-	struct nuvolta_1665_chg *chip = container_of(
-		work, struct nuvolta_1665_chg, reverse_chg_state_work.work);
+	struct nuvolta_1665_chg *chip =
+		 container_of(work, struct nuvolta_1665_chg,
+					reverse_chg_state_work.work);
 	int ret;
 
 	nuvolta_info("no rx found and disable reverse charging\n");
@@ -2202,14 +2189,13 @@ static void reverse_chg_state_set_work(struct work_struct *work)
 	mutex_unlock(&chip->reverse_op_lock);
 
 	schedule_delayed_work(&chip->reverse_sent_state_work, 0);
-
-	return;
 }
 
 static void reverse_dping_state_set_work(struct work_struct *work)
 {
-	struct nuvolta_1665_chg *chip = container_of(
-		work, struct nuvolta_1665_chg, reverse_dping_state_work.work);
+	struct nuvolta_1665_chg *chip =
+		 container_of(work, struct nuvolta_1665_chg,
+					reverse_dping_state_work.work);
 	int ret;
 
 	nuvolta_info("tx mode fault and disable reverse charging\n");
@@ -2220,32 +2206,14 @@ static void reverse_dping_state_set_work(struct work_struct *work)
 	mutex_unlock(&chip->reverse_op_lock);
 
 	schedule_delayed_work(&chip->reverse_sent_state_work, 0);
-
-	return;
-}
-
-static void pen_check_worker(struct work_struct *work)
-{
-	struct nuvolta_1665_chg *chip = container_of(work,
-			struct nuvolta_1665_chg, pen_check_work.work);
-
-	static bool pen_charge_en = false;
-	bool enable = (chip->reverse_pen_soc >= 0 && chip->reverse_pen_soc <= 100);
-
-	if (pen_charge_en != enable)
-		pen_charge_state_notifier_call_chain(enable);
-
-	if (chip->reverse_chg_en != enable)
-		nuvolta_1665_set_reverse_chg_mode(chip, enable);
-
-	pen_charge_en = enable;
 }
 
 static enum alarmtimer_restart reverse_chg_alarm_cb(struct alarm *alarm,
-						    ktime_t now)
+							ktime_t now)
 {
 	struct nuvolta_1665_chg *chip =
-		container_of(alarm, struct nuvolta_1665_chg, reverse_chg_alarm);
+		 container_of(alarm, struct nuvolta_1665_chg,
+					reverse_chg_alarm);
 
 	nuvolta_info(" Reverse Chg Alarm Triggered %lld\n", ktime_to_ms(now));
 
@@ -2257,10 +2225,11 @@ static enum alarmtimer_restart reverse_chg_alarm_cb(struct alarm *alarm,
 }
 
 static enum alarmtimer_restart reverse_dping_alarm_cb(struct alarm *alarm,
-						      ktime_t now)
+							ktime_t now)
 {
-	struct nuvolta_1665_chg *chip = container_of(
-		alarm, struct nuvolta_1665_chg, reverse_dping_alarm);
+	struct nuvolta_1665_chg *chip =
+		 container_of(alarm, struct nuvolta_1665_chg,
+					reverse_dping_alarm);
 
 	nuvolta_info("Reverse Dping Alarm Triggered %lld\n", ktime_to_ms(now));
 
@@ -2271,8 +2240,7 @@ static enum alarmtimer_restart reverse_dping_alarm_cb(struct alarm *alarm,
 	return ALARMTIMER_NORESTART;
 }
 
-static int nuvolta_1665_reverse_enable_fod(struct nuvolta_1665_chg *chip,
-					   bool enable)
+static int nuvolta_1665_reverse_enable_fod(struct nuvolta_1665_chg *chip, bool enable)
 {
 	int ret = 0;
 	bool status = true;
@@ -2310,22 +2278,20 @@ static int nuvolta_1665_reverse_enable_fod(struct nuvolta_1665_chg *chip,
 	return ret;
 }
 
-static void nuvolta_1665_reverse_chg_handler(struct nuvolta_1665_chg *chip,
-					     u16 int_flag)
+static void nuvolta_1665_reverse_chg_handler(struct nuvolta_1665_chg *chip, u16 int_flag)
 {
 	int rc = 0;
 
 	if (int_flag & RTX_INT_EPT) {
 		alarm_start_relative(&chip->reverse_dping_alarm,
-				     ms_to_ktime(REVERSE_DPING_CHECK_DELAY_MS));
+				ms_to_ktime(REVERSE_DPING_CHECK_DELAY_MS));
 		if (tx_info_update(chip, sram_buffer) >= 0)
-			nuvolta_info("tx mode ept. the code:0x%02x\n",
-				     sram_buffer[10]);
+			nuvolta_info("tx mode ept. the code:0x%02x\n", sram_buffer[10]);
 		goto out;
 	}
 
 	if (int_flag & INT_GET_DPING) {
-		nuvolta_info("TRX get dping and disable reverse charging \n");
+		nuvolta_info("TRX get dping and disable reverse charging\n");
 		nuvolta_1665_set_reverse_chg_mode(chip, false);
 		chip->is_reverse_mode = 0;
 		chip->is_reverse_chg = 2;
@@ -2335,8 +2301,7 @@ static void nuvolta_1665_reverse_chg_handler(struct nuvolta_1665_chg *chip,
 
 	if (int_flag & RTX_INT_START_DPING) {
 		if (!chip->alarm_flag) {
-			alarm_start_relative(
-				&chip->reverse_chg_alarm,
+			alarm_start_relative(&chip->reverse_chg_alarm,
 				ms_to_ktime(REVERSE_CHG_CHECK_DELAY_MS));
 			chip->alarm_flag = true;
 		}
@@ -2363,14 +2328,14 @@ static void nuvolta_1665_reverse_chg_handler(struct nuvolta_1665_chg *chip,
 
 		//start reverse chg infor work
 		cancel_delayed_work_sync(&chip->reverse_chg_work);
-		msleep(10);
+		usleep_range(10000, 11000);
 		schedule_delayed_work(&chip->reverse_chg_work, 0);
+
 		/* set reverse charging state to started */
 		if (chip->is_reverse_mode || chip->is_boost_mode) {
 			chip->is_reverse_chg = 4;
 			nuvolta_info("notify pmic reverse charging!\n");
-			schedule_delayed_work(&chip->reverse_sent_state_work,
-					      100);
+			schedule_delayed_work(&chip->reverse_sent_state_work, 100);
 		}
 		nuvolta_info("tx mode get rx\n");
 	}
@@ -2390,12 +2355,8 @@ static void nuvolta_1665_reverse_chg_handler(struct nuvolta_1665_chg *chip,
 	if (int_flag & INT_GET_PPP) {
 		nuvolta_info("INT_GET_PPP.\n");
 		if (tx_info_update(chip, sram_buffer) >= 0) {
-			nuvolta_info(
-				"receive dates: 0x%02x: ,0x%02x: ,0x%02x: ,0x%02x: ,0x%02x: ,0x%02x: ,0x%02x: ,0x%02x:\n",
-				sram_buffer[42], sram_buffer[43],
-				sram_buffer[44], sram_buffer[45],
-				sram_buffer[46], sram_buffer[47],
-				sram_buffer[48], sram_buffer[49]);
+			nuvolta_info("receive dates: 0x%02x: ,0x%02x: ,0x%02x: ,0x%02x: ,0x%02x: ,0x%02x: ,0x%02x: ,0x%02x:\n", sram_buffer[42],
+			sram_buffer[43], sram_buffer[44], sram_buffer[45], sram_buffer[46], sram_buffer[47], sram_buffer[48], sram_buffer[49]);
 		}
 	}
 
@@ -2435,23 +2396,19 @@ out:
 		if (chip->reverse_pen_soc != 0xFF)
 			power_supply_changed(chip->wireless_psy);
 	}
-
-	return;
 }
 
-static void nuvolta_1665_chg_handler(struct nuvolta_1665_chg *chip,
-				     u16 int_flag)
+static void nuvolta_1665_chg_handler(struct nuvolta_1665_chg *chip, u16 int_flag)
 {
 	u8 auth_status = 0;
-	u8 rcv_value[128] = { 0 };
+	u8 rcv_value[128] = {0};
 	u8 val_length = 0;
 	int vout = 0;
 
 	switch (int_flag) {
 	case RX_INT_POWER_ON:
 		chip->epp = nuvolta_1665_get_rx_power_mode(chip);
-		nuvolta_info("[%s] RX_INT_POWER_ON epp: %d\n", __func__,
-			     chip->epp);
+		nuvolta_info("[%s] RX_INT_POWER_ON epp: %d\n", __func__, chip->epp);
 		break;
 	case RX_INT_LDO_ON:
 		//TODO disable aicl
@@ -2505,11 +2462,10 @@ static void nuvolta_1665_chg_handler(struct nuvolta_1665_chg *chip,
 				nuvolta_1665_get_vout(chip, &vout);
 				if (vout < 12000) {
 					//if (!chip->cp_master_dev)
-					//chip->cp_master_dev = get_charger_by_name("cp_master");
+						//chip->cp_master_dev = get_charger_by_name("cp_master");
 					if (chip->cp_master_dev) {
 						//charger_dev_enable_pmic_ovp(chip->cp_master_dev, true);
-						nuvolta_info(
-							"enable pmic ovp en");
+						nuvolta_info("enable pmic ovp en");
 					}
 					//nuvolta_1665_stepper_pmic_icl(chip, 200, 800, 100, 20);
 				}
@@ -2520,20 +2476,20 @@ static void nuvolta_1665_chg_handler(struct nuvolta_1665_chg *chip,
 			//if chip->epp, enable vdd
 		} else if (chip->set_fastcharge_vout_cnt++ < 3) {
 			nuvolta_info("set fastchg vol failed, retry %d\n",
-				     chip->set_fastcharge_vout_cnt);
+				chip->set_fastcharge_vout_cnt);
 			msleep(2000);
 			//nuvolta_1665_set_fastchg_adapter_v(chip);
 		} else {
 			nuvolta_info("set fastchg vol failed finally\n");
 			nuvolta_1665_adapter_handle(chip);
 			//if (chip->adapter_type >= ADAPTER_XIAOMI_QC3)
-			//charger_dev_enable_pmic_ovp(chip->cp_master_dev, true);
+				//charger_dev_enable_pmic_ovp(chip->cp_master_dev, true);
 		}
 		break;
 	case RX_INT_OCP_OTP_ALARM:
 		nuvolta_info("[%s] OCP OR OTP trigger\n", __func__);
 		schedule_delayed_work(&chip->rx_alarm_work,
-				      msecs_to_jiffies(500));
+					msecs_to_jiffies(500));
 		break;
 	case RX_INT_POWER_OFF:
 		nuvolta_info("[%s] POWER OFF INT trigger\n", __func__);
@@ -2543,15 +2499,13 @@ static void nuvolta_1665_chg_handler(struct nuvolta_1665_chg *chip,
 		nuvolta_info("[%s] factory test\n", __func__);
 		nuvolta_1665_rcv_factory_test_cmd(chip, rcv_value, &val_length);
 		nuvolta_info("[%s] factory test: 0x%x, 0x%x, 0x%x\n", __func__,
-			     rcv_value[0], rcv_value[1], rcv_value[2]);
+			rcv_value[0], rcv_value[1], rcv_value[2]);
 		if (rcv_value[0] == FACTORY_TEST_CMD)
 			nuvolta_1665_process_factory_cmd(chip, rcv_value[1]);
 		break;
 	default:
 		break;
 	}
-
-	return;
 }
 
 static void nu1665_dump_regs(struct nuvolta_1665_chg *chip)
@@ -2598,8 +2552,8 @@ static void nuvolta_1665_wireless_int_work(struct work_struct *work)
 	int ret = 0;
 	int irq_level;
 
-	struct nuvolta_1665_chg *chip = container_of(
-		work, struct nuvolta_1665_chg, wireless_int_work.work);
+	struct nuvolta_1665_chg *chip = container_of(work,
+		struct nuvolta_1665_chg, wireless_int_work.work);
 
 	if (gpio_is_valid(chip->irq_gpio))
 		irq_level = gpio_get_value(chip->irq_gpio);
@@ -2664,14 +2618,12 @@ static void nuvolta_1665_wireless_int_work(struct work_struct *work)
 
 exit:
 	mutex_unlock(&chip->wireless_chg_int_lock);
-	return;
 }
 
 static irqreturn_t nuvolta_1665_interrupt_handler(int irq, void *dev_id)
 {
 	struct nuvolta_1665_chg *chip = dev_id;
 
-	nuvolta_info("[%s]\n", __func__);
 	pm_stay_awake(chip->dev);
 	schedule_delayed_work(&chip->wireless_int_work, 0);
 
@@ -2680,7 +2632,6 @@ static irqreturn_t nuvolta_1665_interrupt_handler(int irq, void *dev_id)
 
 static void nuvolta_1665_reset_parameters(struct nuvolta_1665_chg *chip)
 {
-	nuvolta_info("%s\n", __func__);
 
 	chip->power_good_flag = 0;
 	chip->ss = 2;
@@ -2698,14 +2649,11 @@ static void nuvolta_1665_reset_parameters(struct nuvolta_1665_chg *chip)
 	chip->parallel_charge = false;
 	chip->reverse_chg_en = false;
 	chip->alarm_flag = false;
-
-	return;
 }
 
 static void nuvolta_1665_pg_det_work(struct work_struct *work)
 {
-	struct nuvolta_1665_chg *chip = container_of(
-		work, struct nuvolta_1665_chg, wireless_pg_det_work.work);
+	struct nuvolta_1665_chg *chip = container_of(work, struct nuvolta_1665_chg, wireless_pg_det_work.work);
 	int ret = 0, wls_switch_usb = 0;
 
 	if (!chip->wireless_psy) {
@@ -2733,22 +2681,17 @@ static void nuvolta_1665_pg_det_work(struct work_struct *work)
 			cancel_delayed_work(&chip->chg_monitor_work);
 			cancel_delayed_work(&chip->max_power_control_work);
 			cancel_delayed_work(&chip->rx_alarm_work);
-			schedule_delayed_work(&chip->rx_enable_usb_work,
-					      msecs_to_jiffies(500));
-			schedule_delayed_work(&chip->delay_report_status_work,
-					      msecs_to_jiffies(2000));
+			schedule_delayed_work(&chip->rx_enable_usb_work, msecs_to_jiffies(500));
+			schedule_delayed_work(&chip->delay_report_status_work, msecs_to_jiffies(2000));
 
 			nuvolta_1665_set_pmic_icl(chip, 0);
 			if (chip->icl_votable)
-				vote(chip->icl_votable, WLS_CHG_VOTER, false,
-				     0);
+				vote(chip->icl_votable, WLS_CHG_VOTER, false, 0);
 			if (chip->fcc_votable)
-				vote(chip->fcc_votable, WLS_CHG_VOTER, false,
-				     0);
+				vote(chip->fcc_votable, WLS_CHG_VOTER, false, 0);
 
 			//wls_get_property(WLS_PROP_SWITCH_USB, &wls_switch_usb);
-			nuvolta_info("wireless switch to usb: %d\n",
-				     wls_switch_usb);
+			nuvolta_info("wireless switch to usb: %d\n", wls_switch_usb);
 			if (!wls_switch_usb) {
 				nuvolta_1665_enable_bc12(chip, false);
 				nuvolta_1665_enable_power_path(false);
@@ -2756,22 +2699,18 @@ static void nuvolta_1665_pg_det_work(struct work_struct *work)
 
 			if (chip->wait_for_reverse_test) {
 				nuvolta_info("factory reverse charge start\n");
-				schedule_delayed_work(
-					&chip->factory_reverse_start_work,
-					msecs_to_jiffies(2000));
+				schedule_delayed_work(&chip->factory_reverse_start_work, msecs_to_jiffies(2000));
 			}
 
 			//TODO: disable vdd
 			//TODO: enable aicl
 		}
-		if (chip->wireless_psy) {
+		if (chip->wireless_psy)
 			power_supply_changed(chip->wireless_psy);
-		}
 	}
 }
 
-static void nuvolta_1665_get_charge_phase(struct nuvolta_1665_chg *chip,
-					  int *chg_phase)
+static void nuvolta_1665_get_charge_phase(struct nuvolta_1665_chg *chip, int *chg_phase)
 {
 	switch (*chg_phase) {
 	case NORMAL_MODE:
@@ -2781,8 +2720,7 @@ static void nuvolta_1665_get_charge_phase(struct nuvolta_1665_chg *chip,
 		}
 		break;
 	case TAPER_MODE:
-		if ((chip->batt_soc == 100) &&
-		    (chip->chg_status == POWER_SUPPLY_STATUS_FULL)) {
+		if ((chip->batt_soc == 100) && (chip->chg_status == POWER_SUPPLY_STATUS_FULL)) {
 			*chg_phase = FULL_MODE;
 			nuvolta_info("change taper mode to full mode");
 		} else if (chip->batt_soc < 99) {
@@ -2791,8 +2729,7 @@ static void nuvolta_1665_get_charge_phase(struct nuvolta_1665_chg *chip,
 		}
 		break;
 	case FULL_MODE:
-		if ((chip->chg_status == POWER_SUPPLY_STATUS_CHARGING) &&
-		    (chip->batt_soc < 100)) {
+		if ((chip->chg_status == POWER_SUPPLY_STATUS_CHARGING) && (chip->batt_soc < 100)) {
 			*chg_phase = RECHG_MODE;
 			nuvolta_info("change full mode to recharge mode");
 		}
@@ -2806,13 +2743,11 @@ static void nuvolta_1665_get_charge_phase(struct nuvolta_1665_chg *chip,
 	default:
 		break;
 	}
-	return;
 }
 
-static void nuvolta_1665_get_adapter_current(struct nuvolta_1665_chg *chip,
-					     u8 adapter)
+static void nuvolta_1665_get_adapter_current(struct nuvolta_1665_chg *chip, u8 adapter)
 {
-	nuvolta_info("[%s] adapter = 0x%x \n", __func__, adapter);
+	nuvolta_info("[%s] adapter = 0x%x\n", __func__, adapter);
 
 	switch (adapter) {
 	case ADAPTER_QC2:
@@ -2868,16 +2803,13 @@ static void nuvolta_1665_get_adapter_current(struct nuvolta_1665_chg *chip,
 	}
 
 	nuvolta_info("[%s]target_vout: %ld, target_icl: %ld", __func__,
-		     chip->target_vol, chip->target_curr);
-	return;
+		chip->target_vol, chip->target_curr);
 }
 
 static void nuvolta_1665_get_charging_info(struct nuvolta_1665_chg *chip)
 {
 	int vout, iout, vrect;
-	union power_supply_propval val = {
-		0,
-	};
+	union power_supply_propval val = {0,};
 	int ret = 0;
 
 	if (!chip)
@@ -2888,11 +2820,9 @@ static void nuvolta_1665_get_charging_info(struct nuvolta_1665_chg *chip)
 	if (!chip->batt_psy)
 		nuvolta_err("failed to get batt_psy\n");
 	else {
-		power_supply_get_property(chip->batt_psy,
-					  POWER_SUPPLY_PROP_CAPACITY, &val);
+		power_supply_get_property(chip->batt_psy, POWER_SUPPLY_PROP_CAPACITY, &val);
 		chip->batt_soc = val.intval;
-		power_supply_get_property(chip->batt_psy,
-					  POWER_SUPPLY_PROP_STATUS, &val);
+		power_supply_get_property(chip->batt_psy, POWER_SUPPLY_PROP_STATUS, &val);
 		chip->chg_status = val.intval;
 		nuvolta_1665_get_charge_phase(chip, &chip->chg_phase);
 	}
@@ -2913,10 +2843,8 @@ static void nuvolta_1665_get_charging_info(struct nuvolta_1665_chg *chip)
 		vrect = 0;
 	}
 
-	nuvolta_info(
-		"%s:Vout:%d, Iout:%d, Vrect:%d, soc: %d, status: %d, chg_phase: %d\n",
-		__func__, vout, iout, vrect, chip->batt_soc, chip->chg_status,
-		chip->chg_phase);
+	nuvolta_info("%s:Vout:%d, Iout:%d, Vrect:%d, soc: %d, status: %d, chg_phase: %d\n",
+			__func__, vout, iout, vrect, chip->batt_soc, chip->chg_status, chip->chg_phase);
 }
 
 static void nuvolta_1665_standard_epp_work(struct nuvolta_1665_chg *chip)
@@ -2929,19 +2857,17 @@ static void nuvolta_1665_standard_epp_work(struct nuvolta_1665_chg *chip)
 
 	if (chip->target_vol != chip->pre_vol) {
 		nuvolta_info("set new vout: %lu, pre vout: %lu\n",
-			     chip->target_vol, chip->pre_vol);
+			chip->target_vol, chip->pre_vol);
 		nuvolta_1665_set_vout(chip, chip->target_vol);
 		chip->pre_vol = chip->target_vol;
 	}
 
 	if (chip->target_curr != chip->pre_curr) {
 		nuvolta_info("set new icl: %lu, pre icl: %lu\n",
-			     chip->target_curr, chip->pre_curr);
+			chip->target_curr, chip->pre_curr);
 		nuvolta_1665_set_pmic_icl(chip, chip->target_curr);
 		chip->pre_curr = chip->target_curr;
 	}
-
-	return;
 }
 
 static void nuvolta_1665_bpp_plus_work(struct nuvolta_1665_chg *chip)
@@ -2957,19 +2883,17 @@ static void nuvolta_1665_bpp_plus_work(struct nuvolta_1665_chg *chip)
 
 	if (chip->target_vol != chip->pre_vol) {
 		nuvolta_info("set new vout: %lu, pre vout: %lu\n",
-			     chip->target_vol, chip->pre_vol);
+			chip->target_vol, chip->pre_vol);
 		nuvolta_1665_set_vout(chip, chip->target_vol);
 		chip->pre_vol = chip->target_vol;
 	}
 
 	if (chip->target_curr != chip->pre_curr) {
 		nuvolta_info("set new icl: %lu, pre icl: %lu\n",
-			     chip->target_curr, chip->pre_curr);
+			chip->target_curr, chip->pre_curr);
 		nuvolta_1665_set_pmic_icl(chip, chip->target_curr);
 		chip->pre_curr = chip->target_curr;
 	}
-
-	return;
 }
 
 static void nuvolta_1665_epp_compatible_work(struct nuvolta_1665_chg *chip)
@@ -2987,19 +2911,17 @@ static void nuvolta_1665_epp_compatible_work(struct nuvolta_1665_chg *chip)
 
 	if (chip->target_vol != chip->pre_vol) {
 		nuvolta_info("set new vout: %lu, pre vout: %lu\n",
-			     chip->target_vol, chip->pre_vol);
+			chip->target_vol, chip->pre_vol);
 		nuvolta_1665_set_vout(chip, chip->target_vol);
 		chip->pre_vol = chip->target_vol;
 	}
 
 	if (chip->target_curr != chip->pre_curr) {
 		nuvolta_info("set new icl: %lu, pre icl: %lu\n",
-			     chip->target_curr, chip->pre_curr);
+			chip->target_curr, chip->pre_curr);
 		nuvolta_1665_set_pmic_icl(chip, chip->target_curr);
 		chip->pre_curr = chip->target_curr;
 	}
-
-	return;
 }
 
 static void nuvolta_1665_epp_plus_work(struct nuvolta_1665_chg *chip)
@@ -3017,19 +2939,17 @@ static void nuvolta_1665_epp_plus_work(struct nuvolta_1665_chg *chip)
 
 	if (chip->target_vol != chip->pre_vol) {
 		nuvolta_info("set new vout: %lu, pre vout: %lu\n",
-			     chip->target_vol, chip->pre_vol);
+			chip->target_vol, chip->pre_vol);
 		nuvolta_1665_set_vout(chip, chip->target_vol);
 		chip->pre_vol = chip->target_vol;
 	}
 
 	if (chip->target_curr != chip->pre_curr) {
 		nuvolta_info("set new icl: %lu, pre icl: %lu\n",
-			     chip->target_curr, chip->pre_curr);
+			chip->target_curr, chip->pre_curr);
 		nuvolta_1665_set_pmic_icl(chip, chip->target_curr);
 		chip->pre_curr = chip->target_curr;
 	}
-
-	return;
 }
 
 static void nuvolta_1665_charging_loop(struct nuvolta_1665_chg *chip)
@@ -3078,53 +2998,53 @@ static void nuvolta_1665_charging_loop(struct nuvolta_1665_chg *chip)
 	default:
 		break;
 	}
-
-	return;
 }
 
 static void nuvolta_1665_monitor_work(struct work_struct *work)
 {
-	struct nuvolta_1665_chg *chip = container_of(
-		work, struct nuvolta_1665_chg, chg_monitor_work.work);
+	struct nuvolta_1665_chg *chip =
+		 container_of(work, struct nuvolta_1665_chg,
+					chg_monitor_work.work);
 	nuvolta_1665_get_charging_info(chip);
 
 	nuvolta_1665_charging_loop(chip);
 
-	schedule_delayed_work(&chip->chg_monitor_work, msecs_to_jiffies(5000));
+	schedule_delayed_work(&chip->chg_monitor_work,
+			msecs_to_jiffies(5000));
 }
 
 static void nuvolta_1665_factory_reverse_start_work(struct work_struct *work)
 {
-	struct nuvolta_1665_chg *chip = container_of(
-		work, struct nuvolta_1665_chg, factory_reverse_start_work.work);
+	struct nuvolta_1665_chg *chip =
+		container_of(work, struct nuvolta_1665_chg,
+		factory_reverse_start_work.work);
 
 	//TODO:enable reverse charge
 	nuvolta_info("just for use chip: %d\n", chip->power_good_flag);
-	return;
 }
 
 static void nuvolta_1665_factory_reverse_stop_work(struct work_struct *work)
 {
-	struct nuvolta_1665_chg *chip = container_of(
-		work, struct nuvolta_1665_chg, factory_reverse_stop_work.work);
+	struct nuvolta_1665_chg *chip =
+		container_of(work, struct nuvolta_1665_chg,
+		factory_reverse_stop_work.work);
 
 	//TODO:disable reverse charge
 	nuvolta_info("just for use chip: %d\n", chip->power_good_flag);
-	return;
 }
 
 static void nuvolta_1665_delay_report_status_work(struct work_struct *work)
 {
-	struct nuvolta_1665_chg *chip = container_of(
-		work, struct nuvolta_1665_chg, delay_report_status_work.work);
+	struct nuvolta_1665_chg *chip =
+		container_of(work, struct nuvolta_1665_chg,
+		delay_report_status_work.work);
 
 	//TODO:delay report discharging
 	nuvolta_info("just for use chip: %d\n", chip->power_good_flag);
-	return;
 }
 
 static void nuvolta_1665_check_rx_alarm(struct nuvolta_1665_chg *chip,
-					bool *ocp_flag, bool *otp_flag)
+	bool *ocp_flag, bool *otp_flag)
 {
 	int iout = 0, temp = 0;
 	int ret = 0;
@@ -3140,14 +3060,13 @@ static void nuvolta_1665_check_rx_alarm(struct nuvolta_1665_chg *chip,
 		*otp_flag = false;
 	else
 		*otp_flag = (temp >= RX_MAX_TEMP);
-
-	return;
 }
 
 static void nuvolta_1665_rx_alarm_work(struct work_struct *work)
 {
 	struct nuvolta_1665_chg *chip =
-		container_of(work, struct nuvolta_1665_chg, rx_alarm_work.work);
+		container_of(work, struct nuvolta_1665_chg,
+		rx_alarm_work.work);
 
 	bool ocp_flag = false, otp_flag = false;
 	int fcc_setted = 0;
@@ -3170,44 +3089,45 @@ static void nuvolta_1665_rx_alarm_work(struct work_struct *work)
 			nuvolta_1665_set_pmic_ichg(chip, fcc_setted - 500);
 	}
 
-	schedule_delayed_work(&chip->rx_alarm_work, msecs_to_jiffies(4000));
-	return;
+	schedule_delayed_work(&chip->rx_alarm_work,
+				msecs_to_jiffies(4000));
 }
 
 static void nuvolta_1665_rx_enable_usb_work(struct work_struct *work)
 {
-	struct nuvolta_1665_chg *chip = container_of(
-		work, struct nuvolta_1665_chg, rx_enable_usb_work.work);
+	struct nuvolta_1665_chg *chip =
+		container_of(work, struct nuvolta_1665_chg,
+		rx_enable_usb_work.work);
 
 	//TODO:
 	nuvolta_info("just for use chip: %d\n", chip->power_good_flag);
-	return;
 }
 
 static void nuvolta_1665_max_power_control_work(struct work_struct *work)
 {
-	struct nuvolta_1665_chg *chip = container_of(
-		work, struct nuvolta_1665_chg, max_power_control_work.work);
+	struct nuvolta_1665_chg *chip =
+		container_of(work, struct nuvolta_1665_chg,
+		max_power_control_work.work);
 
 	//TODO:
 	nuvolta_info("just for use chip: %d\n", chip->power_good_flag);
-	return;
 }
 
 static void nuvolta_1665_fw_state_work(struct work_struct *work)
 {
 	struct nuvolta_1665_chg *chip =
-		container_of(work, struct nuvolta_1665_chg, fw_state_work.work);
+		container_of(work, struct nuvolta_1665_chg,
+		fw_state_work.work);
 
 	//TODO:
 	nuvolta_info("just for use chip: %d\n", chip->power_good_flag);
-	return;
 }
 
 static void nu1665_hall3_irq_work(struct work_struct *work)
 {
-	struct nuvolta_1665_chg *chip = container_of(
-		work, struct nuvolta_1665_chg, hall3_irq_work.work);
+	struct nuvolta_1665_chg *chip =
+	    container_of(work, struct nuvolta_1665_chg,
+			 hall3_irq_work.work);
 
 	if (chip->fw_update) {
 		nuvolta_info("[hall3] fw updating, don't enable reverse chg\n");
@@ -3222,16 +3142,14 @@ static void nu1665_hall3_irq_work(struct work_struct *work)
 		chip->is_reverse_chg = 2;
 		schedule_delayed_work(&chip->reverse_sent_state_work, 0);
 	} else
-		nuvolta_info(
-			"[hall3] hall4 online, don't disable reverse charge\n");
-
-	return;
+		nuvolta_info("[hall3] hall4 online, don't disable reverse charge\n");
 }
 
 static void nu1665_hall4_irq_work(struct work_struct *work)
 {
-	struct nuvolta_1665_chg *chip = container_of(
-		work, struct nuvolta_1665_chg, hall4_irq_work.work);
+	struct nuvolta_1665_chg *chip =
+	    container_of(work, struct nuvolta_1665_chg,
+			 hall4_irq_work.work);
 
 	if (chip->fw_update) {
 		nuvolta_info("[hall4] fw updating, don't enable reverse chg\n");
@@ -3246,16 +3164,14 @@ static void nu1665_hall4_irq_work(struct work_struct *work)
 		chip->is_reverse_chg = 2;
 		schedule_delayed_work(&chip->reverse_sent_state_work, 0);
 	} else
-		nuvolta_info(
-			"[hall4] hall3 online, don't disable reverse charge\n");
-
-	return;
+		nuvolta_info("[hall4] hall3 online, don't disable reverse charge\n");
 }
 
 static void nu_reverse_chg_work(struct work_struct *work)
 {
-	struct nuvolta_1665_chg *chip = container_of(
-		work, struct nuvolta_1665_chg, reverse_chg_work.work);
+	struct nuvolta_1665_chg *chip =
+	    container_of(work, struct nuvolta_1665_chg,
+			 reverse_chg_work.work);
 	int temp = 0, rc = 0;
 
 	if (chip->is_reverse_mode || chip->is_boost_mode) {
@@ -3278,14 +3194,13 @@ exit:
 		schedule_delayed_work(&chip->reverse_chg_work, 100);
 	else
 		schedule_delayed_work(&chip->reverse_chg_work, 10 * HZ);
-
-	return;
 }
 
 static void nu1665_probe_fw_download_work(struct work_struct *work)
 {
-	struct nuvolta_1665_chg *chip = container_of(
-		work, struct nuvolta_1665_chg, probe_fw_download_work.work);
+	struct nuvolta_1665_chg *chip =
+	    container_of(work, struct nuvolta_1665_chg,
+			 probe_fw_download_work.work);
 	bool crc_ok = false;
 	int rc = 0;
 	bool fw_ok = false;
@@ -3295,7 +3210,7 @@ static void nu1665_probe_fw_download_work(struct work_struct *work)
 
 	if (chip->fw_update) {
 		nuvolta_info("[nu1665] [%s] FW Update is on going!\n",
-			     __func__);
+			 __func__);
 		return;
 	}
 
@@ -3335,11 +3250,10 @@ static void nu1665_probe_fw_download_work(struct work_struct *work)
 
 		nuvolta_info("%s: FW download start\n", __func__);
 		rc = nuvolta_1665_download_fw(chip, false, true);
-		if (rc < 0) {
+		if (rc < 0)
 			nuvolta_err("[%s] fw download failed!\n", __func__);
-		} else {
+		else
 			nuvolta_info("%s: FW download end\n", __func__);
-		}
 
 		rc = nuvolta_1665_set_reverse_gpio(chip, false);
 		msleep(1000);
@@ -3357,14 +3271,11 @@ static void nu1665_probe_fw_download_work(struct work_struct *work)
 	chip->fw_update = false;
 	pm_relax(chip->dev);
 	if (chip->hall3_online)
-		schedule_delayed_work(&chip->hall3_irq_work,
-				      msecs_to_jiffies(2000));
+		schedule_delayed_work(&chip->hall3_irq_work, msecs_to_jiffies(2000));
 	else if (chip->hall4_online)
-		schedule_delayed_work(&chip->hall4_irq_work,
-				      msecs_to_jiffies(2000));
-	else
-		return;
+		schedule_delayed_work(&chip->hall4_irq_work, msecs_to_jiffies(2000));
 }
+
 
 static irqreturn_t nuvolta_1665_power_good_handler(int irq, void *dev_id)
 {
@@ -3385,27 +3296,31 @@ static irqreturn_t nuvolta_1665_hall3_irq_handler(int irq, void *dev_id)
 		if (gpio_get_value(chip->hall3_gpio)) {
 			nuvolta_err("hall3_irq_handler: pen detach\n");
 			chip->hall3_online = 0;
+			pen_charge_state_notifier_call_chain(0, NULL);
 			if (chip->hall4_online) {
 				nuvolta_err(
 					"hall3_irq_handler: hall4 online, return\n");
+				pen_charge_state_notifier_call_chain(1, NULL);
 				return IRQ_HANDLED;
 			}
 			schedule_delayed_work(&chip->hall3_irq_work,
 					      msecs_to_jiffies(0));
 			return IRQ_HANDLED;
-		} else {
-			nuvolta_err("hall3_irq_handler: pen attach\n");
-			chip->hall3_online = 1;
 		}
+
+		nuvolta_err("hall3_irq_handler: pen attach\n");
+		chip->hall3_online = 1;
+		pen_charge_state_notifier_call_chain(1, NULL);
 	}
 
 	if (chip->hall4_online) {
 		nuvolta_err(
 			"[hall3] reverse charging already running, return\n");
 		return IRQ_HANDLED;
-	} else
-		schedule_delayed_work(&chip->hall3_irq_work,
-				      msecs_to_jiffies(10));
+	}
+
+	schedule_delayed_work(&chip->hall3_irq_work,
+				  msecs_to_jiffies(10));
 
 	return IRQ_HANDLED;
 }
@@ -3418,27 +3333,31 @@ static irqreturn_t nuvolta_1665_hall4_irq_handler(int irq, void *dev_id)
 		if (gpio_get_value(chip->hall4_gpio)) {
 			nuvolta_err("hall4_irq_handler: pen detach\n");
 			chip->hall4_online = 0;
+			pen_charge_state_notifier_call_chain(0, NULL);
 			if (chip->hall3_online) {
 				nuvolta_err(
 					"hall4_irq_handler: hall3 online, return\n");
+				pen_charge_state_notifier_call_chain(1, NULL);
 				return IRQ_HANDLED;
 			}
 			schedule_delayed_work(&chip->hall4_irq_work,
 					      msecs_to_jiffies(0));
 			return IRQ_HANDLED;
-		} else {
-			nuvolta_err("hall4_irq_handler: pen attach\n");
-			chip->hall4_online = 1;
 		}
+
+		nuvolta_err("hall4_irq_handler: pen attach\n");
+		chip->hall4_online = 1;
+		pen_charge_state_notifier_call_chain(1, NULL);
 	}
 
 	if (chip->hall3_online) {
 		nuvolta_err(
 			"[hall4] reverse charging already running, return\n");
 		return IRQ_HANDLED;
-	} else
-		schedule_delayed_work(&chip->hall4_irq_work,
-				      msecs_to_jiffies(10));
+	}
+
+	schedule_delayed_work(&chip->hall4_irq_work,
+				  msecs_to_jiffies(10));
 
 	return IRQ_HANDLED;
 }
@@ -3453,57 +3372,58 @@ static int nuvolta_1665_parse_dt(struct nuvolta_1665_chg *chip)
 	}
 
 	chip->tx_on_gpio = of_get_named_gpio(node, "reverse_chg_ovp_gpio", 0);
-	nuvolta_err("[%s] print tx_on gpio %d\n", __func__, chip->tx_on_gpio);
+	nuvolta_info("[%s] print tx_on gpio %d\n",
+						__func__, chip->tx_on_gpio);
 	if (!gpio_is_valid(chip->tx_on_gpio)) {
-		nuvolta_err("[%s] fail_tx_on gpio %d\n", __func__,
-			    chip->tx_on_gpio);
+		nuvolta_err("[%s] fail_tx_on gpio %d\n",
+						 __func__, chip->tx_on_gpio);
 		return -EINVAL;
 	}
 
-	/*	chip->enable_gpio = of_get_named_gpio(node, "rx_sleep_gpio", 0);
+/*	chip->enable_gpio = of_get_named_gpio(node, "rx_sleep_gpio", 0);
 	if ((!gpio_is_valid(chip->enable_gpio)))
 		return -EINVAL;
 */
 	chip->irq_gpio = of_get_named_gpio(node, "rx_irq_gpio", 0);
-	nuvolta_err("[%s] print irq_gpio %d\n", __func__, chip->irq_gpio);
+	nuvolta_info("[%s] print irq_gpio %d\n",
+						__func__, chip->irq_gpio);
 	if (!gpio_is_valid(chip->irq_gpio)) {
-		nuvolta_err("[%s] fail_irq_gpio %d\n", __func__,
-			    chip->irq_gpio);
+		nuvolta_err("[%s] fail_irq_gpio %d\n",
+						 __func__, chip->irq_gpio);
 		return -EINVAL;
 	}
 
-	/*	chip->power_good_gpio = of_get_named_gpio(node, "pwr_det_gpio", 0);
+/*	chip->power_good_gpio = of_get_named_gpio(node, "pwr_det_gpio", 0);
 	if (!gpio_is_valid(chip->power_good_gpio)) {
 		nuvolta_err("[%s] fail_power_good_gpio %d\n",
 						 __func__, chip->power_good_gpio);
 		return -EINVAL;
 	}
 */
-	chip->reverse_boost_gpio =
-		of_get_named_gpio(node, "reverse_boost_gpio", 0);
-	nuvolta_err("[%s] print reverse_boost_gpio %d\n", __func__,
-		    chip->reverse_boost_gpio);
+	chip->reverse_boost_gpio = of_get_named_gpio(node, "reverse_boost_gpio", 0);
+	nuvolta_info("[%s] print reverse_boost_gpio %d\n",
+						__func__, chip->reverse_boost_gpio);
 	if (!gpio_is_valid(chip->reverse_boost_gpio)) {
-		nuvolta_err("[%s] fail reverse_boost_gpio %d\n", __func__,
-			    chip->reverse_boost_gpio);
+		nuvolta_err("[%s] fail reverse_boost_gpio %d\n",
+						 __func__, chip->reverse_boost_gpio);
 		return -EINVAL;
 	}
 
 	chip->hall3_gpio = of_get_named_gpio(node, "hall,int3", 0);
-	nuvolta_err("[%s] print chip->hall3_gpio %d\n", __func__,
-		    chip->hall3_gpio);
+	nuvolta_info("[%s] print chip->hall3_gpio %d\n",
+						__func__, chip->hall3_gpio);
 	if ((!gpio_is_valid(chip->hall3_gpio))) {
-		nuvolta_err("[%s] chip->hall3_gpio %d\n", __func__,
-			    chip->hall3_gpio);
+		nuvolta_err("[%s] chip->hall3_gpio %d\n",
+						 __func__, chip->hall3_gpio);
 		return -EINVAL;
 	}
 
 	chip->hall4_gpio = of_get_named_gpio(node, "hall,int4", 0);
-	nuvolta_err("[%s] print chip->hall4_gpio %d\n", __func__,
-		    chip->hall4_gpio);
+	nuvolta_info("[%s] print chip->hall4_gpio %d\n",
+						__func__, chip->hall4_gpio);
 	if ((!gpio_is_valid(chip->hall4_gpio))) {
-		nuvolta_err("[%s] chip->hall4_gpio %d\n", __func__,
-			    chip->hall4_gpio);
+		nuvolta_err("[%s] chip->hall4_gpio %d\n",
+						 __func__, chip->hall4_gpio);
 		return -EINVAL;
 	}
 
@@ -3545,7 +3465,7 @@ static int nuvolta_rx1665_gpio_init(struct nuvolta_1665_chg *chip)
 	if (gpio_is_valid(chip->irq_gpio)) {
 		irqn = gpio_to_irq(chip->irq_gpio);
 		if (irqn < 0) {
-			nuvolta_err("[%s] gpio_to_irq Fail!, irq_gpio:%d \n",
+			nuvolta_err("[%s] gpio_to_irq Fail!, irq_gpio:%d\n",
 				    __func__, chip->irq_gpio);
 			ret = -1;
 			goto fail_irq_gpio;
@@ -3560,14 +3480,14 @@ static int nuvolta_rx1665_gpio_init(struct nuvolta_1665_chg *chip)
 	/*	if (gpio_is_valid(chip->power_good_gpio)) {
 		irqn = gpio_to_irq(chip->power_good_gpio);
 		if (irqn < 0) {
-			nuvolta_err("[%s] gpio_to_irq Fail! \n", __func__);
-            ret = -1;
+			nuvolta_err("[%s] gpio_to_irq Fail!\n", __func__);
+	    ret = -1;
 			goto fail_power_good_gpio;
 		}
 		chip->power_good_irq = irqn;
 	} else {
 		nuvolta_err("%s: power good gpio not provided\n", __func__);
-        ret = -1;
+	ret = -1;
 		goto fail_power_good_gpio;
 	}
 */
@@ -3617,7 +3537,7 @@ static int nuvolta_rx1665_irq_request(struct nuvolta_1665_chg *chip)
 
 	// config irq
 	if (!chip->irq) {
-		nuvolta_err("irq is wrong = %s \n", __func__);
+		nuvolta_err("irq is wrong = %s\n", __func__);
 		return -EINVAL;
 	}
 
@@ -3636,7 +3556,7 @@ static int nuvolta_rx1665_irq_request(struct nuvolta_1665_chg *chip)
 
 	// config hall3 irq
 	if (!chip->hall3_irq) {
-		nuvolta_err("hall3 irq is wrong = %s \n", __func__);
+		nuvolta_err("hall3 irq is wrong = %s\n", __func__);
 		return -EINVAL;
 	}
 
@@ -3657,7 +3577,7 @@ static int nuvolta_rx1665_irq_request(struct nuvolta_1665_chg *chip)
 	}
 	// config hall4 irq
 	if (!chip->hall4_irq) {
-		nuvolta_err("hall4 irq is wrong = %s \n", __func__);
+		nuvolta_err("hall4 irq is wrong = %s\n", __func__);
 		return -EINVAL;
 	}
 
@@ -3680,7 +3600,7 @@ static int nuvolta_rx1665_irq_request(struct nuvolta_1665_chg *chip)
 	return 0;
 	// config power good irq
 	if (!chip->power_good_irq) {
-		nuvolta_err("power good irq is wrong = %s \n", __func__);
+		nuvolta_err("power good irq is wrong = %s\n", __func__);
 		return -EINVAL;
 	}
 
@@ -3705,7 +3625,8 @@ static int nuvolta_rx1665_irq_request(struct nuvolta_1665_chg *chip)
 }
 
 static ssize_t chip_vrect_show(struct device *dev,
-			       struct device_attribute *attr, char *buf)
+		struct device_attribute *attr,
+		char *buf)
 {
 	int vrect = 0, ret = 0;
 
@@ -3718,8 +3639,9 @@ static ssize_t chip_vrect_show(struct device *dev,
 	return scnprintf(buf, PAGE_SIZE, "rx1665 Vrect : %d mV\n", vrect);
 }
 
-static ssize_t chip_iout_show(struct device *dev, struct device_attribute *attr,
-			      char *buf)
+static ssize_t chip_iout_show(struct device *dev,
+		struct device_attribute *attr,
+		char *buf)
 {
 	int iout = 0, ret = 0;
 
@@ -3732,8 +3654,9 @@ static ssize_t chip_iout_show(struct device *dev, struct device_attribute *attr,
 	return scnprintf(buf, PAGE_SIZE, "%d\n", iout);
 }
 
-static ssize_t chip_vout_show(struct device *dev, struct device_attribute *attr,
-			      char *buf)
+static ssize_t chip_vout_show(struct device *dev,
+		struct device_attribute *attr,
+		char *buf)
 {
 	int vout = 0, ret = 0;
 
@@ -3747,22 +3670,27 @@ static ssize_t chip_vout_show(struct device *dev, struct device_attribute *attr,
 }
 
 static ssize_t chip_vout_store(struct device *dev,
-			       struct device_attribute *attr, const char *buf,
-			       size_t count)
+		struct device_attribute *attr,
+		const char *buf,
+		size_t count)
 {
-	int index;
+	unsigned long index;
+	int ret;
 
-	index = (int)simple_strtoul(buf, NULL, 10);
-	nuvolta_info("[rx1665] [%s] --Store output_voltage = %d\n", __func__,
-		     index);
+	ret = kstrtoul(buf, 10, &index);
+	if (ret)
+		nuvolta_err("[rx1665] [%s]: Failed to convert str to ul\n", __func__);
+
+	nuvolta_info("[rx1665] [%s] --Store output_voltage = %d\n",
+							__func__, (int)index);
 	if ((index < 4000) || (index > 21000)) {
 		nuvolta_err("[rx1665] [%s] Store Voltage %s is invalid\n",
-			    __func__, buf);
+							__func__, buf);
 		nuvolta_1665_set_vout(g_chip, 0);
 		return count;
 	}
 
-	nuvolta_1665_set_vout(g_chip, index);
+	nuvolta_1665_set_vout(g_chip, (int)index);
 
 	return count;
 }
@@ -3775,7 +3703,7 @@ static int nuvolta_1665_check_i2c(struct nuvolta_1665_chg *chip)
 	ret = rx1665_write(chip, 0x88, 0x0000);
 	if (ret < 0)
 		return ret;
-	msleep(10);
+	usleep_range(10000, 11000);
 
 	ret = rx1665_read(chip, &data, 0x0000);
 	if (ret < 0)
@@ -3784,12 +3712,10 @@ static int nuvolta_1665_check_i2c(struct nuvolta_1665_chg *chip)
 	if (data == 0x88) {
 		nuvolta_info("[%s] i2c check ok!\n", __func__);
 		return 1;
-	} else {
-		nuvolta_info("[%s] i2c check failed!\n", __func__);
-		return -1;
 	}
 
-	return ret;
+	nuvolta_err("[%s] i2c check failed!\n", __func__);
+	return -EPERM;
 }
 
 /*static int nuvolta_1665_enter_dtm_mode(struct nuvolta_1665_chg *chip)
@@ -3797,7 +3723,6 @@ static int nuvolta_1665_check_i2c(struct nuvolta_1665_chg *chip)
 	int ret = 0;
 	u8 data;
 
-	nuvolta_info("[%s] \n", __func__);
 
 	ret = rx1665_write(chip, 0x41, 0x0090);
 	if (ret < 0)
@@ -3860,7 +3785,6 @@ static int nuvolta_1665_exit_dtm_mode(struct nuvolta_1665_chg *chip)
 {
 	int ret = 0;
 
-	nuvolta_info("[%s] \n", __func__);
 
 	ret = rx1665_write(chip, 0x00, 0x2020);
 	if (ret < 0)
@@ -3877,7 +3801,6 @@ static int nuvolta_1665_disable_mcu(struct nuvolta_1665_chg *chip)
 {
 	int ret = 0;
 
-	nuvolta_info("[%s] \n", __func__);
 
 	ret = rx1665_write(chip, 0xc0, 0x1000);
 	if (ret < 0)
@@ -3894,7 +3817,6 @@ static int nuvolta_1665_mux_burn_free(struct nuvolta_1665_chg *chip)
 {
 	int ret = 0;
 
-	nuvolta_info("[%s] \n", __func__);
 
 	ret = rx1665_write(chip, 0x80, 0x1001);
 	if (ret < 0)
@@ -3907,7 +3829,6 @@ static int nuvolta_1665_select_all_sector(struct nuvolta_1665_chg *chip)
 {
 	int ret = 0;
 
-	nuvolta_info("[%s] \n", __func__);
 
 	ret = rx1665_write(chip, 0xff, 0x0012);
 	if (ret < 0)
@@ -3920,7 +3841,6 @@ static int nuvolta_1665_enter_write_mode(struct nuvolta_1665_chg *chip)
 {
 	int ret = 0;
 
-	nuvolta_info("[%s] \n", __func__);
 
 	ret = rx1665_write(chip, 0x5a, 0x001a);
 	if (ret < 0)
@@ -3933,7 +3853,6 @@ static int nuvolta_1665_exit_write_mode(struct nuvolta_1665_chg *chip)
 {
 	int ret = 0;
 
-	nuvolta_info("[%s] \n", __func__);
 
 	ret = rx1665_write(chip, 0x00, 0x001a);
 	if (ret < 0)
@@ -4027,17 +3946,17 @@ static int nuvolta_1665_exit_write_mode(struct nuvolta_1665_chg *chip)
 	return ret;
 }*/
 #if 0
-static u8 nuvolta_1665_get_boot_fw_version()
+static u8 nuvolta_1665_get_boot_fw_version(void)
 {
 	return ((~fw_data_1665[1*1024-9]) & 0xFF);
 }
 
-static u8 nuvolta_1665_get_rx_fw_version()
+static u8 nuvolta_1665_get_rx_fw_version(void)
 {
 	return ((~fw_data_1665[23*1024-9]) & 0xFF);
 }
 
-static u8 nuvolta_1665_get_tx_fw_version()
+static u8 nuvolta_1665_get_tx_fw_version(void)
 {
 	return ((~fw_data_1665[32*1024-9]) & 0xFF);
 }
@@ -4105,15 +4024,13 @@ static u8 nuvolta_1665_get_fw_version(struct nuvolta_1665_chg *chip)
 }
 #endif
 static int nuvolta_1665_download_fw_data(struct nuvolta_1665_chg *chip,
-					 unsigned char *fw_data,
-					 int fw_data_length)
+	unsigned char *fw_data, int fw_data_length)
 {
 	int ret = 0;
-	u8 read_data = 0; //, wrfail = 0, busy = 0;
+	u8 read_data = 0;//, wrfail = 0, busy = 0;
 	int i = 0, j = 0;
 	u8 __1st_word = 1;
 
-	nuvolta_info("[%s] start\n", __func__);
 
 	//ret = nuvolta_1665_enter_dtm_mode(chip);
 	if (rx1665_write(chip, 0x41, 0x0090) < 0)
@@ -4127,7 +4044,7 @@ static int nuvolta_1665_download_fw_data(struct nuvolta_1665_chg *chip,
 		return ret;
 	}
 
-	/*	ret = nuvolta_1665_disable_mcu(chip);
+/*	ret = nuvolta_1665_disable_mcu(chip);
 	if (ret < 0) {
 		nuvolta_err("[%s] failed to disable_mcu\n", __func__);
 		goto exit;
@@ -4160,13 +4077,13 @@ static int nuvolta_1665_download_fw_data(struct nuvolta_1665_chg *chip,
 			if (rx1665_write(chip, 0x01, 0x0017) < 0)
 				goto exit;
 
-			if (rx1665_write(chip, fw_data[i + 3], 0x001C) < 0)
+			if (rx1665_write(chip, fw_data[i+3], 0x001C) < 0)
 				goto exit;
-			if (rx1665_write(chip, fw_data[i + 2], 0x001D) < 0)
+			if (rx1665_write(chip, fw_data[i+2], 0x001D) < 0)
 				goto exit;
-			if (rx1665_write(chip, fw_data[i + 1], 0x001E) < 0)
+			if (rx1665_write(chip, fw_data[i+1], 0x001E) < 0)
 				goto exit;
-			if (rx1665_write(chip, fw_data[i + 0], 0x001F) < 0)
+			if (rx1665_write(chip, fw_data[i+0], 0x001F) < 0)
 				goto exit;
 
 			if (rx1665_write(chip, 0x01, 0x0019) < 0)
@@ -4179,13 +4096,13 @@ static int nuvolta_1665_download_fw_data(struct nuvolta_1665_chg *chip,
 			msleep(20);
 		}
 
-		if (rx1665_write(chip, fw_data[i + 3], 0x001C) < 0)
+		if (rx1665_write(chip, fw_data[i+3], 0x001C) < 0)
 			goto exit;
-		if (rx1665_write(chip, fw_data[i + 2], 0x001D) < 0)
+		if (rx1665_write(chip, fw_data[i+2], 0x001D) < 0)
 			goto exit;
-		if (rx1665_write(chip, fw_data[i + 1], 0x001E) < 0)
+		if (rx1665_write(chip, fw_data[i+1], 0x001E) < 0)
 			goto exit;
-		if (rx1665_write(chip, fw_data[i + 0], 0x001F) < 0)
+		if (rx1665_write(chip, fw_data[i+0], 0x001F) < 0)
 			goto exit;
 
 		for (j = 0; j < 250; j++) {
@@ -4194,21 +4111,21 @@ static int nuvolta_1665_download_fw_data(struct nuvolta_1665_chg *chip,
 			if (!(read_data & (1 << 7)))
 				break;
 			if (read_data & (1 << 6)) {
-				nuvolta_err("[%s] write failed \n", __func__);
+				nuvolta_err("[%s] write failed\n", __func__);
 				goto exit;
 			}
-			msleep(1);
+			usleep_range(1000, 2000);
 		}
 
 		if (j == 250) {
-			nuvolta_err("[%s] write timeout \n", __func__);
+			nuvolta_err("[%s] write timeout\n", __func__);
 			goto exit;
 		}
 	}
 	if (rx1665_write(chip, 0x00, 0x001A) < 0)
 		goto exit;
 
-	/*	ret = nuvolta_1665_exit_write_mode(chip);
+/*	ret = nuvolta_1665_exit_write_mode(chip);
 	if (ret < 0)
 		goto exit;
 
@@ -4222,7 +4139,7 @@ exit:
 	msleep(100);
 	nuvolta_err("[%s] wrfail, MTP error\n", __func__);
 
-	/*	ret = nuvolta_1665_exit_write_mode(chip);
+/*	ret = nuvolta_1665_exit_write_mode(chip);
 	if (ret < 0)
 		return ret;
 
@@ -4247,14 +4164,14 @@ static int key_open(struct nuvolta_1665_chg *chip)
 		goto exit;
 	return 0;
 exit:
-	nuvolta_err("[%s] failed \n", __func__);
+	nuvolta_err("[%s] failed\n", __func__);
 	return -1;
 }
 
 static int write_key0(struct nuvolta_1665_chg *chip)
 {
 	if (rx1665_write(chip, 0x00, 0x2018) < 0) {
-		nuvolta_err("[%s] failed \n", __func__);
+		nuvolta_err("[%s] failed\n", __func__);
 		return -1;
 	}
 	return 0;
@@ -4263,7 +4180,7 @@ static int write_key0(struct nuvolta_1665_chg *chip)
 static int write_key1(struct nuvolta_1665_chg *chip)
 {
 	if (rx1665_write(chip, 0x00, 0x2019) < 0) {
-		nuvolta_err("[%s] failed \n", __func__);
+		nuvolta_err("[%s] failed\n", __func__);
 		return -1;
 	}
 	return 0;
@@ -4272,7 +4189,7 @@ static int write_key1(struct nuvolta_1665_chg *chip)
 static int exit_key0(struct nuvolta_1665_chg *chip)
 {
 	if (rx1665_write(chip, 0xFF, 0x2018) < 0) {
-		nuvolta_err("[%s] failed \n", __func__);
+		nuvolta_err("[%s] failed\n", __func__);
 		return -1;
 	}
 	return 0;
@@ -4281,7 +4198,7 @@ static int exit_key0(struct nuvolta_1665_chg *chip)
 static int exit_key1(struct nuvolta_1665_chg *chip)
 {
 	if (rx1665_write(chip, 0xFF, 0x2019) < 0) {
-		nuvolta_err("[%s] failed \n", __func__);
+		nuvolta_err("[%s] failed\n", __func__);
 		return -1;
 	}
 	return 0;
@@ -4290,14 +4207,13 @@ static int exit_key1(struct nuvolta_1665_chg *chip)
 static int exit_key_open(struct nuvolta_1665_chg *chip)
 {
 	if (rx1665_write(chip, 0x00, 0x2017) < 0) {
-		nuvolta_err("[%s] failed \n", __func__);
+		nuvolta_err("[%s] failed\n", __func__);
 		return -1;
 	}
 	return 0;
 }
 
-static int nuvolta_1665_download_fw(struct nuvolta_1665_chg *chip,
-				    bool power_on, bool force)
+static int nuvolta_1665_download_fw(struct nuvolta_1665_chg *chip, bool power_on, bool force)
 {
 	int ret = 0;
 	unsigned char *fw_data = NULL;
@@ -4313,14 +4229,14 @@ static int nuvolta_1665_download_fw(struct nuvolta_1665_chg *chip,
 	fw_data_length = sizeof(fw_data_1665);
 	nuvolta_info("[%s] fw data length: %ld\n", __func__, fw_data_length);
 
-	/*	check_result = nuvolta_1665_get_fw_version(chip);
+/*	check_result = nuvolta_1665_get_fw_version(chip);
 	if ((check_result == (RX_CHECK_SUCCESS | TX_CHECK_SUCCESS | BOOT_CHECK_SUCCESS)) && (!force)) {
 		nuvolta_info("[%s] no need update, check result:%d\n", __func__, check_result);
 		return ret;
 	}*/
 
 	//start down firmware
-	/*	ret = nuvolta_1665_get_confirm_data(chip, &confirm_data);
+/*	ret = nuvolta_1665_get_confirm_data(chip, &confirm_data);
 	if (ret < 0)
 		return ret;
 
@@ -4328,7 +4244,7 @@ static int nuvolta_1665_download_fw(struct nuvolta_1665_chg *chip,
 	if (ret < 0)
 		return ret;*/
 
-	//  new patch
+//  new patch
 	if (key_open(chip) < 0)
 		return -1;
 
@@ -4338,9 +4254,11 @@ static int nuvolta_1665_download_fw(struct nuvolta_1665_chg *chip,
 	if (write_key1(chip) < 0)
 		return -1;
 
+
+
 	ret = nuvolta_1665_download_fw_data(chip, fw_data, fw_data_length);
 	if (ret < 0) {
-		nuvolta_err("[] nuvolta_1665_download_fw_data failed \n");
+		nuvolta_err("[] nuvolta_1665_download_fw_data failed\n");
 		return -1;
 	}
 
@@ -4368,12 +4286,12 @@ static int fw_crc_chk(struct nuvolta_1665_chg *chip)
 	if (rx1665_read(chip, &read_data, 0x0028) < 0)
 		goto exit;
 	if (read_data == 0x66) {
-		nuvolta_info("fw crc chk good \n");
+		nuvolta_info("fw crc chk good\n");
 		return 0;
 	}
-	nuvolta_info("fw crc chk res %x \n", read_data);
+	nuvolta_info("fw crc chk res %x\n", read_data);
 exit:
-	nuvolta_err("[%s] failed \n", __func__);
+	nuvolta_err("[%s] failed\n", __func__);
 	return -1;
 }
 
@@ -4385,15 +4303,14 @@ static int read_fw_version(struct nuvolta_1665_chg *chip, u8 *version)
 	*version = 0xFF;
 
 	if (rx1665_read(chip, version, 0x002C) < 0) {
-		nuvolta_err("[%s] failed \n", __func__);
+		nuvolta_err("[%s] failed\n", __func__);
 		return -1;
 	}
-	nuvolta_info("fw chk version %x \n", *version);
+	nuvolta_info("fw chk version %x\n", *version);
 	return 0;
 }
 
-static int nuvolta_1665_firmware_update_func(struct nuvolta_1665_chg *chip,
-					     u8 cmd)
+static int nuvolta_1665_firmware_update_func(struct nuvolta_1665_chg *chip, u8 cmd)
 {
 	int ret = 0;
 	u8 fw_version = 0;
@@ -4413,16 +4330,14 @@ static int nuvolta_1665_firmware_update_func(struct nuvolta_1665_chg *chip,
 	case FW_UPDATE_CHECK:
 		ret = nuvolta_1665_download_fw(chip, false, false);
 		if (ret < 0) {
-			nuvolta_err("[%s] fw download failed! cmd: %d\n",
-				    __func__, cmd);
+			nuvolta_err("[%s] fw download failed! cmd: %d\n", __func__, cmd);
 			goto exit;
 		}
 		break;
 	case FW_UPDATE_FORCE:
 		ret = nuvolta_1665_download_fw(chip, false, true);
 		if (ret < 0) {
-			nuvolta_err("[%s] fw download failed! cmd: %d\n",
-				    __func__, cmd);
+			nuvolta_err("[%s] fw download failed! cmd: %d\n", __func__, cmd);
 			goto exit;
 		}
 		break;
@@ -4435,8 +4350,7 @@ static int nuvolta_1665_firmware_update_func(struct nuvolta_1665_chg *chip,
 	case FW_UPDATE_AUTO:
 		ret = nuvolta_1665_download_fw(chip, true, false);
 		if (ret < 0) {
-			nuvolta_err("[%s] fw download failed! cmd: %d\n",
-				    __func__, cmd);
+			nuvolta_err("[%s] fw download failed! cmd: %d\n", __func__, cmd);
 			goto exit;
 		}
 		break;
@@ -4460,7 +4374,7 @@ static int nuvolta_1665_firmware_update_func(struct nuvolta_1665_chg *chip,
 		else
 			chip->fw_version = fw_version;
 	}
-	nuvolta_info("check fw version %x \n", chip->fw_version);
+	nuvolta_info("check fw version %x\n", chip->fw_version);
 exit:
 	chip->fw_update = false;
 	nuvolta_1665_set_reverse_gpio(chip, false);
@@ -4468,77 +4382,78 @@ exit:
 }
 
 static ssize_t chip_firmware_update_store(struct device *dev,
-					  struct device_attribute *attr,
-					  const char *buf, size_t count)
+		struct device_attribute *attr,
+		const char *buf,
+		size_t count)
 {
-	int cmd = 0, ret = 0;
+	int ret = 0;
+	unsigned long cmd = 0;
 
 	if (g_chip->fw_update) {
 		nuvolta_info("[%s] Firmware Update is on going!\n", __func__);
 		return count;
 	}
 
-	cmd = (int)simple_strtoul(buf, NULL, 10);
-	nuvolta_info("[%s] value %d\n", __func__, cmd);
+	ret = kstrtoul(buf, 10, &cmd);
+	if (ret)
+		nuvolta_err("[%s] Failed to convert str to ul\n", __func__);
+
+	nuvolta_info("[%s] value %d\n", __func__, (int)cmd);
 
 	if ((cmd > FW_UPDATE_NONE) && (cmd < FW_UPDATE_MAX)) {
-		ret = nuvolta_1665_firmware_update_func(g_chip, cmd);
+		ret = nuvolta_1665_firmware_update_func(g_chip, (int)cmd);
 		if (ret < 0) {
 			nuvolta_err("[%s] Firmware Update:failed!\n", __func__);
 			return count;
-		} else {
-			nuvolta_info("[%s] Firmware Update:Success!\n",
-				     __func__);
-			return count;
 		}
-	} else {
-		nuvolta_err("[%s] Firmware Update:invalid cmd\n", __func__);
+
+		nuvolta_info("[%s] Firmware Update:Success!\n", __func__);
+		return count;
 	}
 
+	nuvolta_err("[%s] Firmware Update:invalid cmd\n", __func__);
 	return count;
 }
 
 static ssize_t chip_version_show(struct device *dev,
-				 struct device_attribute *attr, char *buf)
+		struct device_attribute *attr,
+		char *buf)
 {
 	int check_result = 0;
 	u8 default_FW_Ver = 0xFE;
 
 	if (g_chip->fw_update) {
-		nuvolta_info("[%s] fw update going, can not show version\n",
-			     __func__);
+		nuvolta_info("[%s] fw update going, can not show version\n", __func__);
 		return scnprintf(buf, PAGE_SIZE, "updating\n");
-	} else {
-		nuvolta_1665_set_reverse_gpio(g_chip, true);
-		//nuvolta_1665_set_reverse_pmic_boost(g_chip, true);
-		msleep(100);
-
-		//check_result = nuvolta_1665_get_fw_version(g_chip);
-		check_result = fw_crc_chk(g_chip);
-		if (check_result >= 0) {
-			read_fw_version(g_chip, &default_FW_Ver);
-		}
-		nuvolta_1665_set_reverse_gpio(g_chip, false);
-		//nuvolta_1665_set_reverse_pmic_boost(g_chip, false);
-
-		/*		return scnprintf(buf, PAGE_SIZE, "fw_ver:%02x.%02x.%02x.%x%x\n",
-				g_wls_fw_data.fw_boot_id, g_wls_fw_data.fw_tx_id, g_wls_fw_data.fw_rx_id,
-				g_wls_fw_data.hw_id_h, g_wls_fw_data.hw_id_l); nuvolta_1665_get_tx_fw_version()
-*/
-		return scnprintf(buf, PAGE_SIZE, "fw_ver:%02x\n",
-				 default_FW_Ver);
 	}
+
+	nuvolta_1665_set_reverse_gpio(g_chip, true);
+	//nuvolta_1665_set_reverse_pmic_boost(g_chip, true);
+	msleep(100);
+
+	//check_result = nuvolta_1665_get_fw_version(g_chip);
+	check_result = fw_crc_chk(g_chip);
+	if (check_result >= 0)
+		read_fw_version(g_chip, &default_FW_Ver);
+
+	nuvolta_1665_set_reverse_gpio(g_chip, false);
+	//nuvolta_1665_set_reverse_pmic_boost(g_chip, false);
+
+/*		return scnprintf(buf, PAGE_SIZE, "fw_ver:%02x.%02x.%02x.%x%x\n",
+			g_wls_fw_data.fw_boot_id, g_wls_fw_data.fw_tx_id, g_wls_fw_data.fw_rx_id,
+			g_wls_fw_data.hw_id_h, g_wls_fw_data.hw_id_l); nuvolta_1665_get_tx_fw_version()
+*/
+	return scnprintf(buf, PAGE_SIZE, "fw_ver:%02x\n", default_FW_Ver);
 }
 
-static ssize_t chip_fw_show(struct device *dev, struct device_attribute *attr,
-			    char *buf)
+static ssize_t chip_fw_show(struct device *dev,
+			    struct device_attribute *attr, char *buf)
 {
 	int ret = 0;
 
 	if (g_chip->fw_update) {
 		nuvolta_info("[%s] Firmware Update is on going!\n", __func__);
-		return snprintf(buf, PAGE_SIZE,
-				"Firmware Update is on going!\n");
+		return snprintf(buf, PAGE_SIZE, "Firmware Update is on going!\n");
 	}
 
 	nuvolta_info("[%s] Start fireware update process\n", __func__);
@@ -4546,19 +4461,17 @@ static ssize_t chip_fw_show(struct device *dev, struct device_attribute *attr,
 	if (ret < 0) {
 		nuvolta_err("[%s] Firmware Update:failed!\n", __func__);
 		return snprintf(buf, PAGE_SIZE, "Firmware Update:Failed\n");
-	} else {
-		nuvolta_info("[%s] Firmware Update:Success!\n", __func__);
-		return snprintf(buf, PAGE_SIZE, "Firmware Update:Success\n");
 	}
+
+	nuvolta_info("[%s] Firmware Update:Success!\n", __func__);
+	return snprintf(buf, PAGE_SIZE, "Firmware Update:Success\n");
 }
 
-static DEVICE_ATTR(chip_vrect, S_IRUGO, chip_vrect_show, NULL);
-static DEVICE_ATTR(chip_firmware_update, S_IWUSR, NULL,
-		   chip_firmware_update_store);
-static DEVICE_ATTR(chip_version, S_IRUGO, chip_version_show, NULL);
-static DEVICE_ATTR(chip_vout, S_IWUSR | S_IRUGO, chip_vout_show,
-		   chip_vout_store);
-static DEVICE_ATTR(chip_iout, S_IRUGO, chip_iout_show, NULL);
+static DEVICE_ATTR_RO(chip_vrect);
+static DEVICE_ATTR_WO(chip_firmware_update);
+static DEVICE_ATTR_RO(chip_version);
+static DEVICE_ATTR_RW(chip_vout);
+static DEVICE_ATTR_RO(chip_iout);
 static DEVICE_ATTR(chip_fw, S_IWUSR | S_IRUGO, chip_fw_show, NULL);
 
 static struct attribute *rx1665_sysfs_attrs[] = {
@@ -4717,29 +4630,27 @@ static int wls_get_reverse_chg_state(struct nuvolta_1665_chg *chip, int *state)
 }
 */
 
-static int nuvolta_1665_set_enable_mode(struct nuvolta_1665_chg *chip,
-					bool enable)
+static int nuvolta_1665_set_enable_mode(struct nuvolta_1665_chg *chip, bool enable)
 {
 	int ret = 0;
 	int gpio_enable_val = 0;
 	int en = !!enable;
 
 	if (gpio_is_valid(chip->enable_gpio)) {
-		ret = gpio_request(chip->enable_gpio, "rx-enable-gpio");
+		ret = gpio_request(chip->enable_gpio,
+				"rx-enable-gpio");
 		if (ret) {
 			nuvolta_err("%s: unable to request enable gpio [%d]\n",
-				    __func__, chip->enable_gpio);
+					__func__, chip->enable_gpio);
 		}
 
 		ret = gpio_direction_output(chip->enable_gpio, !en);
 		if (ret) {
-			nuvolta_err(
-				"%s: cannot set direction for idt enable gpio [%d]\n",
-				__func__, chip->enable_gpio);
+			nuvolta_err("%s: cannot set direction for idt enable gpio [%d]\n",
+					__func__, chip->enable_gpio);
 		}
 		gpio_enable_val = gpio_get_value(chip->enable_gpio);
-		nuvolta_info("nuvolta enable gpio val is :%d\n",
-			     gpio_enable_val);
+		nuvolta_info("nuvolta enable gpio val is :%d\n", gpio_enable_val);
 		gpio_free(chip->enable_gpio);
 	}
 
@@ -4767,12 +4678,13 @@ static enum power_supply_property nu1665_props[] = {
 };
 
 static int nu1665_get_prop(struct power_supply *psy,
-			   enum power_supply_property psp,
-			   union power_supply_propval *val)
+			     enum power_supply_property psp,
+			     union power_supply_propval *val)
 {
 	struct nuvolta_1665_chg *chip = power_supply_get_drvdata(psy);
 	int temp = 0;
 	int rc = 0;
+
 	switch (psp) {
 	case POWER_SUPPLY_PROP_WIRELESS_FW_VERSION:
 		val->intval = chip->fw_version;
@@ -4780,7 +4692,7 @@ static int nu1665_get_prop(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_SIGNAL_STRENGTH:
 		val->intval = chip->ss;
 		break;
-		/*	case POWER_SUPPLY_PROP_INPUT_VOLTAGE_REGULATION:
+/*	case POWER_SUPPLY_PROP_INPUT_VOLTAGE_REGULATION:
 		if (!chip->power_good_flag) {
 			val->intval = 0;
 			break;
@@ -4835,14 +4747,12 @@ static int nu1665_get_prop(struct power_supply *psy,
 				val->intval = chip->reverse_pen_soc;
 			} else {
 				val->intval = last_valid_pen_soc;
-				nuvolta_err("print last valid pen soc: %d\n",
-					    val->intval);
+				nuvolta_err("print last valid pen soc: %d\n", val->intval);
 			}
 		} else {
 			val->intval = last_valid_pen_soc;
 			if (val->intval)
-				nuvolta_err("report last valid pen soc: %d\n",
-					    val->intval);
+				nuvolta_err("report last valid pen soc: %d\n", val->intval);
 		}
 		break;
 	case POWER_SUPPLY_PROP_REVERSE_VOUT:
@@ -4874,8 +4784,8 @@ static int nu1665_get_prop(struct power_supply *psy,
 }
 
 static int nu1665_set_prop(struct power_supply *psy,
-			   enum power_supply_property psp,
-			   const union power_supply_propval *val)
+			     enum power_supply_property psp,
+			     const union power_supply_propval *val)
 {
 	struct nuvolta_1665_chg *chip = power_supply_get_drvdata(psy);
 
@@ -4891,8 +4801,7 @@ static int nu1665_set_prop(struct power_supply *psy,
 
 		if (chip->hall3_online || chip->hall4_online) {
 			if (chip->is_reverse_mode || chip->is_boost_mode) {
-				nuvolta_info(
-					"reverse charge running, return\n");
+				nuvolta_info("reverse charge running, return\n");
 				break;
 			}
 		} else {
@@ -4906,8 +4815,7 @@ static int nu1665_set_prop(struct power_supply *psy,
 			nuvolta_1665_set_reverse_chg_mode(chip, val->intval);
 		} else {
 			chip->is_reverse_chg = 3;
-			schedule_delayed_work(&chip->reverse_sent_state_work,
-					      0);
+			schedule_delayed_work(&chip->reverse_sent_state_work, 0);
 		}
 		break;
 	case POWER_SUPPLY_PROP_OTG_STATE:
@@ -4924,7 +4832,7 @@ static int nu1665_set_prop(struct power_supply *psy,
 }
 
 static int nu1665_prop_is_writeable(struct power_supply *psy,
-				    enum power_supply_property psp)
+				      enum power_supply_property psp)
 {
 	int rc;
 
@@ -4978,7 +4886,6 @@ static const struct wireless_charger_ops nuvolta_1665_chg_ops = {
 
 static int nuvolta_1665_chg_init_chgdev(struct nuvolta_1665_chg *chip)
 {
-	nuvolta_info("enter %s\n", __func__);
 	chip->wlschgdev = wireless_charger_device_register(chip->wlsdev_name, chip->dev,
 						chip, &nuvolta_1665_chg_ops,
 						&nuvolta_1665_chg_props);
@@ -5008,8 +4915,9 @@ static int nuvolta_1665_chg_init_chgdev(struct nuvolta_1665_chg *chip)
 
 static void nuvolta_1665_init_detect_work(struct work_struct *work)
 {
-	struct nuvolta_1665_chg *chip = container_of(
-		work, struct nuvolta_1665_chg, init_detect_work.work);
+	struct nuvolta_1665_chg *chip =
+		container_of(work, struct nuvolta_1665_chg,
+		init_detect_work.work);
 	int ret = 0;
 
 	if (gpio_is_valid(chip->power_good_gpio)) {
@@ -5023,15 +4931,15 @@ static void nuvolta_1665_init_detect_work(struct work_struct *work)
 	}
 
 	//nuvolta_1665_set_reverse_chg_mode(chip, true);
-	return;
 }
 
 extern char *saved_command_line;
 
 static int get_cmdline(struct nuvolta_1665_chg *chip)
 {
-	if (strnstr(saved_command_line,
-		    "androidboot.mode=", strlen(saved_command_line))) {
+	if (strnstr(saved_command_line, "androidboot.mode=",
+		    strlen(saved_command_line))) {
+
 		chip->power_off_mode = 1;
 		nuvolta_info("enter power off charging app\n");
 	} else {
@@ -5042,7 +4950,7 @@ static int get_cmdline(struct nuvolta_1665_chg *chip)
 }
 
 static int nuvolta_1665_probe(struct i2c_client *client,
-			      const struct i2c_device_id *id)
+			const struct i2c_device_id *id)
 {
 	int ret = 0;
 	int hall3_val = 1, hall4_val = 1;
@@ -5109,7 +5017,6 @@ static int nuvolta_1665_probe(struct i2c_client *client,
 	INIT_DELAYED_WORK(&chip->reverse_chg_work, nu_reverse_chg_work);
 	INIT_DELAYED_WORK(&chip->probe_fw_download_work,
 			  nu1665_probe_fw_download_work);
-	INIT_DELAYED_WORK(&chip->pen_check_work, pen_check_worker);
 
 	ret = nuvolta_1665_parse_dt(chip);
 	if (ret < 0) {
@@ -5147,7 +5054,7 @@ static int nuvolta_1665_probe(struct i2c_client *client,
 
 	INIT_DELAYED_WORK(&chip->reverse_sent_state_work,
 			  reverse_chg_sent_state_work);
-	/* register charger device for wireless 
+	/* register charger device for wireless
 	ret = nuvolta_1665_chg_init_chgdev(chip);
 	if (ret < 0) {
 		nuvolta_err("failed to register wireless chgdev %d\n", ret);
@@ -5195,6 +5102,7 @@ static int nuvolta_1665_probe(struct i2c_client *client,
 		if (!hall3_val) {
 			nuvolta_info("pen online, start reverse charge\n");
 			chip->hall3_online = 1;
+			pen_charge_state_notifier_call_chain_booting(1, NULL);
 			schedule_delayed_work(&chip->hall3_irq_work,
 					      msecs_to_jiffies(6000));
 		}
@@ -5206,6 +5114,7 @@ static int nuvolta_1665_probe(struct i2c_client *client,
 		if (!hall4_val) {
 			nuvolta_info("pen online, start reverse charge\n");
 			chip->hall4_online = 1;
+			pen_charge_state_notifier_call_chain_booting(1, NULL);
 			schedule_delayed_work(&chip->hall4_irq_work,
 					      msecs_to_jiffies(6000));
 		}
@@ -5213,11 +5122,6 @@ static int nuvolta_1665_probe(struct i2c_client *client,
 		nuvolta_err("%s: hall4 gpio not provided\n", __func__);
 
 	get_cmdline(chip);
-#ifndef CONFIG_FACTORY_BUILD
-	if (!chip->power_off_mode)
-		schedule_delayed_work(&chip->probe_fw_download_work, 10 * HZ);
-#endif
-	/**/
 	return 0;
 
 error_sysfs:
@@ -5260,8 +5164,8 @@ static int nuvolta_1665_resume(struct device *dev)
 }
 
 static const struct dev_pm_ops nuvolta_1665_pm_ops = {
-	.suspend = nuvolta_1665_suspend,
-	.resume = nuvolta_1665_resume,
+	.suspend	= nuvolta_1665_suspend,
+	.resume		= nuvolta_1665_resume,
 };
 
 static void nuvolta_1665_shutdown(struct i2c_client *client)
@@ -5275,18 +5179,15 @@ static void nuvolta_1665_shutdown(struct i2c_client *client)
 	}
 
 	nuvolta_info("%s: shutdown: %s\n", __func__, chip->wlsdev_name);
-	return;
 }
 
 static const struct of_device_id nuvolta_1665_match_table[] = {
-	{
-		.compatible = "nuvolta,rx1665",
-	},
-	{},
+	{ .compatible = "nuvolta,rx1665",},
+	{ },
 };
 
 static const struct i2c_device_id nuvolta_1665_id[] = {
-	{ "nuvolta_1665", 0 },
+	{"nuvolta_1665", 0},
 	{},
 };
 MODULE_DEVICE_TABLE(i2c, nuvolta_1665_id);
