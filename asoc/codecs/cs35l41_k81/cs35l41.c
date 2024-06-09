@@ -44,10 +44,18 @@
 #include <linux/err.h>
 #include <linux/firmware.h>
 #include <linux/timekeeping.h>
+#ifdef CONFIG_MMHARDWARE_DETECTION
+#include <linux/mmhardware_sysfs.h>
+#endif
 
 #include "wm_adsp.h"
 #include "cs35l41.h"
 #include <sound/cs35l41_k81.h>
+
+#ifdef CONFIG_MMHARDWARE_DETECTION
+static DEFINE_MUTEX(pa_lock);
+static int dev_cnt = 0;
+#endif
 
 static const char * const cs35l41_supplies[] = {
 	"VA",
@@ -3866,6 +3874,43 @@ int cs35l41_probe(struct cs35l41_private *cs35l41,
 	ret = snd_soc_register_component(cs35l41->dev,
 					&soc_component_dev_cs35l41,
 					cs35l41_dai, ARRAY_SIZE(cs35l41_dai));
+
+#ifdef CONFIG_MMHARDWARE_DETECTION
+	mutex_lock(&pa_lock);
+	dev_cnt++;
+	mutex_unlock(&pa_lock);
+	dev_err(cs35l41->dev, "%s: dev_cnt %d \n", __func__, dev_cnt);
+
+	switch (dev_cnt) {
+		case 1:
+			register_kobj_under_mmsysfs(MM_HW_PA_1, MM_HARDWARE_SYSFS_PA_1_FOLDER);
+			break;
+		case 2:
+			register_kobj_under_mmsysfs(MM_HW_PA_2, MM_HARDWARE_SYSFS_PA_2_FOLDER);
+			break;
+		case 3:
+			register_kobj_under_mmsysfs(MM_HW_PA_3, MM_HARDWARE_SYSFS_PA_3_FOLDER);
+			break;
+		case 4:
+			register_kobj_under_mmsysfs(MM_HW_PA_4, MM_HARDWARE_SYSFS_PA_4_FOLDER);
+			break;
+		case 5:
+			register_kobj_under_mmsysfs(MM_HW_PA_5, MM_HARDWARE_SYSFS_PA_5_FOLDER);
+			break;
+		case 6:
+			register_kobj_under_mmsysfs(MM_HW_PA_6, MM_HARDWARE_SYSFS_PA_6_FOLDER);
+			break;
+		case 7:
+			register_kobj_under_mmsysfs(MM_HW_PA_7, MM_HARDWARE_SYSFS_PA_7_FOLDER);
+			break;
+		case 8:
+			register_kobj_under_mmsysfs(MM_HW_PA_8, MM_HARDWARE_SYSFS_PA_8_FOLDER);
+			break;
+		default:
+			break;
+	}
+#endif
+
 	if (ret < 0) {
 		dev_err(cs35l41->dev, "%s: Register codec failed\n", __func__);
 		goto err;
