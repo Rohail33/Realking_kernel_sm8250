@@ -29,7 +29,11 @@
 #include "adsp_err.h"
 #include "q6afecal-hwdep.h"
 #ifdef TFA_ADSP_SUPPORTED
+#if defined(CONFIG_TARGET_PRODUCT_MUNCH)
+#include "../asoc/codecs/tfa9874/inc/tfa_platform_interface_definition.h"
+#else
 #include "../asoc/codecs/tfa98xx/inc/tfa_platform_interface_definition.h"
+#endif
 #endif
 
 #ifdef CONFIG_MSM_CSPL
@@ -326,9 +330,9 @@ static struct afe_ctl this_afe;
 static int pcm_afe_instance[2];
 static int proxy_afe_instance[2];
 bool afe_close_done[2] = {true, true};
-
 #define SIZEOF_CFG_CMD(y) \
 		(sizeof(struct apr_hdr) + sizeof(u16) + (sizeof(struct y)))
+static bool q6afe_is_afe_lsm_port(int port_id);
 
 static bool q6afe_is_afe_lsm_port(int port_id);
 
