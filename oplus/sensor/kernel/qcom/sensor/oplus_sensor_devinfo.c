@@ -22,6 +22,7 @@ extern int pad_als_data_init(void);
 extern void pad_als_data_clean(void);
 
 struct sensor_info * g_chip = NULL;
+struct sensor_info_old * g_chip_old = NULL;
 
 struct proc_dir_entry *sensor_proc_dir = NULL;
 static struct oplus_als_cali_data *gdata = NULL;
@@ -33,11 +34,6 @@ static char* als_rear_feature[] = {
 	"als-factor",
 };
 
-
-__attribute__((weak)) void oplus_device_dir_redirect(struct sensor_info * chip)
-{
-	pr_info("%s oplus_device_dir_redirect \n", __func__);
-};
 
 __attribute__((weak)) unsigned int get_serialID(void)
 {
@@ -701,7 +697,6 @@ static void parse_each_virtual_sensor_dts(struct sensor_algorithm *algo, struct 
 static void oplus_sensor_parse_dts(struct platform_device *pdev)
 {
 	struct device_node *node = pdev->dev.of_node;
-	struct sensor_info * chip = platform_get_drvdata(pdev);
 	int rc = 0;
 	int value = 0;
 	bool is_virtual_sensor = false;
@@ -730,7 +725,11 @@ static void oplus_sensor_parse_dts(struct platform_device *pdev)
 		}
 
 		if (!is_virtual_sensor) {
-			chip->s_vector[sensor_type].sensor_id = sensor_type;
+			if (g_chip) {
+				g_chip->s_vector[sensor_type].sensor_id = sensor_type;
+			} else if (g_chip_old) {
+				g_chip_old->s_vector[sensor_type].sensor_id = sensor_type;
+			}
 			rc = of_property_read_u32(ch_node, "sensor-index", &value);
 
 			if (rc || value >= SOURCE_NUM) {
@@ -740,22 +739,21 @@ static void oplus_sensor_parse_dts(struct platform_device *pdev)
 				sensor_index = value;
 			}
 
-			hw = &chip->s_vector[sensor_type].hw[sensor_index];
+			if (g_chip) {
+				hw = &g_chip->s_vector[sensor_type].hw[sensor_index];
+			} else if (g_chip_old) {
+				hw = &g_chip_old->s_vector[sensor_type].hw[sensor_index];
+			}
 			parse_physical_sensor_common_dts(hw, ch_node);
-			SENSOR_DEVINFO_DEBUG("chip->s_vector[%d].hw[%d] : sensor-name %d, \
-					bus-number %d, sensor-direction %d, \
-					irq-number %d\n",
-				sensor_type, sensor_index,
-				chip->s_vector[sensor_type].hw[sensor_index].sensor_name,
-				chip->s_vector[sensor_type].hw[sensor_index].bus_number,
-				chip->s_vector[sensor_type].hw[sensor_index].direction,
-				chip->s_vector[sensor_type].hw[sensor_index].irq_number);
 			parse_each_physical_sensor_dts(hw, ch_node);
 		} else {
-			chip->a_vector[sensor_type].sensor_id = sensor_type;
-			SENSOR_DEVINFO_DEBUG("chip->a_vector[%d].sensor_id : sensor_type %d",
-				sensor_type, chip->a_vector[sensor_type].sensor_id, sensor_type);
-			algo = &chip->a_vector[sensor_type];
+			if (g_chip) {
+				g_chip->a_vector[sensor_type].sensor_id = sensor_type;
+				algo = &g_chip->a_vector[sensor_type];
+			} else if (g_chip_old) {
+				g_chip_old->a_vector[sensor_type].sensor_id = sensor_type;
+				algo = &g_chip_old->a_vector[sensor_type];
+			}
 			parse_each_virtual_sensor_dts(algo, ch_node);
 		}
 	}/*for_each_child_of_node */
@@ -797,8 +795,6 @@ static void oplus_sensor_parse_dts(struct platform_device *pdev)
 	}
 
 	rc = of_property_read_u32(node, "ldo_enable", &g_ldo_enable);
-
-	oplus_device_dir_redirect(chip);
 }
 
 static ssize_t als_type_read_proc(struct file *file, char __user *buf,
@@ -807,11 +803,13 @@ static ssize_t als_type_read_proc(struct file *file, char __user *buf,
 	char page[256] = {0};
 	int len = 0;
 
-	if (!g_chip) {
+	if (g_chip) {
+		len = sprintf(page, "%d", g_chip->s_vector[OPLUS_LIGHT].hw[0].feature.feature[0]);
+	} else if (g_chip_old) {
+		len = sprintf(page, "%d", g_chip_old->s_vector[OPLUS_LIGHT].hw[0].feature.feature[0]);
+	} else {
 		return -ENOMEM;
 	}
-
-	len = sprintf(page, "%d", g_chip->s_vector[OPLUS_LIGHT].hw[0].feature.feature[0]);
 
 	if (len > *off) {
 		len -= *off;
@@ -1498,6 +1496,7 @@ static int sensor_ldo_init(struct device *dev)
 static int oplus_devinfo_probe(struct platform_device *pdev)
 {
 	struct sensor_info * chip = NULL;
+	struct sensor_info_old * chip_old = NULL;
 	size_t smem_size = 0;
 	void *smem_addr = NULL;
 	int rc = 0;
@@ -1525,9 +1524,16 @@ static int oplus_devinfo_probe(struct platform_device *pdev)
 		return -EPROBE_DEFER; /*return -EPROBE_DEFER if smem not ready*/
 	}
 
-	chip = (struct sensor_info *)(smem_addr);
-
-	memset(chip, 0, sizeof(struct sensor_info));
+	if (smem_size == sizeof(struct sensor_info)) {
+		chip = (struct sensor_info *)(smem_addr);
+		memset(chip, 0, sizeof(struct sensor_info));
+	} else if (smem_size == sizeof(struct sensor_info_old)) {
+		chip_old = (struct sensor_info_old *)(smem_addr);
+		memset(chip_old, 0, sizeof(struct sensor_info_old));
+	} else {
+		pr_err("unsupported SMEM_SENSOR size: %d\n", smem_size);
+		return -EFAULT;
+	}
 
 	if (gdata) {
 		printk("%s:just can be call one time\n", __func__);
@@ -1544,11 +1550,10 @@ static int oplus_devinfo_probe(struct platform_device *pdev)
 
 	gdata = data;
 
-	platform_set_drvdata(pdev, chip);
+	g_chip = chip;
+	g_chip_old = chip_old;
 
 	oplus_sensor_parse_dts(pdev);
-
-	g_chip = chip;
 
 	pr_info("%s success\n", __func__);
 
