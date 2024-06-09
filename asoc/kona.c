@@ -47,7 +47,6 @@
 #endif
 #endif
 
-
 #define DRV_NAME "kona-asoc-snd"
 #define __CHIPSET__ "KONA "
 #define MSM_DAILINK_NAME(name) (__CHIPSET__#name)
@@ -162,6 +161,25 @@ struct snd_soc_dai_link_component cs35l41_codec_components[] = {
                .dai_name = "cs35l41.2-0042",
        },
 };
+#elif defined(CONFIG_TARGET_PRODUCT_DAGU)
+struct snd_soc_dai_link_component cs35l41_codec_components[] = {
+       {
+               .name = "cs35l41.1-0040",
+               .dai_name = "cs35l41.1-0040",
+       },
+       {
+               .name = "cs35l41.1-0041",
+               .dai_name = "cs35l41.1-0041",
+       },
+       {
+               .name = "cs35l41.3-0041",
+               .dai_name = "cs35l41.3-0041",
+       },
+       {
+               .name = "cs35l41.3-0043",
+               .dai_name = "cs35l41.3-0043",
+       },
+};
 #else
 struct snd_soc_dai_link_component cs35l41_codec_components[] = {
 	{
@@ -225,12 +243,12 @@ enum {
 	TDM_7,
 	TDM_PORT_MAX,
 };
-#if defined(CONFIG_TARGET_PRODUCT_PSYCHE)
+#if defined(CONFIG_TARGET_PRODUCT_PSYCHE) || defined(CONFIG_TARGET_PRODUCT_DAGU)
 #define TDM_MAX_SLOTS 4
 #else
 #define TDM_MAX_SLOTS 8
 #endif
-#if defined(CONFIG_TARGET_PRODUCT_ENUMA) || defined(CONFIG_TARGET_PRODUCT_ELISH)
+#if defined(CONFIG_TARGET_PRODUCT_ENUMA) || defined(CONFIG_TARGET_PRODUCT_ELISH) || defined(CONFIG_TARGET_PRODUCT_DAGU)
 #define TDM_SLOT_WIDTH_BITS 32
 #else
 #define TDM_SLOT_WIDTH_BITS 32
@@ -635,7 +653,7 @@ static struct tdm_dev_config pri_tdm_dev_config[MAX_PATH][TDM_PORT_MAX] = {
 		{ {0xFFFF} }, /* RX_7 */
 	},
 	{
-#if defined(CONFIG_TARGET_PRODUCT_PSYCHE)
+#if defined(CONFIG_TARGET_PRODUCT_PSYCHE) || defined(CONFIG_TARGET_PRODUCT_DAGU)
 		{ {0,   4, 0xFFFF} }, /* TX_0 */
 #else
 		{ {0,   4,      8, 12, 0xFFFF} }, /* TX_0 */
@@ -677,6 +695,8 @@ static struct tdm_dev_config tert_tdm_dev_config[MAX_PATH][TDM_PORT_MAX] = {
 	{ /* TERT TDM */
 #if defined(CONFIG_TARGET_PRODUCT_ENUMA) || defined(CONFIG_TARGET_PRODUCT_ELISH)
 		{ {0,   4, 8, 12, 16, 20, 24, 28} }, /* RX_0 */
+#elif defined(CONFIG_TARGET_PRODUCT_DAGU)
+		{ {0,   4, 8, 12} }, /* RX_0 */
 #else
 		{ {0,   4, 0xFFFF} }, /* RX_0 */
 #endif
@@ -6565,7 +6585,7 @@ static struct snd_soc_dai_link msm_common_dai_links[] = {
 #ifdef AUDIO_SM8250_FLAG
 	{/* hw:x,30 */
 #if defined(CONFIG_TARGET_PRODUCT_APOLLO) || defined(CONFIG_TARGET_PRODUCT_CAS) || defined(CONFIG_TARGET_PRODUCT_ALIOTH)|| defined(CONFIG_TARGET_PRODUCT_ENUMA) || defined(CONFIG_TARGET_PRODUCT_ELISH)\
-		|| defined(CONFIG_TARGET_PRODUCT_PSYCHE)
+		|| defined(CONFIG_TARGET_PRODUCT_PSYCHE) || defined(CONFIG_TARGET_PRODUCT_DAGU)
 		.name = "Tertiary TDM1 Hostless Playback",
 		.stream_name = "Tertiary TDM1 Hostless Playback",
 		.cpu_dai_name = "msm-dai-q6-tdm.36898",
@@ -7480,7 +7500,7 @@ static struct snd_soc_dai_link msm_mi2s_be_dai_links[] = {
 #ifdef AUDIO_SM8250_FLAG  //j1
 static struct snd_soc_dai_link tert_mi2s_rx_cs35l41_dai_links[] = {
 #if defined(CONFIG_TARGET_PRODUCT_APOLLO) || defined(CONFIG_TARGET_PRODUCT_CAS)  || defined(CONFIG_TARGET_PRODUCT_ALIOTH)|| defined(CONFIG_TARGET_PRODUCT_ENUMA) || defined(CONFIG_TARGET_PRODUCT_ELISH) \
- 	|| defined(CONFIG_TARGET_PRODUCT_PSYCHE)
+ 	|| defined(CONFIG_TARGET_PRODUCT_PSYCHE) || defined(CONFIG_TARGET_PRODUCT_DAGU)
 	{
 		.name = LPASS_BE_TERT_TDM_RX_0,
 		.stream_name = "Tertiary TDM0 Playback",
@@ -8318,14 +8338,13 @@ static struct snd_soc_card *populate_snd_card_dailinks(struct device *dev)
 #ifdef AUDIO_SM8250_FLAG
 				if (get_hw_version_platform() == HARDWARE_PLATFORM_UMI ||
 				    get_hw_version_platform() == HARDWARE_PLATFORM_CMI ||
-				    get_hw_version_platform() == HARDWARE_PLATFORM_URD ||
-				    get_hw_version_platform() == HARDWARE_PLATFORM_VERTHANDI ||
 				    get_hw_version_platform() == HARDWARE_PLATFORM_APOLLO ||
 				    get_hw_version_platform() == HARDWARE_PLATFORM_ALIOTH ||
 				    get_hw_version_platform() == HARDWARE_PLATFORM_THYME ||
 				    get_hw_version_platform() == HARDWARE_PLATFORM_ENUMA ||
 				    get_hw_version_platform() == HARDWARE_PLATFORM_ELISH ||
 				    get_hw_version_platform() == HARDWARE_PLATFORM_PSYCHE ||
+				    get_hw_version_platform() == HARDWARE_PLATFORM_DAGU ||
 					get_hw_version_platform() == HARDWARE_PLATFORM_CAS) {
 					memcpy(msm_kona_dai_links + total_links,
 						tert_mi2s_rx_cs35l41_dai_links,

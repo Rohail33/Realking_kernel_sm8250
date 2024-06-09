@@ -286,7 +286,7 @@ static int adm_get_copp_id(int port_idx, int copp_idx)
 
 static int adm_get_idx_if_copp_exists(int port_idx, int topology, int mode,
 				 int rate, int bit_width, int app_type,
-				 int session_type)
+				 int session_type, int channel_mode)
 {
 	int idx;
 
@@ -304,7 +304,9 @@ static int adm_get_idx_if_copp_exists(int port_idx, int topology, int mode,
 			atomic_read(
 				&this_adm.copp.session_type[port_idx][idx])) &&
 		    (app_type ==
-			atomic_read(&this_adm.copp.app_type[port_idx][idx])))
+			atomic_read(&this_adm.copp.app_type[port_idx][idx])) &&
+		    (channel_mode ==
+			atomic_read(&this_adm.copp.channels[port_idx][idx])))
 			return idx;
 	return -EINVAL;
 }
@@ -3229,7 +3231,8 @@ int adm_open(int port_id, int path, int rate, int channel_mode, int topology,
 		copp_idx = adm_get_idx_if_copp_exists(port_idx, topology,
 						      perf_mode,
 						      rate, bit_width,
-						      app_type, session_type);
+						      app_type, session_type,
+						      channel_mode);
 
 	if (copp_idx < 0) {
 		copp_idx = adm_get_next_available_copp(port_idx);

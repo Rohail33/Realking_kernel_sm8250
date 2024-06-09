@@ -3162,6 +3162,11 @@ static int tfa98xx_mute(struct snd_soc_dai *dai, int mute, int stream)
 		 */
 		if (stream == SNDRV_PCM_STREAM_PLAYBACK){
 			tfa98xx->pstream = 0;
+#if defined(CONFIG_TARGET_PRODUCT_MUNCH)
+			if(gpio_is_valid(tfa98xx->spk_sw_gpio)){
+				gpio_direction_output(tfa98xx->spk_sw_gpio, 0);
+			}
+#endif
 		} else
 			tfa98xx->cstream = 0;
 		if (tfa98xx->pstream != 0 || tfa98xx->cstream != 0)
@@ -3188,15 +3193,7 @@ static int tfa98xx_mute(struct snd_soc_dai *dai, int mute, int stream)
 		tfa98xx_send_mute_cmd(TFA_KCONTROL_VALUE_ENABLED);
 		msleep(60);
 #endif
-#endif
 		tfa_dev_stop(tfa98xx->tfa);
-#if defined(CONFIG_TARGET_PRODUCT_MUNCH)
-		if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
-			if(gpio_is_valid(tfa98xx->spk_sw_gpio)){
-				gpio_direction_output(tfa98xx->spk_sw_gpio, 0);
-			}
-		}
-#endif
 		tfa98xx->dsp_init = TFA98XX_DSP_INIT_STOPPED;
 		mutex_unlock(&tfa98xx->dsp_lock);
         if(tfa98xx->flags & TFA98XX_FLAG_ADAPT_NOISE_MODE)
@@ -3223,9 +3220,8 @@ static int tfa98xx_mute(struct snd_soc_dai *dai, int mute, int stream)
 					&& !(strstr(tfaContProfileName(tfa98xx->tfa->cnt, tfa98xx->tfa->dev_idx, tfa98xx_mixer_profile), ".standby") != NULL)) {
 				tfa98xx_adsp_send_calib_values();
 			}
-#else
+else
 			tfa98xx_adsp_send_calib_values();
-#endif
 #endif
 		} else {
 			tfa98xx->cstream = 1;
