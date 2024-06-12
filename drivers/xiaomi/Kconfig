@@ -9,4 +9,13 @@ config XIAOMI_MIUI
 	  Say Y if you want to compile the Xiaomi MIUI specific kernel modifications.
 	  Say N if you want to discard the Xiaomi MIUI specific kernel modifications.
 
+if XIAOMI_MIUI
+
+config MIUI_DRM_OPT
+	bool "Enable MIUI DRM optimizations"
+	help
+	  Enables compilation of Xiaomi MIUI specific DRM optimizations
+
+endif
+
 endmenu
