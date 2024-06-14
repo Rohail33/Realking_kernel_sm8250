@@ -1145,6 +1145,91 @@ static int cam_ois_get_data(struct cam_ois_ctrl_t *o_ctrl,
 
 	return rc;
 }
+
+#ifdef CONFIG_CAMERA_CAS
+static int cam_tele_ois_get_data(struct cam_ois_ctrl_t *o_ctrl,
+				 struct cam_packet *csl_packet)
+{
+	struct cam_buf_io_cfg *io_cfg;
+	uint32_t i = 0;
+	int rc = 0;
+	uintptr_t buf_addr;
+	size_t buf_size;
+	uint8_t *read_buffer;
+	uint32_t num_data = sizeof(o_ctrl->ois_tele_data.data);
+	struct timespec64 ts64;
+	cycles_t t_now;
+	uint64_t boottime64;
+
+	memset(&o_ctrl->ois_tele_data, 0, sizeof(struct ois_tele_data_eis_t));
+	get_monotonic_boottime64(&ts64);
+	t_now = get_cycles();
+	boottime64 = (uint64_t)((ts64.tv_sec * 1000000000) + ts64.tv_nsec);
+
+	rc = camera_io_dev_read_seq(&(o_ctrl->io_master_info),
+				    OIS_TELE_DATA_ADDR,
+				    o_ctrl->ois_tele_data.data,
+				    CAMERA_SENSOR_I2C_TYPE_WORD,
+				    CAMERA_SENSOR_I2C_TYPE_BYTE, num_data);
+	o_ctrl->ois_tele_data.data_timestamp =
+		(uint64_t)(t_now * 10000 / 192); //< QTimer Freq = 19.2 MHz
+
+	if (rc < 0) {
+		CAM_ERR(CAM_OIS, "read failed");
+	} else {
+		CAM_DBG(CAM_OIS,
+			"ois_data count=%d,data_timestamp=%llu,boottime64=%llu,t_now=%llu",
+			o_ctrl->ois_tele_data.data[0],
+			o_ctrl->ois_tele_data.data_timestamp, boottime64,
+			t_now);
+	}
+
+	io_cfg = (struct cam_buf_io_cfg *)((uint8_t *)&csl_packet->payload +
+					   csl_packet->io_configs_offset);
+
+	CAM_DBG(CAM_OIS,
+		"number of IO configs: %d:", csl_packet->num_io_configs);
+
+	for (i = 0; i < csl_packet->num_io_configs; i++) {
+		CAM_DBG(CAM_OIS, "Direction: %d:", io_cfg->direction);
+		if (io_cfg->direction == CAM_BUF_OUTPUT) {
+			rc = cam_mem_get_cpu_buf(io_cfg->mem_handle[0],
+						 &buf_addr, &buf_size);
+			if (rc) {
+				CAM_ERR(CAM_OIS, "Fail in get buffer: %d", rc);
+				return rc;
+			}
+
+			CAM_DBG(CAM_OIS, "buf_addr : %pK, buf_size : %zu\n",
+				(void *)buf_addr, buf_size);
+
+			read_buffer = (uint8_t *)buf_addr;
+			if (!read_buffer) {
+				CAM_ERR(CAM_OIS, "invalid buffer to copy data");
+				rc = -EINVAL;
+				return rc;
+			}
+			read_buffer += io_cfg->offsets[0];
+
+			if (buf_size != sizeof(struct ois_tele_data_eis_t)) {
+				CAM_ERR(CAM_OIS,
+					"failed to copy, Invalid size");
+				rc = -EINVAL;
+				return rc;
+			}
+
+			CAM_DBG(CAM_OIS, "copy the data, len:%d", num_data);
+			memcpy(read_buffer, &o_ctrl->ois_tele_data,
+			       sizeof(struct ois_tele_data_eis_t));
+		} else {
+			CAM_ERR(CAM_OIS, "Invalid direction");
+			rc = -EINVAL;
+		}
+	}
+
+	return rc;
+}
+#endif // CONFIG_CAMERA_CAS
 #endif
 
 /**
@@ -1574,6 +1659,24 @@ static int cam_ois_pkt_parse(struct cam_ois_ctrl_t *o_ctrl, void *arg)
 			return rc;
 		}
 		break;
+
+#ifdef CONFIG_CAMERA_CAS
+	case CAM_OIS_PACKET_OPCODE_TELEOIS_GETDATA:
+		if (o_ctrl->cam_ois_state < CAM_OIS_CONFIG) {
+			rc = -EINVAL;
+			CAM_ERR(CAM_OIS,
+					"Not in right state to control OIS: %d",
+					o_ctrl->cam_ois_state);
+			return rc;
+		}
+		rc = cam_tele_ois_get_data(o_ctrl, csl_packet);
+		if (rc < 0) {
+			CAM_ERR(CAM_OIS,
+					"Fail ois_get_data: rc: %d", rc);
+			return rc;
+		}
+		break;
+#endif // CONFIG_CAMERA_CAS
 #endif
 	default:
 		CAM_ERR(CAM_OIS, "Invalid Opcode: %d",

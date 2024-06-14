@@ -1018,6 +1018,12 @@ int cam_ife_csid_cid_reserve(struct cam_ife_csid_hw *csid_hw,
 	if (csid_hw->csi2_reserve_cnt) {
 		/* current configure res type should match requested res type */
 		if (csid_hw->res_type != cid_reserv->in_port->res_type) {
+#ifdef CONFIG_CAMERA_CAS
+			CAM_ERR(CAM_ISP, "[wrong res_type], CSID:%d, csid_hw->res_type:%d, cid_reserv->res_type:%d",
+                    csid_hw->hw_intf->hw_idx,
+                    csid_hw->res_type,
+                    cid_reserv->in_port->res_type);
+#endif
 			rc = -EINVAL;
 			goto end;
 		}
@@ -1046,6 +1052,15 @@ int cam_ife_csid_cid_reserve(struct cam_ife_csid_hw *csid_hw,
 			cid_reserv->in_port->test_pattern)) {
 
 			rc = -EINVAL;
+
+#ifdef CONFIG_CAMERA_CAS
+			CAM_ERR(CAM_ISP,
+				"[wrong lane configuration]: CSID:%d res_sel:0x%x Lane type:%d lane_num:%d",
+				csid_hw->hw_intf->hw_idx,
+				csid_hw->csi2_rx_cfg.lane_cfg,
+				csid_hw->csi2_rx_cfg.lane_type,
+				csid_hw->csi2_rx_cfg.lane_num);
+#endif
 			goto end;
 		}
 	}
