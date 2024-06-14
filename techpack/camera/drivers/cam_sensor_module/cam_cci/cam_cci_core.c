@@ -596,12 +596,18 @@ static int32_t cam_cci_calc_cmd_len(struct cci_device *cci_dev,
 	struct cam_cci_ctrl *c_ctrl, uint32_t cmd_size,
 	 struct cam_sensor_i2c_reg_array *i2c_cmd, uint32_t *pack)
 {
+	// disable I2C writing optimization due to OIS
+#ifndef CONFIG_CAMERA_NONEDXO
 	uint8_t i;
+#endif
 	uint32_t len = 0;
 	uint8_t data_len = 0, addr_len = 0;
 	uint8_t pack_max_len;
 	struct cam_sensor_i2c_reg_setting *msg;
+	// disable I2C writing optimization due to OIS
+#ifndef CONFIG_CAMERA_NONEDXO
 	struct cam_sensor_i2c_reg_array *cmd = i2c_cmd;
+#endif
 	uint32_t size = cmd_size;
 
 	if (!cci_dev || !c_ctrl) {
@@ -623,6 +629,7 @@ static int32_t cam_cci_calc_cmd_len(struct cci_device *cci_dev,
 		len = data_len + addr_len;
 		pack_max_len = size < (cci_dev->payload_size-len) ?
 			size : (cci_dev->payload_size-len);
+#ifndef CONFIG_CAMERA_NONEDXO
 		if ((!c_ctrl->cci_info->disable_optmz) &&
 			(!disable_optmz)) {
 			CAM_DBG(CAM_CCI, "enable writing optimization for 0x%02X", c_ctrl->cci_info->sid<<1);
@@ -644,6 +651,7 @@ static int32_t cam_cci_calc_cmd_len(struct cci_device *cci_dev,
 				cmd++;
 			}
 		}
+#endif
 	}
 
 	if (len > cci_dev->payload_size) {

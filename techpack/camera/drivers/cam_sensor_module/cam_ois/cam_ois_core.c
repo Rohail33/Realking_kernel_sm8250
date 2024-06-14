@@ -15,6 +15,12 @@
 #include "cam_res_mgr_api.h"
 #include "cam_common_util.h"
 #include "cam_packet_util.h"
+#include "Lc898128.h"
+#include <linux/vmalloc.h>
+#include "Sem1215.h"
+
+static int oisfwctrl;
+module_param(oisfwctrl, int, 0644);
 
 int32_t cam_ois_construct_default_power_setting(
 	struct cam_sensor_power_ctrl_t *power_info)
@@ -827,6 +833,218 @@ release_firmware:
 	return rc;
 }
 
+static int cam_lc898128_ois_fw_download(struct cam_ois_ctrl_t *o_ctrl,
+					uint32_t FwChecksum,
+					uint32_t FwChecksumSize,
+					uint8_t FwVersion)
+{
+	int32_t rc = 0;
+	uint8_t ans = 0;
+
+	if (!o_ctrl) {
+		CAM_ERR(CAM_OIS, "Invalid Args");
+		return -EINVAL;
+	}
+
+	if (!CheckFwValid(o_ctrl, FwVersion)) {
+		CAM_ERR(CAM_OIS, "firmware is invalid, updating");
+		//--------------------------------------------------------------------------------
+		// 0. <Info Mat1> Driver Offset
+		//--------------------------------------------------------------------------------
+		ans = DrvOffAdj(o_ctrl);
+		if (ans != 0)
+			return ans;
+
+		ans = CoreResetwithoutMC128(o_ctrl);
+		if (ans != 0)
+			return ans;
+
+		ans = Mat2ReWrite(o_ctrl); // MAT2 re-write process
+		if (ans != 0 && ans != 1)
+			return ans;
+
+		ans = PmemUpdate128(o_ctrl, 1);
+		if (ans != 0)
+			return ans;
+		//--------------------------------------------------------------------------------
+		// <User Mat> Erase
+		//--------------------------------------------------------------------------------
+		if (0 != UnlockCodeSet(o_ctrl))
+			return 0x33;
+
+		WritePermission(o_ctrl);
+
+		AddtionalUnlockCodeSet(o_ctrl);
+
+		ans = EraseUserMat128(o_ctrl, 0, 10);
+		if (0 != ans) {
+			if (0 != UnlockCodeClear(o_ctrl))
+				return 0x32;
+			else
+				return ans;
+		}
+//--------------------------------------------------------------------------------
+// 4. <User Mat> Write
+//--------------------------------------------------------------------------------
+#if (SELECT_VENDOR == 0x01)
+		ans = ProgramFlash128_LongBurst(o_ctrl);
+#else
+		ans = ProgramFlash128_Standard(o_ctrl);
+#endif
+		if (ans != 0) {
+			if (UnlockCodeClear(o_ctrl) != 0)
+				return (0x43); // unlock code clear ng
+			else
+				return (ans);
+		}
+
+		if (UnlockCodeClear(o_ctrl) != 0)
+			return (0x43);
+		//--------------------------------------------------------------------------------
+		// 5. <User Mat> Verify
+		//--------------------------------------------------------------------------------
+		ans = MatVerify(o_ctrl, FwChecksum, FwChecksumSize);
+		if (ans != 0) {
+			CAM_ERR(CAM_OIS, "MatVerify fail %d", ans);
+		}
+	} else {
+		CAM_ERR(CAM_OIS, "firmware is valid, skip updating");
+	}
+
+	return rc;
+}
+
+static int cam_sem1215_ois_fw_download(struct cam_ois_ctrl_t *o_ctrl)
+{
+	uint8_t txdata[TX_BUFFER_SIZE];
+	uint8_t rxdata[RX_BUFFER_SIZE];
+	uint16_t txBuffSize;
+	uint16_t i, chkIdx, idx = 0;
+	uint16_t check_sum;
+	uint32_t updated_ver, new_fw_ver, current_fw_ver;
+	char *fw_name_prog = NULL;
+	char name_prog[32] = { 0 };
+	uint8_t *chkBuff = vmalloc(APP_FW_SIZE);
+	uint8_t *fw_data = vmalloc(APP_FW_SIZE);
+	int32_t rc = 0;
+	//	uint8_t FwVersion = o_ctrl->opcode.fwversion;
+
+	/* Get FW Ver from Binary File */
+	snprintf(name_prog, 32, "%s.prog", o_ctrl->ois_name);
+	fw_name_prog = name_prog;
+	load_fw_buff(o_ctrl, fw_name_prog, fw_data, APP_FW_SIZE);
+	new_fw_ver =
+		*(uint32_t *)&fw_data[APP_FW_SIZE - 12]; /* 0x7FF4 ~ 0x7FF7 */
+
+	I2C_Read_Data(o_ctrl, REG_APP_VER, 4, rxdata);
+	current_fw_ver = *(uint32_t *)rxdata;
+	CAM_DBG(CAM_OIS, "[current_fw_ver] = %d,[new_fw_ver] = %d",
+		current_fw_ver, new_fw_ver);
+
+	if ((current_fw_ver == new_fw_ver) && (oisfwctrl == 0)) {
+		vfree(chkBuff);
+		vfree(fw_data);
+		return rc;
+	} else {
+		/* If have FW app, Turnoff OIS and AF */
+		if (current_fw_ver != 0) {
+			I2C_Read_Data(o_ctrl, REG_OIS_STS, 1,
+				      rxdata); /* Read REG_OIS_STS */
+			if (rxdata[0] != STATE_READY) {
+				txdata[0] = OIS_OFF; /* Set OIS_OFF */
+				I2C_Write_Data(
+					o_ctrl, REG_OIS_CTRL, 1, txdata,
+					0); /* Write 1 Byte to REG_OIS_CTRL */
+			}
+			I2C_Read_Data(o_ctrl, REG_AF_STS, 1,
+				      rxdata); /* Read REG_AF_STS */
+			if (rxdata[0] != STATE_READY) {
+				txdata[0] = AF_OFF; /* Set AF_OFF */
+				I2C_Write_Data(
+					o_ctrl, REG_AF_CTRL, 1, txdata,
+					0); /* Write 1 Byte to REG_AF_CTRL */
+			}
+		}
+
+		/* PAYLOAD_LEN = Size Bytes, FW_UPEN = TRUE */
+		txBuffSize = TX_SIZE_256_BYTE;
+		switch (txBuffSize) {
+		case TX_SIZE_32_BYTE:
+			txdata[0] = FWUP_CTRL_32_SET;
+			break;
+		case TX_SIZE_64_BYTE:
+			txdata[0] = FWUP_CTRL_64_SET;
+			break;
+		case TX_SIZE_128_BYTE:
+			txdata[0] = FWUP_CTRL_128_SET;
+			break;
+		case TX_SIZE_256_BYTE:
+			txdata[0] = FWUP_CTRL_256_SET;
+			break;
+		default:
+			/* Does not setting Tx data size, Alert Message */
+			break;
+		}
+		/* Set FW Update Ctrl Reg */
+		I2C_Write_Data(o_ctrl, REG_FWUP_CTRL, 1, txdata, 0);
+
+		msleep(60);
+		check_sum = 0;
+
+		for (i = 0; i < (APP_FW_SIZE / txBuffSize); i++) {
+			CAM_DBG(CAM_OIS, "Write [REG_DATA_BUF] i = %d", i);
+			memcpy(&chkBuff[txBuffSize * i], &fw_data[idx],
+			       txBuffSize);
+			for (chkIdx = 0; chkIdx < txBuffSize; chkIdx += 2) {
+				check_sum +=
+					((chkBuff[chkIdx + 1 + (txBuffSize * i)]
+					  << 8) |
+					 chkBuff[chkIdx + (txBuffSize * i)]);
+			}
+			memcpy(txdata, &fw_data[idx], txBuffSize);
+			I2C_Write_Data(o_ctrl, REG_DATA_BUF, txBuffSize, txdata,
+				       0);
+			idx += txBuffSize;
+			msleep(20);
+		}
+
+		vfree(chkBuff);
+		vfree(fw_data);
+
+		*(uint16_t *)txdata = check_sum;
+		I2C_Write_Data(o_ctrl, REG_FWUP_CHKSUM, 2, txdata, 0);
+		msleep(200);
+
+		I2C_Read_Data(o_ctrl, REG_FWUP_CHKSUM, 2, rxdata);
+		CAM_DBG(CAM_OIS, "[REG_FWUP_CHKSUM] = 0x%x,0x%x", rxdata[0],
+			rxdata[1]);
+
+		I2C_Read_Data(o_ctrl, REG_FWUP_ERR, 1, rxdata);
+		CAM_DBG(CAM_OIS, "[REG_FWUP_ERR] = 0x%x", rxdata[0]);
+
+		if (rxdata[0] != NO_ERROR) {
+			CAM_ERR(CAM_OIS, "[Error] : FW Update != NO_ERROR");
+			return rc;
+		}
+
+		txdata[0] = RESET_REQ;
+		I2C_Write_Data(o_ctrl, REG_FWUP_CTRL, 1, txdata, 0);
+		msleep(200);
+
+		I2C_Read_Data(o_ctrl, REG_APP_VER, 4, rxdata);
+		updated_ver = *(uint32_t *)rxdata;
+		CAM_DBG(CAM_OIS, "[updated_ver] = %d,[new_fw_ver] = %d",
+			updated_ver, new_fw_ver);
+
+		if (updated_ver != new_fw_ver) {
+			CAM_ERR(CAM_OIS, "[Error]: updated_ver != new_fw_ver");
+			return rc;
+		}
+		CAM_DBG(CAM_OIS, "FW Update Success.");
+	}
+	return rc;
+}
+
 #ifdef ENABLE_OIS_EIS
 static int cam_ois_get_data(struct cam_ois_ctrl_t *o_ctrl,
 		struct cam_packet *csl_packet)
@@ -956,6 +1174,9 @@ static int cam_ois_pkt_parse(struct cam_ois_ctrl_t *o_ctrl, void *arg)
 	struct cam_ois_soc_private     *soc_private =
 		(struct cam_ois_soc_private *)o_ctrl->soc_info.soc_private;
 	struct cam_sensor_power_ctrl_t  *power_info = &soc_private->power_info;
+	uint32_t FwChecksum = o_ctrl->opcode.fwchecksum;
+	uint32_t FwChecksumSize = o_ctrl->opcode.fwchecksumsize;
+	uint8_t FwVersion = o_ctrl->opcode.fwversion;
 
 	ioctl_ctrl = (struct cam_control *)arg;
 	if (copy_from_user(&dev_config,
@@ -1152,13 +1373,32 @@ static int cam_ois_pkt_parse(struct cam_ois_ctrl_t *o_ctrl, void *arg)
 		}
 
 		if (o_ctrl->ois_fw_flag) {
-			if (o_ctrl->opcode.is_addr_indata) {
-				CAM_DBG(CAM_OIS, "apply lc898124 ois_fw settings");
+			CAM_DBG(CAM_OIS, "is_addr_indata = %d",
+				o_ctrl->opcode.is_addr_indata);
+			if (121 == o_ctrl->opcode.is_addr_indata) {
+				CAM_DBG(CAM_OIS,
+					"apply sem1215 ois_fw settings begin.");
+				rc = cam_sem1215_ois_fw_download(o_ctrl);
+				CAM_DBG(CAM_OIS,
+					"apply sem1215 ois_fw settings done.");
+			} else if (128 == o_ctrl->opcode.is_addr_indata) {
+				FwChecksum = o_ctrl->opcode.fwchecksum;
+				FwChecksumSize = o_ctrl->opcode.fwchecksumsize;
+				FwVersion = o_ctrl->opcode.fwversion;
+				CAM_DBG(CAM_OIS,
+					"apply lc898128 ois_fw settings");
+				rc = cam_lc898128_ois_fw_download(
+					o_ctrl, FwChecksum, FwChecksumSize,
+					FwVersion);
+			} else if (1 == o_ctrl->opcode.is_addr_indata) {
+				CAM_DBG(CAM_OIS,
+					"apply lc898124 ois_fw settings");
 				rc = cam_lc898124_ois_fw_download(o_ctrl);
 			} else {
 				CAM_DBG(CAM_OIS, "apply ois_fw settings");
 				rc = cam_ois_fw_download(o_ctrl);
 			}
+
 			if (rc) {
 				CAM_ERR(CAM_OIS, "Failed OIS FW Download");
 				goto pwr_dwn;
