@@ -9172,6 +9172,12 @@ reinit:
 		pm_runtime_put_sync(hba->dev);
 	}
 
+	/*
+	 * Enable auto hibern8 if supported, after full host and
+	 * device initialization.
+	 */
+	ufshcd_set_auto_hibern8_timer(hba);
+
 out:
 	if (ret) {
 		ufshcd_set_ufs_dev_poweroff(hba);
