@@ -1748,7 +1748,7 @@ static int ufshcd_clock_scaling_prepare(struct ufs_hba *hba)
 #if defined(CONFIG_UFSFEATURE)
 	#define DOORBELL_CLR_TOUT_US		(1500 * 1000) /* 1.5 sec */
 #else
-	#define DOORBELL_CLR_TOUT_US		(1000 * 1000) /* 1 sec */
+        #define DOORBELL_CLR_TOUT_US            (40 * 1000 * 1000) /* 40 sec */
 #endif
 #else
 	#define DOORBELL_CLR_TOUT_US		(1000 * 1000) /* 1 sec */
