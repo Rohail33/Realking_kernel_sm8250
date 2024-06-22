@@ -11,11 +11,6 @@ config XIAOMI_MIUI
 
 if XIAOMI_MIUI
 
-config MIUI_DRM_OPT
-	bool "Enable MIUI DRM optimizations"
-	help
-	  Enables compilation of Xiaomi MIUI specific DRM optimizations
-
 config MIGT
 	bool "Boost cpufreq during high load"
 	help
