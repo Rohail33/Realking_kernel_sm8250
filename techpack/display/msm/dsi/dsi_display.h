@@ -202,9 +202,7 @@ struct dsi_display {
 	const char *display_type;
 	struct list_head list;
 	bool is_cont_splash_enabled;
-#ifdef CONFIG_MIUI_DRM_OPT
 	bool is_prim_display;
-#endif
 	bool sw_te_using_wd;
 	struct mutex display_lock;
 	int disp_te_gpio;

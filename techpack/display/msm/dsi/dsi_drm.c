@@ -12,12 +12,10 @@
 #include "sde_connector.h"
 #include "dsi_drm.h"
 #include "sde_trace.h"
-#ifdef CONFIG_MIUI_DRM_OPT
 #include <drm/drm_bridge.h>
 #include <linux/pm_wakeup.h>
 #include "msm_drv.h"
 #include "dsi_defs.h"
-#endif
 #include "sde_encoder.h"
 #include "dsi_mi_feature.h"
 
@@ -36,15 +34,12 @@ static struct dsi_display_mode_priv_info default_priv_info = {
 	.dsc_enabled = false,
 };
 
-#ifdef CONFIG_MIUI_DRM_OPT
 #define WAIT_RESUME_TIMEOUT 200
 
 struct dsi_bridge *gbridge;
 static struct delayed_work prim_panel_work;
 static atomic_t prim_panel_is_on;
-
 static struct wakeup_source *prim_panel_wakelock;
-#endif
 
 static void convert_to_dsi_mode(const struct drm_display_mode *drm_mode,
 				struct dsi_display_mode *dsi_mode)
@@ -183,11 +178,9 @@ static void dsi_bridge_pre_enable(struct drm_bridge *bridge)
 {
 	int rc = 0;
 	struct dsi_bridge *c_bridge = to_dsi_bridge(bridge);
-#ifdef CONFIG_MIUI_DRM_OPT
 	struct mi_drm_notifier notify_data;
 	struct dsi_panel_mi_cfg *mi_cfg = NULL;
 	int power_mode = 0;
-#endif
 
 	if (!bridge) {
 		DSI_ERR("Invalid params\n");
@@ -201,10 +194,7 @@ static void dsi_bridge_pre_enable(struct drm_bridge *bridge)
 
 	if (bridge->encoder->crtc->state->active_changed)
 		atomic_set(&c_bridge->display->panel->esd_recovery_pending, 0);
-
-#ifdef CONFIG_MIUI_DRM_OPT
 	mi_cfg = &c_bridge->display->panel->mi_cfg;
-#endif
 
 	/* By this point mode should have been validated through mode_fixup */
 	rc = dsi_display_set_mode(c_bridge->display,
@@ -215,7 +205,6 @@ static void dsi_bridge_pre_enable(struct drm_bridge *bridge)
 		return;
 	}
 
-#ifdef CONFIG_MIUI_DRM_OPT
 	if (c_bridge->display->is_prim_display && atomic_read(&prim_panel_is_on) && !mi_cfg->fod_dimlayer_enabled) {
 		cancel_delayed_work_sync(&prim_panel_work);
 		__pm_relax(prim_panel_wakelock);
@@ -238,7 +227,7 @@ static void dsi_bridge_pre_enable(struct drm_bridge *bridge)
 	notify_data.data = &power_mode;
 	notify_data.id = MSM_DRM_PRIMARY_DISPLAY;
 	mi_drm_notifier_call_chain(MI_DRM_EARLY_EVENT_BLANK, &notify_data);
-#endif
+
 
 	if (c_bridge->dsi_mode.dsi_mode_flags &
 		(DSI_MODE_FLAG_SEAMLESS | DSI_MODE_FLAG_VRR |
@@ -265,9 +254,7 @@ static void dsi_bridge_pre_enable(struct drm_bridge *bridge)
 		(void)dsi_display_unprepare(c_bridge->display);
 	}
 
-#ifdef CONFIG_MIUI_DRM_OPT
 	mi_drm_notifier_call_chain(MI_DRM_EVENT_BLANK, &notify_data);
-#endif
 	SDE_ATRACE_END("dsi_display_enable");
 
 	rc = dsi_display_splash_res_cleanup(c_bridge->display);
@@ -275,13 +262,11 @@ static void dsi_bridge_pre_enable(struct drm_bridge *bridge)
 		DSI_ERR("Continuous splash pipeline cleanup failed, rc=%d\n",
 									rc);
 
-#ifdef CONFIG_MIUI_DRM_OPT
 	if (c_bridge->display->is_prim_display)
 		atomic_set(&prim_panel_is_on, true);
-#endif
+
 }
 
-#ifdef CONFIG_MIUI_DRM_OPT
 /**
  *  dsi_bridge_interface_enable - Panel light on interface for fingerprint
  *  In order to improve panel light on performance when unlock device by
@@ -325,7 +310,6 @@ int dsi_bridge_interface_enable(int timeout)
 	return ret;
 }
 EXPORT_SYMBOL(dsi_bridge_interface_enable);
-#endif
 
 static void dsi_bridge_enable(struct drm_bridge *bridge)
 {
@@ -425,18 +409,15 @@ static void dsi_bridge_post_disable(struct drm_bridge *bridge)
 {
 	int rc = 0;
 	struct dsi_bridge *c_bridge = to_dsi_bridge(bridge);
-#ifdef CONFIG_MIUI_DRM_OPT
 	struct mi_drm_notifier notify_data;
 	struct dsi_panel_mi_cfg *mi_cfg = NULL;
 	int power_mode = 0;
-#endif
 
 	if (!bridge) {
 		DSI_ERR("Invalid params\n");
 		return;
 	}
 
-#ifdef CONFIG_MIUI_DRM_OPT
 	mi_cfg = &c_bridge->display->panel->mi_cfg;
 
 	if (mi_cfg->fod_dimlayer_enabled)
@@ -447,7 +428,6 @@ static void dsi_bridge_post_disable(struct drm_bridge *bridge)
 	notify_data.data = &power_mode;
 	notify_data.id = MSM_DRM_PRIMARY_DISPLAY;
 	mi_drm_notifier_call_chain(MI_DRM_EARLY_EVENT_BLANK, &notify_data);
-#endif
 
 	SDE_ATRACE_BEGIN("dsi_bridge_post_disable");
 	SDE_ATRACE_BEGIN("dsi_display_disable");
@@ -468,18 +448,14 @@ static void dsi_bridge_post_disable(struct drm_bridge *bridge)
 		return;
 	}
 
-#ifdef CONFIG_MIUI_DRM_OPT
 	mi_drm_notifier_call_chain(MI_DRM_EVENT_BLANK, &notify_data);
-#endif
 	SDE_ATRACE_END("dsi_bridge_post_disable");
 
-#ifdef CONFIG_MIUI_DRM_OPT
 	if (c_bridge->display->is_prim_display)
 		atomic_set(&prim_panel_is_on, false);
-#endif
+
 }
 
-#ifdef CONFIG_MIUI_DRM_OPT
 static void prim_panel_off_delayed_work(struct work_struct *work)
 {
 	mutex_lock(&gbridge->base.lock);
@@ -491,7 +467,6 @@ static void prim_panel_off_delayed_work(struct work_struct *work)
 	}
 	mutex_unlock(&gbridge->base.lock);
 }
-#endif
 
 static void dsi_bridge_mode_set(struct drm_bridge *bridge,
 				struct drm_display_mode *mode,
@@ -1238,7 +1213,6 @@ struct dsi_bridge *dsi_drm_bridge_init(struct dsi_display *display,
 
 	encoder->bridge = &bridge->base;
 
-#ifdef CONFIG_MIUI_DRM_OPT
 	encoder->bridge->is_dsi_drm_bridge = true;
 	mutex_init(&encoder->bridge->lock);
 
@@ -1251,7 +1225,6 @@ struct dsi_bridge *dsi_drm_bridge_init(struct dsi_display *display,
 		init_waitqueue_head(&resume_wait_q);
 		INIT_DELAYED_WORK(&prim_panel_work, prim_panel_off_delayed_work);
 	}
-#endif
 
 	return bridge;
 error_free_bridge:
@@ -1265,14 +1238,12 @@ void dsi_drm_bridge_cleanup(struct dsi_bridge *bridge)
 	if (bridge && bridge->base.encoder)
 		bridge->base.encoder->bridge = NULL;
 
-#ifdef CONFIG_MIUI_DRM_OPT
 	if (bridge == gbridge) {
 		atomic_set(&prim_panel_is_on, false);
 		cancel_delayed_work_sync(&prim_panel_work);
 		wakeup_source_remove(prim_panel_wakelock);
 		wakeup_source_destroy(prim_panel_wakelock);
 	}
-#endif
 
 	kfree(bridge);
 }

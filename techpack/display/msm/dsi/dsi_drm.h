@@ -23,9 +23,7 @@ struct dsi_bridge {
 
 	struct dsi_display *display;
 	struct dsi_display_mode dsi_mode;
-#ifdef CONFIG_MIUI_DRM_OPT
 	struct mutex lock;
-#endif
 };
 
 /**
