@@ -158,6 +158,7 @@ enum {
 };
 
 #ifdef CONFIG_SOUND_CONTROL
+static struct snd_soc_codec *sound_control_codec_ptr;
 static int hp_custom_left = 0;
 static int hp_custom_right = 0;
 #endif
