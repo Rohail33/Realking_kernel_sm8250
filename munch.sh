@@ -8,8 +8,9 @@ rm -rf out/
 clear
 
 # Define variables
-MAIN=$(pwd)
-ZIMAGE_DIR="$MAIN/out/arch/arm64/boot"
+DIR=$(readlink -f .)
+MAIN=$(readlink -f ${DIR}/..)
+ZIMAGE_DIR="$(pwd)/out/arch/arm64/boot"
 KERNEL_DEFCONFIG=munch_defconfig
 
 LINKER="lld"
@@ -17,12 +18,12 @@ MAKE="./makeparallel"
 BUILD_START=$(date +"%s")
 TIME="$(date "+%Y%m%d-%H%M%S")"
 
-#Colors 
+# Colors 
 blue='\033[0;34m'
 nocol='\033[0m'
 
 # Check if the clang compiler is present, if not, clone it from GitHub
-if ! [ -d "$MAIN/clang" ]; then
+if [ ! -d "$MAIN/clang" ]; then
     echo "No clang compiler found ... Cloning from GitHub"
 
     # Prompt user to choose Clang version
@@ -31,15 +32,42 @@ if ! [ -d "$MAIN/clang" ]; then
     echo "2. WeebX Stable"
     read -p "Enter the number of your choice: " clang_choice
 
-    # Download and extract the selected Clang version
-    if [ "$clang_choice" = "1" ]; then
-        wget "$(curl -s https://raw.githubusercontent.com/v3kt0r-87/Clang-Stable/main/clang-zyc.txt)" -O "zyc-clang.tar.gz"
-        rm -rf clang && mkdir clang && tar -xvf zyc-clang.tar.gz -C clang && rm -rf zyc-clang.tar.gz
-    elif [ "$clang_choice" = "2" ]; then
-        wget "$(curl -s https://raw.githubusercontent.com/v3kt0r-87/Clang-Stable/main/clang-weebx.txt)" -O "weebx-clang.tar.gz"
-        rm -rf clang && mkdir clang && tar -xvf weebx-clang.tar.gz -C clang && rm -rf weebx-clang.tar.gz
-    else
-        echo "Invalid choice. Exiting..."
+    # Set URL and archive name based on user choice
+    case "$clang_choice" in
+        1)
+            CLANG_URL=$(curl -s https://raw.githubusercontent.com/v3kt0r-87/Clang-Stable/main/clang-zyc.txt)
+            ARCHIVE_NAME="zyc-clang.tar.gz"
+            ;;
+        2)
+            CLANG_URL=$(curl -s https://raw.githubusercontent.com/v3kt0r-87/Clang-Stable/main/clang-weebx.txt)
+            ARCHIVE_NAME="weebx-clang.tar.gz"
+            ;;
+        *)
+            echo "Invalid choice. Exiting..."
+            exit 1
+            ;;
+    esac
+
+    # Download Clang archive
+    echo "Downloading Clang ... Please Wait ..."
+    if ! wget -P "$MAIN" "$CLANG_URL" -O "$MAIN/$ARCHIVE_NAME"; then
+        echo "Failed to download Clang. Exiting..."
+        exit 1
+    fi
+
+    # Create clang directory and extract archive
+    mkdir -p "$MAIN/clang"
+    if ! tar -xvf "$MAIN/$ARCHIVE_NAME" -C "$MAIN/clang"; then
+        echo "Failed to extract Clang. Exiting..."
+        exit 1
+    fi
+
+    # Clean up
+    rm -f "$MAIN/$ARCHIVE_NAME"
+
+    # Verify directory creation
+    if [ ! -d "$MAIN/clang" ]; then
+        echo "Failed to create the 'clang' directory. Exiting..."
         exit 1
     fi
 fi
@@ -99,7 +127,7 @@ cp -rp ./anykernel/* tmp
 cd tmp
 7za a -mx9 tmp.zip *
 cd ..
-rm *.zip
+rm -f *.zip
 cp -fp tmp/tmp.zip RealKing-Munch-${zip_name}-$TIME.zip
 rm -rf tmp
 echo $TIME
