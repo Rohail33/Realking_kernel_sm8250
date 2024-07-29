@@ -143,3 +143,4 @@ kernel/configs/android-*.cfg
 out/
 *.zip
 *.log
+clang
