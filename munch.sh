@@ -1,12 +1,6 @@
 #!/bin/bash
 #set -e
-
 # Copy this script inside the kernel directory
-
-# Pre-Cleanup
-rm -rf out/
-clear
-
 # Define variables
 DIR=$(readlink -f .)
 MAIN=$(readlink -f ${DIR}/..)
