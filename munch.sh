@@ -16,6 +16,7 @@ TIME="$(date "+%Y%m%d-%H%M%S")"
 blue='\033[0;34m'
 nocol='\033[0m'
 
+
 # Check if the clang compiler is present, if not, clone it from GitHub
 if [ ! -d "$MAIN/clang" ]; then
     echo "No clang compiler found ... Cloning from GitHub"
@@ -24,6 +25,7 @@ if [ ! -d "$MAIN/clang" ]; then
     echo "Choose which Clang to use:"
     echo "1. ZyC Stable"
     echo "2. WeebX Stable"
+    echo "3. WeebX Beta"
     read -p "Enter the number of your choice: " clang_choice
 
     # Set URL and archive name based on user choice
@@ -36,12 +38,16 @@ if [ ! -d "$MAIN/clang" ]; then
             CLANG_URL=$(curl -s https://raw.githubusercontent.com/v3kt0r-87/Clang-Stable/main/clang-weebx.txt)
             ARCHIVE_NAME="weebx-clang.tar.gz"
             ;;
+        3)
+            CLANG_URL=$(curl -s https://raw.githubusercontent.com/v3kt0r-87/Clang-Stable/main/clang-weebx-beta.txt)
+            ARCHIVE_NAME="weebx-clang-beta.tar.gz"
+            ;;
         *)
             echo "Invalid choice. Exiting..."
             exit 1
             ;;
     esac
-
+    
     # Download Clang archive
     echo "Downloading Clang ... Please Wait ..."
     if ! wget -P "$MAIN" "$CLANG_URL" -O "$MAIN/$ARCHIVE_NAME"; then
