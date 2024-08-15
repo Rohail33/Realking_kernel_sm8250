@@ -9,7 +9,7 @@
 KERNEL_DIR=$(pwd)
 
 # Kernel defconfig
-DEFCONFIG=vendor/kona-perf_defconfig
+DEFCONFIG=vendor/meteoric_defconfig
 
 # AnyKernel3 directory
 ANYKERNEL3_DIR=$KERNEL_DIR/anykernel
