@@ -4,7 +4,7 @@
 ### AnyKernel setup
 # begin properties
 properties() { '
-kernel.string=Meteoric kernel by HELLBOY017
+kernel.string= REAL-KING KERNEL by ROHAIL(@Rohail33)--Telegram
 do.devicecheck=0
 do.modules=0
 do.systemless=0
