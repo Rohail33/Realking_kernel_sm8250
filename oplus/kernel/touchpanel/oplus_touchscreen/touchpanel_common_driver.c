@@ -518,7 +518,6 @@ int sec_double_tap(struct gesture_info *gesture)
 static void tp_gesture_handle(struct touchpanel_data *ts)
 {
 	struct gesture_info gesture_info_temp;
-	bool enabled = custom_gesture_enable;
 
 	if (!ts->ts_ops->get_gesture_info) {
 		TPD_INFO("not support ts->ts_ops->get_gesture_info callback\n");
@@ -573,7 +572,7 @@ static void tp_gesture_handle(struct touchpanel_data *ts)
 	}
 #endif // end of CONFIG_OPLUS_TP_APK
 
-	if (gesture_info_temp.gesture_type == DouTap && CHK_BIT(ts->gesture_enable_indep, (1 << gesture_info_temp.gesture_type)) && enabled) {
+	if (gesture_info_temp.gesture_type == DouTap && CHK_BIT(ts->gesture_enable_indep, (1 << gesture_info_temp.gesture_type)) && custom_gesture_enable) {
 		memcpy(&ts->gesture, &gesture_info_temp, sizeof(struct gesture_info));
 
 		input_report_key(ts->input_dev, KEY_WAKEUP, 1);
@@ -1772,7 +1771,6 @@ static ssize_t proc_gesture_control_write(struct file *file, const char __user *
 {
 	int value = 0;
 	char buf[4] = {0};
-	bool custom_gesture = custom_gesture_enable;
 	struct touchpanel_data *ts = PDE_DATA(file_inode(file));
 
 	if (count > 2) {
@@ -1791,49 +1789,51 @@ static ssize_t proc_gesture_control_write(struct file *file, const char __user *
 	sscanf(buf, "%d", &value);
 
 	mutex_lock(&ts->mutex);
-	switch (value) {
-	case 0:
-                if (custom_gesture) 	
-	                ts->gesture_enable_indep &= ~(1 << DouTap);
-	case 1:
-	        if (custom_gesture)
-	        ts->gesture_enable_indep |= (1 << DouTap);
-	case 2:
-	case 3:
-		if (ts->gesture_enable != value) {
-			ts->gesture_enable = value;
-			if (ts->is_incell_panel && (ts->suspend_state == TP_RESUME_EARLY_EVENT || ts->disable_gesture_ctrl) && (ts->tp_resume_order == LCD_TP_RESUME)) {
-				TPD_INFO("tp will resume, no need mode_switch in incell panel\n"); /*avoid i2c error or tp rst pulled down in lcd resume*/
-			} else if (ts->is_suspended) {
-				if (ts->fingerprint_underscreen_support && ts->fp_enable && ts->ts_ops->enable_gesture_mask) {
-					ts->ts_ops->enable_gesture_mask(ts->chip_data, (ts->gesture_enable & 0x01) == 1);
-				} else {
-					operate_mode_switch(ts);
-				}
-			}
-		}
-		break;
-	case 4:
-		break;
-	case 5:
-		ts->hall_status = false;
-		break;
-	case 6:
-		ts->hall_status = true;
-		if ((ts->gesture_enable & 0x01) && ts->is_suspended) {
-			operate_mode_switch(ts);
-		}
-		break;
-	default:
-		TPD_DEBUG("invalid setting %d\n", value);
-	}
 
-        if (custom_gesture) {
+        if (custom_gesture_enable) {
+                if (value)
+		        ts->gesture_enable_indep |= (1 << DouTap);
+	        else
+		        ts->gesture_enable_indep &= ~(1 << DouTap);
+
 	        if (ts->ts_ops->set_gesture_state)
 		        ts->ts_ops->set_gesture_state(ts->chip_data, ts->gesture_enable_indep);
-        }
-
-	TPD_INFO("%s: gesture_enable = %d, value = %d\n", __func__, ts->gesture_enable, value);
+	} else {
+	        switch (value) {
+	        case 0:
+	        case 1:
+	        case 2:
+	        case 3:
+		        if (ts->gesture_enable != value) {
+			        ts->gesture_enable = value;
+			        if (ts->is_incell_panel && (ts->suspend_state == TP_RESUME_EARLY_EVENT || ts->disable_gesture_ctrl) && (ts->tp_resume_order == LCD_TP_RESUME)) {
+				        TPD_INFO("tp will resume, no need mode_switch in incell panel\n"); /*avoid i2c error or tp rst pulled down in lcd resume*/
+			        } else if (ts->is_suspended) {
+				        if (ts->fingerprint_underscreen_support && ts->fp_enable && ts->ts_ops->enable_gesture_mask) {
+					          ts->ts_ops->enable_gesture_mask(ts->chip_data, (ts->gesture_enable & 0x01) == 1);
+				        } else {
+					          operate_mode_switch(ts);
+				        }
+			        }
+		        }
+		        break;
+	        case 4:
+		        break;
+	        case 5:
+		        ts->hall_status = false;
+		        break;
+	        case 6:
+		        ts->hall_status = true;
+		        if ((ts->gesture_enable & 0x01) && ts->is_suspended) {
+			        operate_mode_switch(ts);
+		        }
+		        break;
+	        default:
+		        TPD_DEBUG("invalid setting %d\n", value);
+	          }
+	          
+	        TPD_INFO("%s: gesture_enable = %d, value = %d\n", __func__, ts->gesture_enable, value);
+	}
 	
 	mutex_unlock(&ts->mutex);
 
@@ -1845,7 +1845,6 @@ static ssize_t proc_gesture_control_read(struct file *file, char __user *user_bu
 	int ret = 0;
 	int value = 0;
 	char page[PAGESIZE] = {0};
-	bool custom_gesture = custom_gesture_enable;
 	struct touchpanel_data *ts = PDE_DATA(file_inode(file));
 
 	if (!ts) {
@@ -1854,7 +1853,7 @@ static ssize_t proc_gesture_control_read(struct file *file, char __user *user_bu
 
 	value = !!(ts->gesture_enable_indep & (1 << DouTap));
 
-        if (custom_gesture) {
+	if (custom_gesture_enable) {
 	        TPD_DEBUG("double tap enable is: %d\n", value);
 	        ret = snprintf(page, PAGESIZE - 1, "%d", value);
 	} else {
@@ -1877,7 +1876,6 @@ static ssize_t proc_gesture_control_indep_write(struct file *file, const char __
 {
 	int value = 0;
 	char buf[9] = {0};
-	bool custom_gesture = custom_gesture_enable;
 	struct touchpanel_data *ts = PDE_DATA(file_inode(file));
 
 	if (count > 8) {
@@ -1897,13 +1895,10 @@ static ssize_t proc_gesture_control_indep_write(struct file *file, const char __
 
 	mutex_lock(&ts->mutex);
 
-        if (custom_gesture)
-	        ts->gesture_enable_indep = value;
-        else {
-	        if (ts->ts_ops->set_gesture_state) {
-		        ts->gesture_enable_indep = value;
-		        ts->ts_ops->set_gesture_state(ts->chip_data, value);
-	        }
+	ts->gesture_enable_indep = value;
+
+	if (ts->ts_ops->set_gesture_state) {
+		ts->ts_ops->set_gesture_state(ts->chip_data, value);
 	}
 
 	if (ts->sportify_aod_gesture_support && ts->is_suspended) {
