@@ -237,6 +237,7 @@ menu "KernelSU"
 
 config KSU
         bool "Ship KernelSU with kernel"
+	default y
 
 endmenu
 
