@@ -24,7 +24,7 @@ if [ ! -d "$MAIN/clang" ]; then
     # Prompt user to choose Clang version
     echo "Choose which Clang to use:"
     echo "1. ZyC Stable (Clang 16.0.6)"
-    echo "2. WeebX Stable (Cland 19.1.2)"
+    echo "2. WeebX Stable (Cland 19.1.3)"
     read -p "Enter the number of your choice: " clang_choice
 
     # Set URL and archive name based on user choice
@@ -38,8 +38,10 @@ if [ ! -d "$MAIN/clang" ]; then
             ARCHIVE_NAME="weebx-clang.tar.gz"
             ;;
         *)
-            echo "Invalid choice. Exiting..."
-            exit 1
+            clear
+            echo "Invalid choice. Using WeebX clang to compile ..."
+            CLANG_URL=$(curl -s https://raw.githubusercontent.com/v3kt0r-87/Clang-Stable/main/clang-weebx.txt)
+            ARCHIVE_NAME="weebx-clang.tar.gz"
             ;;
     esac
     
