@@ -217,6 +217,7 @@ static void balance_irqs(void)
 	struct bal_irq *bi;
 	int cpu;
 
+	cpus_read_lock();
 	rcu_read_lock();
 
 	/* Find the available CPUs for balancing, if there are any */
@@ -334,6 +335,7 @@ try_next_heaviest:
 		goto try_next_heaviest;
 unlock:
 	rcu_read_unlock();
+	cpus_read_unlock();
 
 	/* Reset each balance domain for the next run */
 	for_each_possible_cpu(cpu) {
