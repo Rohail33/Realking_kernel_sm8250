@@ -25,7 +25,6 @@
 #include <linux/sizes.h>
 #include "binder_internal.h"
 #include "binder_trace.h"
-#include <trace/hooks/binder.h>
 
 struct list_lru binder_freelist;
 
@@ -232,7 +231,7 @@ static int binder_install_single_page(struct binder_alloc *alloc,
 	 * Protected with mmap_sem in write mode as multiple tasks
 	 * might race to install the same page.
 	 */
-	mmap_write_lock(alloc->vma_vm_mm);
+	down_read(&alloc->vma_vm_mm->mmap_sem);
 	if (binder_get_installed_page(lru_page))
 		goto out;
 
@@ -262,7 +261,7 @@ static int binder_install_single_page(struct binder_alloc *alloc,
 	/* Mark page installation complete and safe to use */
 	binder_set_installed_page(lru_page, page);
 out:
-	mmap_write_unlock(alloc->vma_vm_mm);
+	up_read(&alloc->vma_vm_mm->mmap_sem);
 	mmput_async(alloc->vma_vm_mm);
 	return ret;
 }
@@ -462,8 +461,6 @@ static struct binder_buffer *binder_alloc_new_buf_locked(
 	unsigned long next_used_page;
 	unsigned long curr_last_page;
 	size_t buffer_size;
-
-	trace_android_vh_binder_alloc_new_buf_locked(size, alloc, is_async);
 
 	if (is_async && alloc->free_async_space < size) {
 		binder_alloc_debug(BINDER_DEBUG_BUFFER_ALLOC,
@@ -1086,8 +1083,8 @@ enum lru_status binder_alloc_free_page(struct list_head *item,
 
 	if (!mmget_not_zero(mm))
 		goto err_mmget;
-	if (!mmap_read_trylock(mm))
-		goto err_mmap_read_lock_failed;
+	if (!down_read_trylock(&mm->mmap_sem))
+		goto err_down_read_mmap_sem_failed;
 	if (!binder_alloc_trylock(alloc))
 		goto err_get_alloc_lock_failed;
 	if (!page->page_ptr)
@@ -1119,7 +1116,7 @@ enum lru_status binder_alloc_free_page(struct list_head *item,
 		trace_binder_unmap_user_end(alloc, index);
 	}
 
-	mmap_read_unlock(mm);
+	up_read(&mm->mmap_sem);
 	mmput_async(mm);
 	__free_page(page_to_free);
 
@@ -1130,8 +1127,8 @@ err_invalid_vma:
 err_page_already_freed:
 	binder_alloc_unlock(alloc);
 err_get_alloc_lock_failed:
-	mmap_read_unlock(mm);
-err_mmap_read_lock_failed:
+	up_read(&mm->mmap_sem);
+err_down_read_mmap_sem_failed:
 	mmput_async(mm);
 err_mmget:
 	return LRU_SKIP;
