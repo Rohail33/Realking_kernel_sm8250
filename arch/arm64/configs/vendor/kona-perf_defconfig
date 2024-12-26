@@ -1,4 +1,4 @@
-CONFIG_LOCALVERSION="~RealKing//v17.4-Dominion"
+CONFIG_LOCALVERSION="~RealKing//v17.6-Dominion"
 # CONFIG_LOCALVERSION_AUTO is not set
 # CONFIG_AUDIT is not set
 CONFIG_POLLY_CLANG=y
