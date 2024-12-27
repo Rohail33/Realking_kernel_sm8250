@@ -209,7 +209,7 @@
 		interrupt-parent = <&tlmm>;
 		interrupts = <15 0>;
 		interrupt-names = "can_irq";
-		spi-max-frequency = <10000000>;
+		spi-max-frequency = <14000000>;
 		gpio-controller;
 		status = "okay";
 	};
