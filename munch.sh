@@ -1,6 +1,8 @@
 #!/bin/bash
 #set -e
+
 # Copy this script inside the kernel directory
+
 # Define variables
 DIR=$(readlink -f .)
 MAIN=$(readlink -f ${DIR}/..)
@@ -23,9 +25,8 @@ if [ ! -d "$MAIN/clang" ]; then
 
     # Prompt user to choose Clang version
     echo "Choose which Clang to use:"
-    echo "1. ZyC Stable"
-    echo "2. WeebX Stable"
-    echo "3. WeebX Beta"
+    echo "1. ZyC Stable (Clang 16.0.6)"
+    echo "2. WeebX Stable (Cland 19.1.5)"
     read -p "Enter the number of your choice: " clang_choice
 
     # Set URL and archive name based on user choice
