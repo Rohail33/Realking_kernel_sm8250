@@ -30,6 +30,23 @@
 #include "pnode.h"
 #include "internal.h"
 
+#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
+extern bool susfs_is_current_ksu_domain(void);
+extern bool susfs_is_current_zygote_domain(void);
+#define CL_SUSFS_COPY_MNT_NS 0x1000000
+#define DEFAULT_SUS_MNT_GROUP_ID 1000
+#endif
+
+#ifdef CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT
+extern int susfs_auto_add_sus_bind_mount(const char *pathname, struct path *path_target);
+#endif
+#ifdef CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT
+extern void susfs_auto_add_try_umount_for_bind_mount(struct path *path);
+#endif
+#ifdef CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT
+extern void susfs_auto_add_sus_ksu_default_mount(const char __user *to_pathname);
+#endif
+
 /* Maximum number of mounts in a mount namespace */
 unsigned int sysctl_mount_max __read_mostly = 100000;
 
@@ -108,8 +125,24 @@ static int mnt_alloc_id(struct mount *mnt)
 
 static void mnt_free_id(struct mount *mnt)
 {
+#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
+	// If mnt->mnt.android_kabi_reserved4 is not zero, it means mnt->mnt_id is spoofed,
+	// so here we return the original mnt_id for being freed.
+	if (unlikely(mnt->mnt.android_kabi_reserved4)) {
+		ida_free(&mnt_id_ida, mnt->mnt.android_kabi_reserved4);
+		return;
+	}
+#endif
 	ida_free(&mnt_id_ida, mnt->mnt_id);
 }
+
+#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
+static void susfs_mnt_alloc_group_id(struct mount *mnt)
+{
+	// Just assign the same default sus mount_group_id to mnt->mnt_group_id
+	mnt->mnt_group_id = DEFAULT_SUS_MNT_GROUP_ID;
+}
+#endif
 
 /*
  * Allocate a new peer group ID
@@ -129,6 +162,14 @@ static int mnt_alloc_group_id(struct mount *mnt)
  */
 void mnt_release_group_id(struct mount *mnt)
 {
+#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
+	// If mnt->mnt_group_id >= DEFAULT_SUS_MNT_GROUP_ID, it means 'mnt' is sus mount,
+	// here we don't need to free the mnt_group_id and just simply return and do nothing.
+	if (unlikely(mnt->mnt_group_id >= DEFAULT_SUS_MNT_GROUP_ID)) {
+		mnt->mnt_group_id = 0;
+		return;
+	}
+#endif
 	ida_free(&mnt_group_ida, mnt->mnt_group_id);
 	mnt->mnt_group_id = 0;
 }
@@ -979,6 +1020,14 @@ vfs_kern_mount(struct file_system_type *type, int flags, const char *name, void 
 	mnt->mnt.mnt_sb = root->d_sb;
 	mnt->mnt_mountpoint = mnt->mnt.mnt_root;
 	mnt->mnt_parent = mnt;
+
+#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
+	if (susfs_is_current_zygote_domain()) {
+		mnt->mnt.android_kabi_reserved4 = mnt->mnt_id;
+		mnt->mnt_id = current->android_kabi_reserved8++;
+	}
+#endif
+
 	lock_mount_hash();
 	list_add_tail(&mnt->mnt_instance, &root->d_sb->s_mounts);
 	unlock_mount_hash();
@@ -1060,6 +1109,14 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
 	mnt->mnt.mnt_root = dget(root);
 	mnt->mnt_mountpoint = mnt->mnt.mnt_root;
 	mnt->mnt_parent = mnt;
+
+#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
+	if (susfs_is_current_zygote_domain() && !(flag & CL_SUSFS_COPY_MNT_NS)) {
+		mnt->mnt.android_kabi_reserved4 = mnt->mnt_id;
+		mnt->mnt_id = current->android_kabi_reserved8++;
+	}
+#endif
+
 	lock_mount_hash();
 	list_add_tail(&mnt->mnt_instance, &sb->s_mounts);
 	unlock_mount_hash();
@@ -1745,6 +1802,36 @@ SYSCALL_DEFINE1(oldumount, char __user *, name)
 
 #endif
 
+static int can_umount(const struct path *path, int flags)
+ {
+	 struct mount *mnt = real_mount(path->mnt);
+	 if (flags & ~(MNT_FORCE | MNT_DETACH | MNT_EXPIRE | UMOUNT_NOFOLLOW))
+		 return -EINVAL;
+	 if (!may_mount())
+		 return -EPERM;
+	 if (path->dentry != path->mnt->mnt_root)
+		 return -EINVAL;
+	 if (!check_mnt(mnt))
+		 return -EINVAL;
+	 if (mnt->mnt.mnt_flags & MNT_LOCKED)
+		 return -EINVAL;
+	 if (flags & MNT_FORCE && !capable(CAP_SYS_ADMIN))
+		 return -EPERM;
+	 return 0;
+ }
+
+int path_umount(struct path *path, int flags)
+ {
+	 struct mount *mnt = real_mount(path->mnt);
+	 int ret;
+	 ret = can_umount(path, flags);
+	 if (!ret)
+		 ret = do_umount(mnt, flags);
+	 dput(path->dentry);
+	 mntput_no_expire(mnt);
+	 return ret;
+ }
+
 static bool is_mnt_ns_file(struct dentry *dentry)
 {
 	/* Is this a proxy for a mount namespace? */
@@ -1941,6 +2028,17 @@ static void cleanup_group_ids(struct mount *mnt, struct mount *end)
 static int invent_group_ids(struct mount *mnt, bool recurse)
 {
 	struct mount *p;
+
+#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
+	if (susfs_is_current_ksu_domain()) {
+		for (p = mnt; p; p = recurse ? next_mnt(p, mnt) : NULL) {
+			if (!p->mnt_group_id && !IS_MNT_SHARED(p)) {
+				susfs_mnt_alloc_group_id(p);
+			}
+		}
+		return 0;
+	}
+#endif
 
 	for (p = mnt; p; p = recurse ? next_mnt(p, mnt) : NULL) {
 		if (!p->mnt_group_id && !IS_MNT_SHARED(p)) {
@@ -2284,6 +2382,24 @@ static int do_loopback(struct path *path, const char *old_name,
 		umount_tree(mnt, UMOUNT_SYNC);
 		unlock_mount_hash();
 	}
+#if defined(CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT) || defined(CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT)
+	// Check if bind mounted path should be hidden and umounted automatically.
+	// And we target only process with ksu domain.
+	if (susfs_is_current_ksu_domain()) {
+#if defined(CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT)
+		if (susfs_auto_add_sus_bind_mount(old_name, &old_path)) {
+			goto orig_flow;
+		}
+#endif
+#if defined(CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT)
+		susfs_auto_add_try_umount_for_bind_mount(path);
+#endif
+	}
+#if defined(CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT)
+orig_flow:
+#endif
+#endif // #if defined(CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT) || defined(CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT)
+
 out2:
 	unlock_mount(mp);
 out:
@@ -2883,6 +2999,13 @@ long do_mount(const char *dev_name, const char __user *dir_name,
 	else
 		retval = do_new_mount(&path, type_page, sb_flags, mnt_flags,
 				      dev_name, data_page);
+#ifdef CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT
+	if (!retval && (!(flags & (MS_REMOUNT | MS_BIND | MS_SHARED | MS_PRIVATE | MS_SLAVE | MS_UNBINDABLE)))) {
+		if (susfs_is_current_ksu_domain()) {
+			susfs_auto_add_sus_ksu_default_mount(dir_name);
+		}
+	}
+#endif
 dput_out:
 	path_put(&path);
 	return retval;
@@ -2960,6 +3083,10 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
 	struct mount *old;
 	struct mount *new;
 	int copy_flags;
+#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
+	bool is_zygote_pid = susfs_is_current_zygote_domain();
+	int last_entry_mnt_id = 0;
+#endif
 
 	BUG_ON(!ns);
 
@@ -2979,6 +3106,13 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
 	copy_flags = CL_COPY_UNBINDABLE | CL_EXPIRE;
 	if (user_ns != ns->user_ns)
 		copy_flags |= CL_SHARED_TO_SLAVE | CL_UNPRIVILEGED;
+#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
+	if (is_zygote_pid) {
+		// Let clone_mnt() in copy_tree() know we only interested in function called by copy_mnt_ns()
+		copy_flags |= CL_SUSFS_COPY_MNT_NS;
+	}
+#endif
+
 	new = copy_tree(old, old->mnt.mnt_root, copy_flags);
 	if (IS_ERR(new)) {
 		namespace_unlock();
@@ -3015,6 +3149,29 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
 		while (p->mnt.mnt_root != q->mnt.mnt_root)
 			p = next_mnt(p, old);
 	}
+#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
+	// current->android_kabi_reserved8 -> to record last valid fake mnt_id to zygote pid
+	// q->mnt.android_kabi_reserved4 -> original mnt_id
+	// q->mnt_id -> will be modified to the fake mnt_id
+
+	// Here We are only interested in processes of which original mnt namespace belongs to zygote 
+	// Also we just make use of existing 'q' mount pointer, no need to delcare extra mount pointer
+	if (is_zygote_pid) {
+		last_entry_mnt_id = list_first_entry(&new_ns->list, struct mount, mnt_list)->mnt_id;
+		list_for_each_entry(q, &new_ns->list, mnt_list) {
+			if (unlikely(q->mnt.mnt_root->d_inode->i_state & 33554432)) {
+				continue;
+			}
+			q->mnt.android_kabi_reserved4 = q->mnt_id;
+			q->mnt_id = last_entry_mnt_id++;
+		}
+	}
+	// Assign the 'last_entry_mnt_id' to 'current->android_kabi_reserved8' for later use.
+	// should be fine here assuming zygote is forking/unsharing app in one single thread.
+	// Or should we put a lock here?
+	current->android_kabi_reserved8 = last_entry_mnt_id;
+#endif
+
 	namespace_unlock();
 
 	if (rootmnt)
@@ -3561,3 +3718,37 @@ const struct proc_ns_operations mntns_operations = {
 	.install	= mntns_install,
 	.owner		= mntns_owner,
 };
+
+#ifdef CONFIG_KSU_SUSFS_TRY_UMOUNT
+extern void susfs_try_umount_all(uid_t uid);
+void susfs_run_try_umount_for_current_mnt_ns(void) {
+	struct mount *mnt;
+	struct mnt_namespace *mnt_ns;
+
+	mnt_ns = current->nsproxy->mnt_ns;
+	// Lock the namespace
+	namespace_lock();
+	list_for_each_entry(mnt, &mnt_ns->list, mnt_list) {
+		// Change the sus mount to be private
+		if (mnt->mnt.mnt_root->d_inode->i_state & 33554432) {
+			change_mnt_propagation(mnt, MS_PRIVATE);
+		}
+	}
+	// Unlock the namespace
+	namespace_unlock();
+	susfs_try_umount_all(current_uid().val);
+}
+#endif
+#ifdef CONFIG_KSU_SUSFS
+bool susfs_is_mnt_devname_ksu(struct path *path) {
+	struct mount *mnt;
+
+	if (path && path->mnt) {
+		mnt = real_mount(path->mnt);
+		if (mnt && mnt->mnt_devname && !strcmp(mnt->mnt_devname, "KSU")) {
+			return true;
+		}
+	}
+	return false;
+}
+#endif
