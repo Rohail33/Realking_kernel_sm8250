@@ -98,7 +98,6 @@ static void convert_to_dsi_mode(const struct drm_display_mode *drm_mode,
 void dsi_convert_to_drm_mode(const struct dsi_display_mode *dsi_mode,
 				struct drm_display_mode *drm_mode)
 {
-	bool video_mode = (dsi_mode->panel_mode == DSI_OP_VIDEO_MODE);
 
 	memset(drm_mode, 0, sizeof(*drm_mode));
 
