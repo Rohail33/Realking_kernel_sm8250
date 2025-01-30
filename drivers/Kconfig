@@ -237,10 +237,8 @@ source "drivers/energy_model/Kconfig"
 
 source "drivers/millet/Kconfig"
 
-menu "KernelSU"
-config KSU
-        bool "Ship KernelSU with kernel"
-	default y
-endmenu
+source "drivers/kernelsu/Kconfig"
+
+source "../KernelSU-Next/kernel/Kconfig"
 
 endmenu
