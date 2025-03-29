@@ -982,12 +982,8 @@ bool arch_bpf_jit_check_func(const struct bpf_prog *prog)
 {
 	const uintptr_t func = (const uintptr_t)prog->bpf_func;
 
-	/*
-	 * bpf_func must be correctly aligned and within the correct region.
-	 */
-	if (unlikely(!IS_ALIGNED(func, sizeof(u32))))
-		return false;
-
-	return (func >= BPF_JIT_REGION_START && func < BPF_JIT_REGION_END);
+	/* bpf_func must be correctly aligned and within the BPF JIT region */
+	return (func >= BPF_JIT_REGION_START && func < BPF_JIT_REGION_END &&
+		IS_ALIGNED(func, sizeof(u32)));
 }
 #endif
