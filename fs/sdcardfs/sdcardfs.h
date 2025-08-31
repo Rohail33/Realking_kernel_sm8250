@@ -46,7 +46,6 @@
 #include <linux/string.h>
 #include <linux/list.h>
 #include <linux/iversion.h>
-#include <uapi/linux/mount.h>
 #include "multiuser.h"
 
 /* the file system name */
