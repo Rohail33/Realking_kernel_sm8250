@@ -48,6 +48,7 @@ EXPORT_SYMBOL_GPL(blkcg_root);
 struct blkcg *blkcg_bg;
 
 struct cgroup_subsys_state * const blkcg_root_css = &blkcg_root.css;
+EXPORT_SYMBOL_GPL(blkcg_root_css);
 
 static struct blkcg_policy *blkcg_policy[BLKCG_MAX_POLS];
 
