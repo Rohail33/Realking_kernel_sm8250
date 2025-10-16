@@ -1816,15 +1816,6 @@ static struct ctl_table vm_table[] = {
 		.extra1		= &zero,
 		.extra2		= &two_hundred,
 	},
-	{
-		.procname       = "want_old_faultaround_pte",
-		.data           = &want_old_faultaround_pte,
-		.maxlen         = sizeof(want_old_faultaround_pte),
-		.mode           = 0644,
-		.proc_handler   = proc_dointvec_minmax,
-		.extra1         = &zero,
-		.extra2         = &one,
-	},
 #ifdef CONFIG_HUGETLB_PAGE
 	{
 		.procname	= "nr_hugepages",
