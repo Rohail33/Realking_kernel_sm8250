@@ -42,10 +42,9 @@ typedef struct tracepoint * const tracepoint_ptr_t;
 #endif
 
 struct bpf_raw_event_map {
-	struct tracepoint       *tp;
-	void                    *bpf_func;
-	u32                     num_args;
-	u32			writable_size;
+	struct tracepoint	*tp;
+	void			*bpf_func;
+	u32			num_args;
 } __aligned(32);
 
 #endif
