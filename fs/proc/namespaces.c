@@ -42,14 +42,14 @@ static const char *proc_ns_get_link(struct dentry *dentry,
 	const struct proc_ns_operations *ns_ops = PROC_I(inode)->ns_ops;
 	struct task_struct *task;
 	struct path ns_path;
-	int error = -EACCES;
+	void *error = ERR_PTR(-EACCES);
 
 	if (!dentry)
 		return ERR_PTR(-ECHILD);
 
 	task = get_proc_task(inode);
 	if (!task)
-		return ERR_PTR(-EACCES);
+		return error;
 
 	if (ptrace_may_access(task, PTRACE_MODE_READ_FSCREDS)) {
 		error = ns_get_path(&ns_path, task, ns_ops);
@@ -57,7 +57,7 @@ static const char *proc_ns_get_link(struct dentry *dentry,
 			nd_jump_link(&ns_path);
 	}
 	put_task_struct(task);
-	return ERR_PTR(error);
+	return error;
 }
 
 static int proc_ns_readlink(struct dentry *dentry, char __user *buffer, int buflen)

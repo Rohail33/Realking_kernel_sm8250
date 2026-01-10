@@ -1,2 +1,4 @@
+
 config STREAM_PARSER
-	def_bool n
+	tristate
+	default n

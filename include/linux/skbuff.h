@@ -243,9 +243,6 @@ struct scatterlist;
 struct pipe_inode_info;
 struct iov_iter;
 struct napi_struct;
-struct bpf_prog;
-union bpf_attr;
-struct skb_ext;
 
 #if defined(CONFIG_NF_CONNTRACK) || defined(CONFIG_NF_CONNTRACK_MODULE)
 struct nf_conntrack {
@@ -633,7 +630,6 @@ typedef unsigned char *sk_buff_data_t;
  *	@queue_mapping: Queue mapping for multiqueue devices
  *	@xmit_more: More SKBs are pending for this queue
  *	@pfmemalloc: skbuff was allocated from PFMEMALLOC reserves
- *	@active_extensions: active extensions (skb_ext_id types)
  *	@ndisc_nodetype: router type (from link layer)
  *	@ooo_okay: allow the mapping of a socket to a queue to be changed
  *	@l4_hash: indicate hash is a canonical 4-tuple hash over transport
@@ -663,7 +659,6 @@ typedef unsigned char *sk_buff_data_t;
  *	@data: Data head pointer
  *	@truesize: Buffer size
  *	@users: User count - see {datagram,tcp}.c
- *	@extensions: allocated extensions, valid if active_extensions is nonzero
  */
 
 struct sk_buff {
@@ -744,9 +739,7 @@ struct sk_buff {
 				head_frag:1,
 				xmit_more:1,
 				pfmemalloc:1;
-#ifdef CONFIG_SKB_EXTENSIONS
-	__u8			active_extensions;
-#endif
+
 	/* fields enclosed in headers_start/headers_end are copied
 	 * using a single memcpy() in __copy_skb_header()
 	 */
@@ -863,10 +856,6 @@ struct sk_buff {
 				*data;
 	unsigned int		truesize;
 	refcount_t		users;
-#ifdef CONFIG_SKB_EXTENSIONS
-	/* only useable after checking ->active_extensions != 0 */
-	struct skb_ext		*extensions;
-#endif
 };
 
 #ifdef __KERNEL__
@@ -1202,10 +1191,6 @@ static inline __be32 skb_flow_get_ports(const struct sk_buff *skb,
 void skb_flow_dissector_init(struct flow_dissector *flow_dissector,
 			     const struct flow_dissector_key *key,
 			     unsigned int key_count);
-
-int skb_flow_dissector_bpf_prog_attach(const union bpf_attr *attr,
-				       struct bpf_prog *prog);
-int skb_flow_dissector_bpf_prog_detach(const union bpf_attr *attr);
 
 bool __skb_flow_dissect(const struct sk_buff *skb,
 			struct flow_dissector *flow_dissector,
@@ -3918,100 +3903,6 @@ static inline void nf_conntrack_get(struct nf_conntrack *nfct)
 		atomic_inc(&nfct->use);
 }
 #endif
-
-#ifdef CONFIG_SKB_EXTENSIONS
-enum skb_ext_id {
-#if IS_ENABLED(CONFIG_BRIDGE_NETFILTER)
-	SKB_EXT_BRIDGE_NF,
-#endif
-	SKB_EXT_NUM, /* must be last */
-};
-
-/**
- *	struct skb_ext - sk_buff extensions
- *	@refcnt: 1 on allocation, deallocated on 0
- *	@offset: offset to add to @data to obtain extension address
- *	@chunks: size currently allocated, stored in SKB_EXT_ALIGN_SHIFT units
- *	@data: start of extension data, variable sized
- *
- *	Note: offsets/lengths are stored in chunks of 8 bytes, this allows
- *	to use 'u8' types while allowing up to 2kb worth of extension data.
- */
-struct skb_ext {
-	refcount_t refcnt;
-	u8 offset[SKB_EXT_NUM]; /* in chunks of 8 bytes */
-	u8 chunks;		/* same */
-	char data[0] __aligned(8);
-};
-
-void *skb_ext_add(struct sk_buff *skb, enum skb_ext_id id);
-void __skb_ext_del(struct sk_buff *skb, enum skb_ext_id id);
-void __skb_ext_put(struct skb_ext *ext);
-static inline void skb_ext_put(struct sk_buff *skb)
-{
-	if (skb->active_extensions)
-		__skb_ext_put(skb->extensions);
-}
-
-static inline void skb_ext_get(struct sk_buff *skb)
-{
-	if (skb->active_extensions) {
-		struct skb_ext *ext = skb->extensions;
-		if (ext)
-			refcount_inc(&ext->refcnt);
-	}
-}
-
-static inline void __skb_ext_copy(struct sk_buff *dst,
-				  const struct sk_buff *src)
-{
-	dst->active_extensions = src->active_extensions;
-	if (src->active_extensions) {
-		struct skb_ext *ext = src->extensions;
-		refcount_inc(&ext->refcnt);
-		dst->extensions = ext;
-	}
-}
-
-static inline void skb_ext_copy(struct sk_buff *dst, const struct sk_buff *src)
-{
-	skb_ext_put(dst);
-	__skb_ext_copy(dst, src);
-}
-
-static inline bool __skb_ext_exist(const struct skb_ext *ext, enum skb_ext_id i)
-{
-	return !!ext->offset[i];
-}
-
-static inline bool skb_ext_exist(const struct sk_buff *skb, enum skb_ext_id id)
-{
-	return skb->active_extensions & (1 << id);
-}
-
-static inline void skb_ext_del(struct sk_buff *skb, enum skb_ext_id id)
-{
-	if (skb_ext_exist(skb, id))
-		__skb_ext_del(skb, id);
-}
-
-static inline void *skb_ext_find(const struct sk_buff *skb, enum skb_ext_id id)
-{
-	if (skb_ext_exist(skb, id)) {
-		struct skb_ext *ext = skb->extensions;
-		return (void *)ext + (ext->offset[id] << 3);
-	}
-	return NULL;
-}
-
-#else
-static inline void skb_ext_put(struct sk_buff *skb) {}
-static inline void skb_ext_get(struct sk_buff *skb) {}
-static inline void skb_ext_del(struct sk_buff *skb, int unused) {}
-static inline void __skb_ext_copy(struct sk_buff *d, const struct sk_buff *s) {}
-static inline void skb_ext_copy(struct sk_buff *dst, const struct sk_buff *s) {}
-#endif /* CONFIG_SKB_EXTENSIONS */
-
 #if IS_ENABLED(CONFIG_BRIDGE_NETFILTER)
 static inline void nf_bridge_put(struct nf_bridge_info *nf_bridge)
 {
@@ -4097,19 +3988,12 @@ static inline void skb_init_secmark(struct sk_buff *skb)
 { }
 #endif
 
-static inline int secpath_exists(const struct sk_buff *skb)
-{
-#ifdef CONFIG_XFRM
-	return skb->sp != NULL;
-#else
-	return 0;
-#endif
-}
-
 static inline bool skb_irq_freeable(const struct sk_buff *skb)
 {
 	return !skb->destructor &&
-		!secpath_exists(skb) &&
+#if IS_ENABLED(CONFIG_XFRM)
+		!skb->sp &&
+#endif
 		!skb_nfct(skb) &&
 		!skb->_skb_refdst &&
 		!skb_has_frag_list(skb);
