@@ -844,7 +844,11 @@
 #define SECURITY_INITCALL						\
 		__security_initcall_start = .;				\
 		KEEP(*(.security_initcall.init))			\
-		__security_initcall_end = .;
+		__security_initcall_end = .;				\
+		. = ALIGN(8);						\
+		__start_lsm_info = .;					\
+		KEEP(*(.lsm_info.init))				\
+		__end_lsm_info = .;
 
 #ifdef CONFIG_BLK_DEV_INITRD
 #define INIT_RAM_FS							\
