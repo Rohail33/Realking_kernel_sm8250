@@ -638,7 +638,6 @@ config RANDOM_TRUST_CPU
 	default y
 	depends on ARCH_RANDOM
 	help
-<<<<<<< HEAD
 	Assume that CPU manufacturer (e.g., Intel or AMD for RDSEED or
 	RDRAND, IBM for the S390 and Power PC architectures) is trustworthy
 	for the purposes of initializing Linux's CRNG.  Since this is not
