@@ -751,7 +751,6 @@ CONFIG_FORTIFY_SOURCE=y
 # CONFIG_INTEGRITY is not set
 CONFIG_SECURITY_SELINUX=y
 CONFIG_SECURITY_SMACK=y
-CONFIG_LSM="lockdown,yama,loadpin,safesetid,integrity,selinux,smack,tomoyo,apparmour,bpf"
 CONFIG_CRYPTO_CCM=y
 CONFIG_CRYPTO_GCM=y
 CONFIG_CRYPTO_XCBC=y
