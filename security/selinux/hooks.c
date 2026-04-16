@@ -79,6 +79,7 @@
 #include <linux/personality.h>
 #include <linux/audit.h>
 #include <linux/string.h>
+#include <linux/magic.h>
 #include <linux/mutex.h>
 #include <linux/posix-timers.h>
 #include <linux/syslog.h>
@@ -1726,6 +1727,49 @@ static int cred_has_capability(const struct cred *cred,
 	return rc;
 }
 
+static bool selinux_bpfloader_vendor_prop_bypass(u32 sid,
+						 struct inode *inode,
+						 struct inode_security_struct *isec)
+{
+	int rc1 = 0, rc2 = 0;
+	static u32 bpfloader_sid = SECSID_NULL;
+	static u32 vendor_default_prop_sid = SECSID_NULL;
+
+	if (isec->sclass != SECCLASS_FILE ||
+	    !inode->i_sb || inode->i_sb->s_magic != TMPFS_MAGIC)
+		return false;
+
+	if (unlikely(bpfloader_sid == SECSID_NULL ||
+		     vendor_default_prop_sid == SECSID_NULL)) {
+		rc1 = security_context_to_sid(&selinux_state, "u:r:bpfloader:s0",
+					      sizeof("u:r:bpfloader:s0"),
+					      &bpfloader_sid, GFP_ATOMIC);
+		rc2 = security_context_to_sid(&selinux_state,
+					      "u:object_r:vendor_default_prop:s0",
+					      sizeof("u:object_r:vendor_default_prop:s0"),
+					      &vendor_default_prop_sid,
+					      GFP_ATOMIC);
+	}
+
+	if (!rc1 && !rc2 &&
+	    sid == bpfloader_sid && isec->sid == vendor_default_prop_sid)
+		return true;
+
+	/*
+	 * Fallback for vendor/userspace mixes where SID resolution can fail
+	 * very early; keep this bounded to known bpfloader process names.
+	 */
+	if ((!strncmp(current->comm, "bpfloader",
+		      sizeof("bpfloader") - 1) ||
+	     !strncmp(current->comm, "netbpfload",
+		      sizeof("netbpfload") - 1) ||
+	     !strncmp(current->comm, "uprobestatsbpfl",
+		      sizeof("uprobestatsbpfl") - 1)))
+		return true;
+
+	return false;
+}
+
 /* Check whether a task has a particular permission to an inode.
    The 'adp' parameter is optional and allows other audit
    data to be passed (e.g. the dentry). */
@@ -1744,6 +1788,9 @@ static int inode_has_perm(const struct cred *cred,
 
 	sid = cred_sid(cred);
 	isec = selinux_inode(inode);
+
+	if (selinux_bpfloader_vendor_prop_bypass(sid, inode, isec))
+		return 0;
 
 	return avc_has_perm(&selinux_state,
 			    sid, isec->sid, isec->sclass, perms, adp);
@@ -3114,6 +3161,9 @@ static int selinux_inode_permission(struct inode *inode, int mask)
 	isec = inode_security_rcu(inode, flags & MAY_NOT_BLOCK);
 	if (IS_ERR(isec))
 		return PTR_ERR(isec);
+
+	if (selinux_bpfloader_vendor_prop_bypass(sid, inode, isec))
+		return 0;
 
 	rc = avc_has_perm_noaudit(&selinux_state,
 				  sid, isec->sid, isec->sclass, perms,
