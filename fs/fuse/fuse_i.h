@@ -1318,6 +1318,7 @@ void fuse_copyattr(struct file *dst_file, struct file *src_file);
 int fuse_passthrough_setup(struct fuse_conn *fc, struct fuse_file *ff,
                           struct fuse_open_out *openarg);
 void fuse_passthrough_release(struct fuse_passthrough *passthrough);
+int fuse_passthrough_mmap(struct file *file, struct vm_area_struct *vma);
 ssize_t fuse_passthrough_read_iter(struct kiocb *iocb, struct iov_iter *to);
 ssize_t fuse_passthrough_write_iter(struct kiocb *iocb, struct iov_iter *from);
 

@@ -253,6 +253,45 @@ int fuse_passthrough_setup(struct fuse_conn *fc, struct fuse_file *ff,
 	return 0;
 }
 
+int fuse_passthrough_mmap(struct file *file, struct vm_area_struct *vma)
+{
+	int ret;
+	const struct cred *old_cred;
+	struct fuse_file *ff = file->private_data;
+	struct inode *fuse_inode = file_inode(file);
+	struct file *passthrough_file = ff->passthrough.filp;
+	struct inode *passthrough_inode = file_inode(passthrough_file);
+
+	if (!passthrough_file->f_op->mmap)
+		return -ENODEV;
+
+	if (WARN_ON(file != vma->vm_file))
+		return -EIO;
+
+	vma->vm_file = get_file(passthrough_file);
+
+	old_cred = override_creds(ff->passthrough.cred);
+	ret = call_mmap(vma->vm_file, vma);
+	revert_creds(old_cred);
+
+	if (ret)
+		fput(passthrough_file);
+	else
+		fput(file);
+
+	if (file->f_flags & O_NOATIME)
+		return ret;
+
+	if ((!timespec64_equal(&fuse_inode->i_mtime, &passthrough_inode->i_mtime) ||
+	     !timespec64_equal(&fuse_inode->i_ctime, &passthrough_inode->i_ctime))) {
+		fuse_inode->i_mtime = passthrough_inode->i_mtime;
+		fuse_inode->i_ctime = passthrough_inode->i_ctime;
+	}
+	touch_atime(&file->f_path);
+
+	return ret;
+}
+
 void fuse_passthrough_release(struct fuse_passthrough *passthrough)
 {
 	if (passthrough->filp) {

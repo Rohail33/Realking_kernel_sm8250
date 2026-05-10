@@ -3626,7 +3626,11 @@ static long fuse_file_fallocate(struct file *file, int mode, loff_t offset,
 			goto out;
 	}
 
-	err = file_modified(file);
+	err = file_remove_privs(file);
+	if (err)
+		goto out;
+
+	err = file_update_time(file);
 	if (err)
 		goto out;
 
@@ -3727,7 +3731,11 @@ static ssize_t __fuse_copy_file_range(struct file *file_in, loff_t pos_in,
 
 	inode_lock(inode_out);
 
-	err = file_modified(file_out);
+	err = file_remove_privs(file_out);
+	if (err)
+		goto out;
+
+	err = file_update_time(file_out);
 	if (err)
 		goto out;
 
