@@ -212,7 +212,8 @@ static int bpf_map_update_value(struct bpf_map *map, struct fd f, void *key,
 		err = bpf_fd_reuseport_array_update_elem(map, key, value,
 							 flags);
 	} else if (map->map_type == BPF_MAP_TYPE_QUEUE ||
-		   map->map_type == BPF_MAP_TYPE_STACK) {
+		   map->map_type == BPF_MAP_TYPE_STACK ||
+		   map->map_type == BPF_MAP_TYPE_BLOOM_FILTER) {
 		err = map->ops->map_push_elem(map, value, flags);
 	} else {
 		rcu_read_lock();
@@ -251,7 +252,8 @@ static int bpf_map_copy_value(struct bpf_map *map, void *key, void *value,
 	} else if (map->map_type == BPF_MAP_TYPE_REUSEPORT_SOCKARRAY) {
 		err = bpf_fd_reuseport_array_lookup_elem(map, key, value);
 	} else if (map->map_type == BPF_MAP_TYPE_QUEUE ||
-		   map->map_type == BPF_MAP_TYPE_STACK) {
+		   map->map_type == BPF_MAP_TYPE_STACK ||
+		   map->map_type == BPF_MAP_TYPE_BLOOM_FILTER) {
 		err = map->ops->map_peek_elem(map, value);
 	} else if (map->map_type == BPF_MAP_TYPE_STRUCT_OPS) {
 		/* struct_ops map requires directly updating "value" */
@@ -356,6 +358,7 @@ void bpf_map_init_from_attr(struct bpf_map *map, union bpf_attr *attr)
 	map->value_size = attr->value_size;
 	map->max_entries = attr->max_entries;
 	map->map_flags = bpf_map_flags_retain_permanent(attr->map_flags);
+	map->map_extra = attr->map_extra;
 	map->numa_node = bpf_map_attr_numa_node(attr);
 }
 
@@ -807,7 +810,7 @@ static int map_check_btf(struct bpf_map *map, const struct btf *btf,
 	return ret;
 }
 
-#define BPF_MAP_CREATE_LAST_FIELD btf_vmlinux_value_type_id
+#define BPF_MAP_CREATE_LAST_FIELD map_extra
 /* called via syscall */
 static int map_create(union bpf_attr *attr)
 {
@@ -828,6 +831,9 @@ static int map_create(union bpf_attr *attr)
 	} else if (attr->btf_key_type_id && !attr->btf_value_type_id) {
 		return -EINVAL;
 	}
+
+	if (attr->map_type != BPF_MAP_TYPE_BLOOM_FILTER && attr->map_extra)
+		return -EINVAL;
 
 	f_flags = bpf_get_file_flag(attr->map_flags);
 	if (f_flags < 0)
@@ -3719,6 +3725,7 @@ static int bpf_map_get_info_by_fd(struct file *file,
 	info.value_size = map->value_size;
 	info.max_entries = map->max_entries;
 	info.map_flags = map->map_flags;
+	info.map_extra = map->map_extra;
 	memcpy(info.name, map->name, sizeof(map->name));
 
 	if (map->btf) {

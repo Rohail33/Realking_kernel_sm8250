@@ -5042,6 +5042,11 @@ static int check_map_func_compatibility(struct bpf_verifier_env *env,
 		    func_id != BPF_FUNC_map_push_elem)
 			goto error;
 		break;
+	case BPF_MAP_TYPE_BLOOM_FILTER:
+		if (func_id != BPF_FUNC_map_peek_elem &&
+		    func_id != BPF_FUNC_map_push_elem)
+			goto error;
+		break;
 	case BPF_MAP_TYPE_SK_STORAGE:
 		if (func_id != BPF_FUNC_sk_storage_get &&
 		    func_id != BPF_FUNC_sk_storage_delete)
@@ -5123,7 +5128,11 @@ static int check_map_func_compatibility(struct bpf_verifier_env *env,
 	case BPF_FUNC_map_pop_elem:
 	case BPF_FUNC_map_push_elem:
 		if (map->map_type != BPF_MAP_TYPE_QUEUE &&
-		    map->map_type != BPF_MAP_TYPE_STACK)
+		    map->map_type != BPF_MAP_TYPE_STACK &&
+		    map->map_type != BPF_MAP_TYPE_BLOOM_FILTER)
+			goto error;
+		if (func_id == BPF_FUNC_map_pop_elem &&
+		    map->map_type == BPF_MAP_TYPE_BLOOM_FILTER)
 			goto error;
 		break;
 	case BPF_FUNC_sk_storage_get:
