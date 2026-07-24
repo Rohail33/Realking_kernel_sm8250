@@ -132,6 +132,7 @@ void kgsl_pwrscale_update_stats(struct kgsl_device *device)
 {
 	struct kgsl_pwrctrl *pwrctrl = &device->pwrctrl;
 	struct kgsl_pwrscale *psc = &device->pwrscale;
+	ktime_t cur_time = ktime_get();
 
 	if (WARN_ON(!mutex_is_locked(&device->mutex)))
 		return;
@@ -160,6 +161,10 @@ void kgsl_pwrscale_update_stats(struct kgsl_device *device)
 		device->pwrscale.accum_stats.ram_wait += stats.ram_wait;
 		pwrctrl->clock_times[pwrctrl->active_pwrlevel] +=
 				stats.busy_time;
+		if (pwrctrl->last_stat_updated)
+			pwrctrl->time_in_pwrlevel[pwrctrl->active_pwrlevel] +=
+				ktime_us_delta(cur_time, pwrctrl->last_stat_updated);
+		pwrctrl->last_stat_updated = cur_time;
 	}
 }
 EXPORT_SYMBOL(kgsl_pwrscale_update_stats);

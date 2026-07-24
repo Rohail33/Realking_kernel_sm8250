@@ -133,7 +133,9 @@ struct gpu_cx_ipeak_client {
  * @num_pwrlevels - number of available power levels
  * @throttle_mask - LM throttle mask
  * @interval_timeout - timeout in jiffies to be idle before a power event
- * @clock_times - Each GPU frequency's accumulated active time in us
+ * @clock_times - Each GPU frequency's accumulated active busy time in us
+ * @time_in_pwrlevel - Each GPU frequency's accumulated active duration in us
+ * @last_stat_updated - The last time pwrscale stats were updated
  * @regulators - array of pointers to kgsl_regulator structs
  * @pcl - bus scale identifier
  * @gpu_cfg - CPU to GPU AHB path bus scale identifier
@@ -190,6 +192,8 @@ struct kgsl_pwrctrl {
 	unsigned int throttle_mask;
 	unsigned long interval_timeout;
 	u64 clock_times[KGSL_MAX_PWRLEVELS];
+	u64 time_in_pwrlevel[KGSL_MAX_PWRLEVELS];
+	ktime_t last_stat_updated;
 	struct kgsl_regulator regulators[KGSL_MAX_REGULATORS];
 	uint32_t pcl;
 	uint32_t gpu_cfg;

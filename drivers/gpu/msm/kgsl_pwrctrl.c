@@ -651,6 +651,13 @@ void kgsl_pwrctrl_pwrlevel_change(struct kgsl_device *device,
 	_isense_clk_set_rate(pwr, pwr->active_pwrlevel);
 
 	/*
+	 * GRAPHICS.LA.14 updates the bus after GPU clock decreases so the
+	 * memory vote follows the new level only after the clock transition.
+	 */
+	if (new_level > old_level)
+		kgsl_pwrctrl_buslevel_update(device, true);
+
+	/*
 	 * Some targets do not support the bandwidth requirement of
 	 * GPU at TURBO, for such targets we need to set GPU-BIMC
 	 * interface clocks to TURBO directly whenever GPU runs at
